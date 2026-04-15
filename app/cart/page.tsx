@@ -1,59 +1,75 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+
+type CartItem = {
+  id: string;
+  name: string;
+  price: number;
+  size?: string;
+  color?: string;
+};
 
 export default function CartPage() {
-  const [cart, setCart] = useState<any[]>([]);
+  const router = useRouter();
+
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [showCheckout, setShowCheckout] = useState(false);
 
   useEffect(() => {
-    const data = localStorage.getItem("cart");
-    if (data) {
-      setCart(JSON.parse(data));
-    }
+    const data = JSON.parse(localStorage.getItem("cart") || "[]");
+    setCart(data);
   }, []);
-
-  const updateCart = (newCart: any[]) => {
-    setCart(newCart);
-    localStorage.setItem("cart", JSON.stringify(newCart));
-  };
 
   const removeItem = (index: number) => {
     const newCart = [...cart];
     newCart.splice(index, 1);
-    updateCart(newCart);
+    setCart(newCart);
+    localStorage.setItem("cart", JSON.stringify(newCart));
   };
 
-  const changeQty = (index: number, type: "inc" | "dec") => {
-    const newCart = [...cart];
+  const total = cart.reduce((sum, item) => sum + item.price, 0);
 
-    if (!newCart[index].qty) newCart[index].qty = 1;
-
-    if (type === "inc") {
-      newCart[index].qty += 1;
-    } else {
-      newCart[index].qty -= 1;
-      if (newCart[index].qty < 1) newCart[index].qty = 1;
+  const submitOrder = () => {
+    if (!name || !phone) {
+      alert("Введите имя и телефон");
+      return;
     }
 
-    updateCart(newCart);
+    const order = {
+      name,
+      phone,
+      items: cart,
+      total,
+    };
+
+    console.log("ORDER:", order);
+
+    alert("Заказ оформлен!");
+
+    localStorage.removeItem("cart");
+    setCart([]);
+    setShowCheckout(false);
+
+    router.push("/");
   };
 
-  const total = cart.reduce((sum, item) => {
-    const qty = item.qty || 1;
-    return sum + item.price * qty;
-  }, 0);
-
   return (
-    <main className="min-h-screen bg-[#F5F5F5] p-4 pb-28">
+    <main className="min-h-screen bg-[#F5F5F5] p-4 pb-24">
 
       {/* HEADER */}
-      <h1 className="text-2xl font-light mb-6">Корзина</h1>
+      <h1 className="text-xl font-semibold mb-4">
+        Корзина
+      </h1>
 
-      {/* EMPTY STATE */}
-      {cart.length === 0 ? (
-        <div className="text-center mt-24">
+      {/* EMPTY */}
+      {cart.length === 0 && (
+        <div className="bg-white p-6 rounded-2xl text-center">
 
-          <p className="text-lg font-light text-gray-700">
+          <p className="text-gray-500">
             Корзина пустая
           </p>
 
@@ -62,95 +78,128 @@ export default function CartPage() {
           </p>
 
           <button
-            onClick={() => (window.location.href = "/")}
-            className="mt-6 bg-black text-white px-6 py-3 rounded-xl"
+            onClick={() => router.push("/")}
+            className="mt-4 bg-black text-white px-4 py-2 rounded-xl"
           >
             Перейти в каталог
           </button>
 
         </div>
-      ) : (
-        <>
-          {/* ITEMS */}
-          {cart.map((item, index) => (
-            <div key={index} className="bg-white p-4 rounded-2xl mb-3">
+      )}
 
-              <h2 className="font-medium">{item.name}</h2>
+      {/* ITEMS */}
+      <div className="space-y-3">
+        {cart.map((item, i) => (
+          <div key={i} className="bg-white p-4 rounded-2xl">
 
-              <p className="text-sm text-gray-500 mt-1">
-                {item.price} ₽
-              </p>
+            <h2 className="font-medium">{item.name}</h2>
 
-              {/* QTY */}
-              <div className="flex items-center gap-3 mt-3">
+            <p className="text-sm text-gray-500 mt-1">
+              {item.size && `Размер: ${item.size}`}{" "}
+              {item.color && `| Цвет: ${item.color}`}
+            </p>
 
-                <button
-                  onClick={() => changeQty(index, "dec")}
-                  className="px-3 py-1 border rounded"
-                >
-                  -
-                </button>
+            <div className="flex justify-between items-center mt-2">
+              <span className="font-bold">{item.price} ₽</span>
 
-                <span className="font-medium">
-                  {item.qty || 1}
-                </span>
-
-                <button
-                  onClick={() => changeQty(index, "inc")}
-                  className="px-3 py-1 border rounded"
-                >
-                  +
-                </button>
-
-                <button
-                  onClick={() => removeItem(index)}
-                  className="ml-auto text-red-500 text-sm"
-                >
-                  удалить
-                </button>
-
-              </div>
+              <button
+                onClick={() => removeItem(i)}
+                className="text-red-500 text-sm"
+              >
+                удалить
+              </button>
             </div>
-          ))}
-
-          {/* TOTAL + PAY */}
-          <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4">
-
-            <div className="flex justify-between mb-3">
-              <span className="text-gray-600">Итого</span>
-              <span className="font-bold">{total} ₽</span>
-            </div>
-
-            <button
-              onClick={async () => {
-                try {
-                  const res = await fetch("http://localhost:5000/create-payment", {
-                    method: "POST",
-                    headers: {
-                      "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({ amount: total }),
-                  });
-
-                  const data = await res.json();
-
-                  if (data.url) {
-                    window.location.href = data.url;
-                  } else {
-                    alert("Ошибка оплаты");
-                  }
-                } catch (err) {
-                  alert("Ошибка соединения с сервером");
-                }
-              }}
-              className="w-full bg-black text-white py-3 rounded-xl"
-            >
-              Оформить заказ
-            </button>
 
           </div>
-        </>
+        ))}
+      </div>
+
+      {/* TOTAL BUTTON */}
+      {cart.length > 0 && !showCheckout && (
+        <div className="fixed bottom-16 left-0 right-0 bg-white border-t p-4">
+
+          <div className="flex justify-between mb-2">
+            <span>Итого:</span>
+            <span className="font-bold">{total} ₽</span>
+          </div>
+
+          <button
+            onClick={() => setShowCheckout(true)}
+            className="w-full bg-black text-white py-3 rounded-xl"
+          >
+            Оформить заказ
+          </button>
+
+        </div>
       )}
+
+      {/* CHECKOUT FORM */}
+      {showCheckout && (
+        <div className="fixed inset-0 bg-black/50 flex items-end">
+
+          <div className="bg-white w-full p-4 rounded-t-2xl">
+
+            <h2 className="text-lg font-semibold mb-3">
+              Оформление заказа
+            </h2>
+
+            <input
+              placeholder="Ваше имя"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full p-3 bg-gray-100 rounded-xl mb-2"
+            />
+
+            <input
+              placeholder="Телефон"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className="w-full p-3 bg-gray-100 rounded-xl mb-4"
+            />
+
+            <div className="flex gap-2">
+
+              <button
+                onClick={() => setShowCheckout(false)}
+                className="flex-1 bg-gray-200 py-3 rounded-xl"
+              >
+                Назад
+              </button>
+
+              <button
+                onClick={submitOrder}
+                className="flex-1 bg-black text-white py-3 rounded-xl"
+              >
+                Подтвердить
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
+      )}
+
+      {/* BOTTOM MENU */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around p-3 text-sm">
+
+        <button onClick={() => router.push("/")}>
+          Главная
+        </button>
+
+        <button onClick={() => router.push("/favorites")}>
+          Избранное
+        </button>
+
+        <button onClick={() => router.push("/cart")}>
+          Корзина
+        </button>
+
+        <button onClick={() => router.push("/profile")}>
+          Профиль
+        </button>
+
+      </div>
 
     </main>
   );
