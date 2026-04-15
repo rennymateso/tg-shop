@@ -1,11 +1,10 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+
 
 export default function ProductPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-
+ 
   const id = searchParams.get("id");
 
   const products: any = {
