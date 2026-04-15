@@ -1,35 +1,40 @@
 "use client";
 
-export default function ProfilePage() {
+import { useRouter } from "next/navigation";
+
+export default function Profile() {
+  const router = useRouter();
+
   return (
     <main className="min-h-screen bg-[#F5F5F5] p-4">
 
-      <h1 className="text-2xl font-light mb-6">Профиль</h1>
+      <h1 className="text-xl font-semibold">Профиль</h1>
 
-      {/* USER INFO */}
-      <div className="bg-white p-4 rounded-2xl">
-        <p className="text-sm text-gray-500">Пользователь</p>
-        <p className="text-lg">Гость</p>
+      <div className="mt-4 bg-white p-4 rounded-2xl">
 
-        <p className="text-sm text-gray-500 mt-4">Телефон</p>
-        <p className="text-lg">+7 (999) 000-00-00</p>
-      </div>
+        <p className="font-medium">MONTREAUX</p>
 
-      {/* INFO BLOCK */}
-      <div className="bg-white p-4 rounded-2xl mt-4">
-        <p className="text-sm text-gray-500">О магазине</p>
-        <p className="text-sm mt-2">
-          MONTREAUX — премиальная мужская одежда
+        <p className="text-sm text-gray-500 mt-2">
+          Телефон: +7 (900) 000-00-00
         </p>
+
+        <p className="text-sm text-gray-500 mt-1">
+          Доставка: Россия / Казань
+        </p>
+
+        <button className="w-full mt-4 bg-black text-white py-3 rounded-xl">
+          Перейти в Telegram канал
+        </button>
+
       </div>
 
-      {/* CHANNEL BUTTON */}
-      <a
-        href="https://t.me/your_channel"
-        className="block mt-4 bg-black text-white text-center py-3 rounded-xl"
+      {/* BACK */}
+      <button
+        onClick={() => router.push("/")}
+        className="mt-4 text-sm underline"
       >
-        Наш Telegram канал
-      </a>
+        ← Назад
+      </button>
 
     </main>
   );
