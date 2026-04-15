@@ -1,21 +1,27 @@
 "use client";
 
-
+import { useRouter } from "next/navigation";
 
 export default function ProductPage() {
   const router = useRouter();
- 
-  const id = searchParams.get("id");
 
-  const products: any = {
-    1: { name: "Футболка Premium", price: 3500 },
-    2: { name: "Поло Classic", price: 4500 },
-    3: { name: "Джинсы Slim", price: 6500 },
+  // берем id из URL через window (без useSearchParams — так стабильнее для Vercel)
+  const id =
+    typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search).get("id")
+      : null;
+
+  const products: Record<string, { name: string; price: number }> = {
+    "1": { name: "Футболка Premium", price: 3500 },
+    "2": { name: "Поло Classic", price: 4500 },
+    "3": { name: "Джинсы Slim", price: 6500 },
   };
 
-  const product = id ? products[id as keyof typeof products] : null;
+  const product = id ? products[id] : null;
 
   const addToCart = () => {
+    if (!product || !id) return;
+
     const cart = JSON.parse(localStorage.getItem("cart") || "[]");
 
     cart.push({
@@ -30,9 +36,9 @@ export default function ProductPage() {
     router.push("/cart");
   };
 
-  if (!id || !product) {
+  if (!product) {
     return (
-      <main className="min-h-screen flex items-center justify-center">
+      <main className="min-h-screen flex items-center justify-center bg-[#F5F5F5]">
         Товар не найден
       </main>
     );
@@ -41,15 +47,19 @@ export default function ProductPage() {
   return (
     <main className="min-h-screen bg-[#F5F5F5] p-4">
 
-      <button onClick={() => router.back()}>
+      {/* назад */}
+      <button onClick={() => router.back()} className="mb-4">
         ← Назад
       </button>
 
-      <div className="mt-6 bg-white p-4 rounded-2xl">
+      {/* карточка */}
+      <div className="bg-white p-4 rounded-2xl">
 
         <div className="h-64 bg-gray-100 rounded-xl mb-4" />
 
-        <h1 className="text-xl font-light">{product.name}</h1>
+        <h1 className="text-xl font-semibold">
+          {product.name}
+        </h1>
 
         <p className="text-lg font-bold mt-2">
           {product.price} ₽
