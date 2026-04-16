@@ -18,6 +18,7 @@ export default function ProductPage() {
   const [open, setOpen] = useState(false);
   const [size, setSize] = useState("");
   const [color, setColor] = useState("");
+  const [quantity, setQuantity] = useState(1);
 
   const topSizes = [
     { label: "S", sub: "46" },
@@ -58,6 +59,7 @@ export default function ProductPage() {
       price: product.price,
       size,
       color,
+      quantity,
     });
 
     localStorage.setItem("cart", JSON.stringify(cart));
@@ -76,7 +78,7 @@ export default function ProductPage() {
           ← Назад
         </button>
 
-        <div className="rounded-[28px] bg-white p-5 shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
+        <div className="rounded-[24px] bg-white p-5 shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
           <p className="text-sm text-gray-500">Товар не найден</p>
         </div>
 
@@ -87,7 +89,7 @@ export default function ProductPage() {
 
   return (
     <main className="min-h-screen bg-[#F5F5F5] px-4 pt-5 pb-32">
-      <div className="mb-4 flex items-center justify-between animate-[fadeIn_.3s_ease]">
+      <div className="mb-4 flex items-center justify-between">
         <button
           onClick={() => router.back()}
           className="rounded-full bg-white px-4 py-2 text-sm text-gray-600 shadow-[0_4px_16px_rgba(0,0,0,0.04)] transition-transform duration-200 active:scale-95"
@@ -109,8 +111,8 @@ export default function ProductPage() {
         </button>
       </div>
 
-      <div className="overflow-hidden rounded-[30px] bg-white shadow-[0_10px_30px_rgba(0,0,0,0.05)] animate-[fadeIn_.35s_ease]">
-        <div className="relative aspect-[3/4] bg-[#ECECEC] overflow-hidden">
+      <div className="overflow-hidden rounded-[24px] bg-white shadow-[0_10px_30px_rgba(0,0,0,0.05)]">
+        <div className="relative aspect-[3/4] overflow-hidden bg-[#ECECEC]">
           <img
             src={product.image}
             alt={product.name}
@@ -135,14 +137,14 @@ export default function ProductPage() {
             {product.name}
           </h1>
 
-          <div className="mt-3 flex items-center gap-2">
+          <div className="mt-3 flex items-end gap-2">
             {product.oldPrice && (
-              <span className="text-[13px] text-gray-400 line-through">
+              <span className="text-[13px] font-normal text-gray-400 line-through">
                 {product.oldPrice} ₽
               </span>
             )}
 
-            <span className="text-[20px] font-semibold text-black">
+            <span className="text-[21px] font-semibold tracking-[-0.02em] text-black">
               {product.price} ₽
             </span>
           </div>
@@ -155,7 +157,7 @@ export default function ProductPage() {
             {product.colors.map((c) => (
               <span
                 key={c}
-                className="rounded-full bg-[#F5F5F5] px-3 py-1.5 text-[12px] text-gray-600 transition-transform duration-200 hover:scale-[1.02]"
+                className="rounded-full bg-[#F5F5F5] px-3 py-1.5 text-[12px] text-gray-600"
               >
                 {c}
               </span>
@@ -164,21 +166,42 @@ export default function ProductPage() {
 
           <button
             onClick={() => setOpen(true)}
-            className="mt-6 w-full rounded-2xl bg-black py-3.5 text-sm font-medium text-white transition-all duration-200 hover:opacity-95 active:scale-[0.99]"
+            className="mt-6 w-full rounded-2xl bg-black py-3.5 text-sm font-medium text-white transition-all duration-200 active:scale-[0.99]"
           >
-            Выбрать размер и цвет
+            Выбрать параметры
           </button>
         </div>
       </div>
 
       {open && (
-        <div className="fixed inset-0 z-40 flex items-end bg-black/45 animate-[fadeIn_.2s_ease]">
-          <div className="w-full rounded-t-[30px] bg-white p-5 pb-6 shadow-2xl">
+        <div className="fixed inset-0 z-40 flex items-end bg-black/45">
+          <div className="w-full rounded-t-[28px] bg-white p-5 pb-6 shadow-2xl">
             <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-gray-300" />
 
             <h2 className="mb-4 text-[18px] font-medium text-black">
               Выбор параметров
             </h2>
+
+            <p className="mb-2 text-sm text-gray-500">Количество</p>
+            <div className="mb-5 flex items-center justify-between rounded-2xl border border-gray-200 px-4 py-3">
+              <button
+                onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-[#F5F5F5] text-lg text-black"
+              >
+                −
+              </button>
+
+              <span className="text-[16px] font-medium text-black">
+                {quantity}
+              </span>
+
+              <button
+                onClick={() => setQuantity((prev) => prev + 1)}
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-[#F5F5F5] text-lg text-black"
+              >
+                +
+              </button>
+            </div>
 
             <p className="mb-2 text-sm text-gray-500">Размер</p>
             <div className="mb-5 grid grid-cols-3 gap-2">
@@ -221,6 +244,13 @@ export default function ProductPage() {
               ))}
             </div>
 
+            <div className="mb-4 flex items-center justify-between rounded-2xl bg-[#F7F7F7] px-4 py-3">
+              <span className="text-sm text-gray-500">Итого</span>
+              <span className="text-[18px] font-semibold tracking-[-0.02em] text-black">
+                {product.price * quantity} ₽
+              </span>
+            </div>
+
             <div className="flex gap-2">
               <button
                 onClick={() => setOpen(false)}
@@ -233,25 +263,12 @@ export default function ProductPage() {
                 onClick={addToCart}
                 className="flex-1 rounded-2xl bg-black py-3.5 text-sm font-medium text-white transition-transform duration-200 active:scale-[0.99]"
               >
-                Добавить
+                Перейти к заказу
               </button>
             </div>
           </div>
         </div>
       )}
-
-      <style jsx global>{`
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-            transform: translateY(6px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-      `}</style>
 
       <BottomNav />
     </main>

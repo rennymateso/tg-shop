@@ -160,18 +160,18 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="mt-3 flex items-start gap-2">
-        <div className="relative flex-1 min-w-0" ref={brandMenuRef}>
+      <div className="mt-3 flex items-start justify-between gap-2">
+        <div className="relative shrink-0" ref={brandMenuRef}>
           <button
             type="button"
             onClick={() => setShowBrandMenu((prev) => !prev)}
-            className="w-full truncate rounded-full border border-gray-200 bg-white px-3 py-2 text-left text-[11px] text-gray-700 shadow-[0_4px_14px_rgba(0,0,0,0.04)]"
+            className="max-w-[170px] truncate rounded-full border border-gray-200 bg-white px-3 py-2 text-[11px] text-gray-700 shadow-[0_4px_14px_rgba(0,0,0,0.04)]"
           >
             {selectedBrand}
           </button>
 
           {showBrandMenu && (
-            <div className="absolute left-0 right-0 top-10 z-30 max-h-60 overflow-y-auto rounded-2xl border border-gray-100 bg-white p-1.5 shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
+            <div className="absolute left-0 top-10 z-30 w-52 max-h-60 overflow-y-auto rounded-2xl border border-gray-100 bg-white p-1.5 shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
               {brands.map((brand) => (
                 <button
                   key={brand}
@@ -234,7 +234,7 @@ export default function Home() {
       </div>
 
       {filteredProducts.length === 0 ? (
-        <div className="rounded-[28px] bg-white p-7 text-center shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
+        <div className="rounded-[24px] bg-white p-7 text-center shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
           <p className="text-[16px] font-medium text-black">Ничего не найдено</p>
           <p className="mt-2 text-sm text-gray-400">
             Попробуйте изменить фильтры
@@ -246,7 +246,7 @@ export default function Home() {
             <div
               key={p.id}
               onClick={() => router.push(`/product?id=${p.id}`)}
-              className="group cursor-pointer overflow-hidden rounded-[26px] bg-white shadow-[0_10px_28px_rgba(0,0,0,0.05)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(0,0,0,0.08)] active:scale-[0.985]"
+              className="group cursor-pointer overflow-hidden rounded-[20px] bg-white shadow-[0_10px_28px_rgba(0,0,0,0.05)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(0,0,0,0.08)] active:scale-[0.985]"
             >
               <div className="relative aspect-[3/4] overflow-hidden bg-[#EAEAEA]">
                 <img
@@ -291,16 +291,41 @@ export default function Home() {
                   {p.name}
                 </h3>
 
-                <div className="mt-2 flex items-center gap-2">
-                  {p.oldPrice && (
-                    <span className="text-[12px] text-gray-400 line-through">
-                      {p.oldPrice} ₽
-                    </span>
-                  )}
+                <div className="mt-3 flex items-end justify-between gap-2">
+                  <div className="flex items-end gap-2">
+                    {p.oldPrice && (
+                      <span className="text-[12px] font-normal text-gray-400 line-through">
+                        {p.oldPrice} ₽
+                      </span>
+                    )}
 
-                  <span className="text-[15px] font-semibold text-black">
-                    {p.price} ₽
-                  </span>
+                    <span className="text-[17px] font-semibold tracking-[-0.02em] text-black">
+                      {p.price} ₽
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      router.push(`/product?id=${p.id}`);
+                    }}
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#F5F5F5] transition-transform duration-200 active:scale-90"
+                  >
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="black"
+                      strokeWidth="1.7"
+                    >
+                      <path d="M6 6h15l-1.5 9h-12z" />
+                      <path d="M6 6L5 3H2" />
+                      <circle cx="9" cy="20" r="1" />
+                      <circle cx="18" cy="20" r="1" />
+                    </svg>
+                  </button>
                 </div>
               </div>
             </div>
