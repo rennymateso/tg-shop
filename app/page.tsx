@@ -246,13 +246,13 @@ export default function Home() {
             <div
               key={p.id}
               onClick={() => router.push(`/product?id=${p.id}`)}
-              className="group cursor-pointer overflow-hidden rounded-[20px] bg-white shadow-[0_10px_28px_rgba(0,0,0,0.05)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(0,0,0,0.08)] active:scale-[0.985]"
+              className="group cursor-pointer overflow-hidden rounded-[20px] bg-white shadow-[0_10px_28px_rgba(0,0,0,0.05)] transition-all duration-300 active:scale-[0.985]"
             >
               <div className="relative aspect-[3/4] overflow-hidden bg-[#EAEAEA]">
                 <img
                   src={p.image}
                   alt={p.name}
-                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                  className="h-full w-full object-cover"
                 />
 
                 <div className="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-medium text-black backdrop-blur shadow-sm">
@@ -280,19 +280,23 @@ export default function Home() {
                 </button>
               </div>
 
-              <div className="p-3.5">
-                <div className="mb-1.5 flex items-center gap-2 text-[11px] text-gray-400">
-                  <span className="uppercase tracking-[0.14em]">{p.brand}</span>
-                  <span>•</span>
-                  <span>{p.category}</span>
+              <div className="flex min-h-[190px] flex-col p-3.5">
+                <div className="h-[34px] overflow-hidden text-[10px] text-gray-400">
+                  <div className="flex items-start gap-2 leading-[1.25]">
+                    <span className="max-w-[78px] uppercase tracking-[0.14em] break-words">
+                      {p.brand}
+                    </span>
+                    <span className="shrink-0">•</span>
+                    <span className="truncate">{p.category}</span>
+                  </div>
                 </div>
 
-                <h3 className="min-h-[38px] text-[14px] font-medium leading-[1.3] text-black">
+                <h3 className="mt-2 min-h-[56px] text-[14px] font-medium leading-[1.3] text-black">
                   {p.name}
                 </h3>
 
-                <div className="mt-3 flex items-end justify-between gap-2">
-                  <div className="flex items-end gap-2">
+                <div className="mt-auto flex items-end justify-between gap-2">
+                  <div className="flex min-h-[32px] items-end gap-2">
                     {p.oldPrice && (
                       <span className="text-[12px] font-normal text-gray-400 line-through">
                         {p.oldPrice} ₽
