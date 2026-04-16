@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import BottomNav from "../components/BottomNav";
+import { products } from "../data/products";
 
 type CartItem = {
   id: string;
@@ -31,7 +33,10 @@ export default function CartPage() {
     localStorage.setItem("cart", JSON.stringify(newCart));
   };
 
-  const total = cart.reduce((sum, item) => sum + item.price, 0);
+  const total = useMemo(
+    () => cart.reduce((sum, item) => sum + item.price, 0),
+    [cart]
+  );
 
   const submitOrder = () => {
     if (!name || !phone) {
@@ -47,99 +52,162 @@ export default function CartPage() {
     };
 
     console.log("ORDER:", order);
-
     alert("Заказ оформлен!");
 
     localStorage.removeItem("cart");
     setCart([]);
     setShowCheckout(false);
-
     router.push("/");
   };
 
+  const getProductById = (id: string) => {
+    return products.find((item) => item.id === id);
+  };
+
   return (
-    <main className="min-h-screen bg-[#F5F5F5] p-4 pb-24">
+    <main className="min-h-screen bg-[#F5F5F5] px-4 pt-5 pb-32">
+      <div className="mb-5 flex items-center justify-between animate-[fadeIn_.3s_ease]">
+        <button
+          onClick={() => router.back()}
+          className="rounded-full bg-white px-4 py-2 text-sm text-gray-600 shadow-[0_4px_16px_rgba(0,0,0,0.04)] transition-transform duration-200 active:scale-95"
+        >
+          ← Назад
+        </button>
 
-      {/* HEADER */}
-      <h1 className="text-xl font-semibold mb-4">
-        Корзина
-      </h1>
+        <h1 className="text-[20px] font-medium">Корзина</h1>
 
-      {/* EMPTY */}
+        <div className="w-[86px]" />
+      </div>
+
       {cart.length === 0 && (
-        <div className="bg-white p-6 rounded-2xl text-center">
+        <div className="rounded-[28px] bg-white p-7 text-center shadow-[0_8px_28px_rgba(0,0,0,0.05)] animate-[fadeIn_.35s_ease]">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#F3F3F3]">
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="black"
+              strokeWidth="1.6"
+            >
+              <path d="M6 6h15l-1.5 9h-12z" />
+              <path d="M6 6L5 3H2" />
+              <circle cx="9" cy="20" r="1" />
+              <circle cx="18" cy="20" r="1" />
+            </svg>
+          </div>
 
-          <p className="text-gray-500">
+          <p className="mt-4 text-[16px] font-medium text-black">
             Корзина пустая
           </p>
 
-          <p className="text-sm text-gray-400 mt-2">
+          <p className="mt-2 text-sm text-gray-400">
             Добавьте товары из каталога
           </p>
 
           <button
             onClick={() => router.push("/")}
-            className="mt-4 bg-black text-white px-4 py-2 rounded-xl"
+            className="mt-5 rounded-2xl bg-black px-5 py-3 text-sm font-medium text-white transition-transform duration-200 active:scale-[0.99]"
           >
             Перейти в каталог
           </button>
-
         </div>
       )}
 
-      {/* ITEMS */}
-      <div className="space-y-3">
-        {cart.map((item, i) => (
-          <div key={i} className="bg-white p-4 rounded-2xl">
+      <div className="space-y-4">
+        {cart.map((item, i) => {
+          const product = getProductById(item.id);
 
-            <h2 className="font-medium">{item.name}</h2>
+          return (
+            <div
+              key={i}
+              className="rounded-[28px] bg-white p-4 shadow-[0_8px_28px_rgba(0,0,0,0.05)] transition-all duration-300 hover:shadow-[0_12px_30px_rgba(0,0,0,0.07)] animate-[fadeIn_.35s_ease]"
+            >
+              <div className="flex gap-4">
+                <div className="w-[88px] shrink-0 overflow-hidden rounded-[20px] bg-[#ECECEC] aspect-[3/4]">
+                  <img
+                    src={product?.image || "/products/product-1.jpg"}
+                    alt={item.name}
+                    className="h-full w-full object-cover transition-transform duration-500 hover:scale-[1.03]"
+                  />
+                </div>
 
-            <p className="text-sm text-gray-500 mt-1">
-              {item.size && `Размер: ${item.size}`}{" "}
-              {item.color && `| Цвет: ${item.color}`}
-            </p>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="mb-1 flex items-center gap-2 text-[11px] text-gray-400">
+                        <span className="uppercase tracking-[0.14em]">
+                          {product?.brand || "MONTREAUX"}
+                        </span>
+                        {product?.category && (
+                          <>
+                            <span>•</span>
+                            <span>{product.category}</span>
+                          </>
+                        )}
+                      </div>
 
-            <div className="flex justify-between items-center mt-2">
-              <span className="font-bold">{item.price} ₽</span>
+                      <h2 className="text-[15px] font-medium leading-[1.3] text-black">
+                        {item.name}
+                      </h2>
+                    </div>
 
-              <button
-                onClick={() => removeItem(i)}
-                className="text-red-500 text-sm"
-              >
-                удалить
-              </button>
+                    <button
+                      onClick={() => removeItem(i)}
+                      className="whitespace-nowrap text-xs text-gray-400 transition-colors duration-200 hover:text-black"
+                    >
+                      удалить
+                    </button>
+                  </div>
+
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {item.size && (
+                      <span className="rounded-full bg-[#F3F3F3] px-2.5 py-1 text-[11px] text-gray-600">
+                        Размер: {item.size}
+                      </span>
+                    )}
+
+                    {item.color && (
+                      <span className="rounded-full bg-[#F3F3F3] px-2.5 py-1 text-[11px] text-gray-600">
+                        Цвет: {item.color}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="mt-4 text-[16px] font-semibold text-black">
+                    {item.price} ₽
+                  </div>
+                </div>
+              </div>
             </div>
-
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      {/* TOTAL BUTTON */}
       {cart.length > 0 && !showCheckout && (
-        <div className="fixed bottom-16 left-0 right-0 bg-white border-t p-4">
-
-          <div className="flex justify-between mb-2">
-            <span>Итого:</span>
-            <span className="font-bold">{total} ₽</span>
+        <div className="fixed bottom-24 left-4 right-4 z-40 rounded-[28px] border border-white bg-white p-4 shadow-[0_10px_30px_rgba(0,0,0,0.08)] animate-[fadeIn_.25s_ease]">
+          <div className="mb-3 flex items-center justify-between">
+            <span className="text-sm text-gray-500">Итого</span>
+            <span className="text-[18px] font-semibold text-black">
+              {total} ₽
+            </span>
           </div>
 
           <button
             onClick={() => setShowCheckout(true)}
-            className="w-full bg-black text-white py-3 rounded-xl"
+            className="w-full rounded-2xl bg-black py-3.5 text-sm font-medium text-white transition-transform duration-200 active:scale-[0.99]"
           >
             Оформить заказ
           </button>
-
         </div>
       )}
 
-      {/* CHECKOUT FORM */}
       {showCheckout && (
-        <div className="fixed inset-0 bg-black/50 flex items-end">
+        <div className="fixed inset-0 z-40 flex items-end bg-black/45 animate-[fadeIn_.2s_ease]">
+          <div className="w-full rounded-t-[30px] bg-white p-5 pb-6 shadow-2xl">
+            <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-gray-300" />
 
-          <div className="bg-white w-full p-4 rounded-t-2xl">
-
-            <h2 className="text-lg font-semibold mb-3">
+            <h2 className="mb-4 text-[18px] font-medium text-black">
               Оформление заказа
             </h2>
 
@@ -147,60 +215,49 @@ export default function CartPage() {
               placeholder="Ваше имя"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full p-3 bg-gray-100 rounded-xl mb-2"
+              className="mb-3 w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
             />
 
             <input
               placeholder="Телефон"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              className="w-full p-3 bg-gray-100 rounded-xl mb-4"
+              className="mb-4 w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
             />
 
             <div className="flex gap-2">
-
               <button
                 onClick={() => setShowCheckout(false)}
-                className="flex-1 bg-gray-200 py-3 rounded-xl"
+                className="flex-1 rounded-2xl bg-gray-100 py-3.5 text-sm font-medium text-black transition-transform duration-200 active:scale-[0.99]"
               >
                 Назад
               </button>
 
               <button
                 onClick={submitOrder}
-                className="flex-1 bg-black text-white py-3 rounded-xl"
+                className="flex-1 rounded-2xl bg-black py-3.5 text-sm font-medium text-white transition-transform duration-200 active:scale-[0.99]"
               >
                 Подтвердить
               </button>
-
             </div>
-
           </div>
-
         </div>
       )}
 
-      {/* BOTTOM MENU */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around p-3 text-sm">
+      <style jsx global>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(6px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
 
-        <button onClick={() => router.push("/")}>
-          Главная
-        </button>
-
-        <button onClick={() => router.push("/favorites")}>
-          Избранное
-        </button>
-
-        <button onClick={() => router.push("/cart")}>
-          Корзина
-        </button>
-
-        <button onClick={() => router.push("/profile")}>
-          Профиль
-        </button>
-
-      </div>
-
+      <BottomNav />
     </main>
   );
 }
