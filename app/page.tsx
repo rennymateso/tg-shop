@@ -65,13 +65,9 @@ export default function Home() {
   }, []);
 
   const toggleFavorite = (id: string) => {
-    let updated: string[];
-
-    if (favorites.includes(id)) {
-      updated = favorites.filter((i) => i !== id);
-    } else {
-      updated = [...favorites, id];
-    }
+    const updated = favorites.includes(id)
+      ? favorites.filter((i) => i !== id)
+      : [...favorites, id];
 
     setFavorites(updated);
     localStorage.setItem("favorites", JSON.stringify(updated));
@@ -106,7 +102,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-[#F5F5F5] px-4 pt-6 pb-32">
-      <div className="text-center animate-[fadeIn_.35s_ease]">
+      <div className="text-center">
         <p className="text-[11px] uppercase tracking-[0.28em] text-gray-400">
           Menswear
         </p>
@@ -120,8 +116,8 @@ export default function Home() {
         </p>
       </div>
 
-      <div className="mt-6 animate-[fadeIn_.4s_ease]">
-        <div className="rounded-[22px] bg-white px-4 py-3 shadow-[0_8px_24px_rgba(0,0,0,0.04)] transition-shadow duration-300 focus-within:shadow-[0_10px_30px_rgba(0,0,0,0.07)]">
+      <div className="mt-6">
+        <div className="rounded-[22px] bg-white px-4 py-3 shadow-[0_8px_24px_rgba(0,0,0,0.04)]">
           <div className="flex items-center gap-3">
             <svg
               width="18"
@@ -146,7 +142,7 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="mt-5 overflow-x-auto animate-[fadeIn_.45s_ease]">
+      <div className="mt-5 overflow-x-auto">
         <div className="flex min-w-max gap-2">
           {categories.map((category) => (
             <button
@@ -155,7 +151,7 @@ export default function Home() {
               className={`rounded-full px-3 py-2 text-[12px] border transition-all duration-200 active:scale-95 ${
                 selectedCategory === category
                   ? "bg-black text-white border-black"
-                  : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
+                  : "bg-white text-gray-600 border-gray-200"
               }`}
             >
               {category}
@@ -164,77 +160,73 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="mt-4 flex items-center justify-between gap-3 animate-[fadeIn_.5s_ease]">
+      <div className="mt-3 flex items-start gap-2">
         <div className="relative flex-1 min-w-0" ref={brandMenuRef}>
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
-            <button
-              type="button"
-              onClick={() => setShowBrandMenu((prev) => !prev)}
-              className="shrink-0 bg-white border border-gray-200 rounded-full px-3 py-2 text-[12px] text-gray-700 shadow-[0_6px_18px_rgba(0,0,0,0.04)] transition-all duration-200 hover:border-gray-300 active:scale-95"
-            >
-              {selectedBrand}
-            </button>
+          <button
+            type="button"
+            onClick={() => setShowBrandMenu((prev) => !prev)}
+            className="w-full truncate rounded-full border border-gray-200 bg-white px-3 py-2 text-left text-[11px] text-gray-700 shadow-[0_4px_14px_rgba(0,0,0,0.04)]"
+          >
+            {selectedBrand}
+          </button>
 
-            {showBrandMenu && (
-              <div className="flex items-center gap-2 min-w-max animate-[fadeIn_.2s_ease]">
-                {brands.map((brand) => (
-                  <button
-                    key={brand}
-                    type="button"
-                    onClick={() => {
-                      setSelectedBrand(brand);
-                      setShowBrandMenu(false);
-                    }}
-                    className={`shrink-0 rounded-full px-3 py-2 text-[12px] border transition-all duration-200 active:scale-95 ${
-                      selectedBrand === brand
-                        ? "bg-black text-white border-black"
-                        : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
-                    }`}
-                  >
-                    {brand}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          {showBrandMenu && (
+            <div className="absolute left-0 right-0 top-10 z-30 max-h-60 overflow-y-auto rounded-2xl border border-gray-100 bg-white p-1.5 shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
+              {brands.map((brand) => (
+                <button
+                  key={brand}
+                  type="button"
+                  onClick={() => {
+                    setSelectedBrand(brand);
+                    setShowBrandMenu(false);
+                  }}
+                  className={`w-full rounded-xl px-3 py-2 text-left text-[12px] ${
+                    selectedBrand === brand
+                      ? "bg-black text-white"
+                      : "text-gray-700 hover:bg-gray-50"
+                  }`}
+                >
+                  {brand}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="relative shrink-0" ref={sortMenuRef}>
-          <div className="flex items-center justify-end gap-2 overflow-visible">
-            {showSortMenu && (
-              <div className="flex items-center gap-2 min-w-max mr-2 animate-[fadeIn_.2s_ease]">
-                {sortOptions.map((option) => (
-                  <button
-                    key={option}
-                    type="button"
-                    onClick={() => {
-                      setSelectedSort(option);
-                      setShowSortMenu(false);
-                    }}
-                    className={`shrink-0 rounded-full px-3 py-2 text-[12px] border transition-all duration-200 active:scale-95 ${
-                      selectedSort === option
-                        ? "bg-black text-white border-black"
-                        : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
-                    }`}
-                  >
-                    {option}
-                  </button>
-                ))}
-              </div>
-            )}
+          <button
+            type="button"
+            onClick={() => setShowSortMenu((prev) => !prev)}
+            className="rounded-full border border-gray-200 bg-white px-3 py-2 text-[11px] text-gray-700 shadow-[0_4px_14px_rgba(0,0,0,0.04)]"
+          >
+            Сортировка
+          </button>
 
-            <button
-              type="button"
-              onClick={() => setShowSortMenu((prev) => !prev)}
-              className="shrink-0 bg-white border border-gray-200 rounded-full px-3 py-2 text-[12px] text-gray-700 shadow-[0_6px_18px_rgba(0,0,0,0.04)] transition-all duration-200 hover:border-gray-300 active:scale-95"
-            >
-              Сортировка
-            </button>
-          </div>
+          {showSortMenu && (
+            <div className="absolute right-0 top-10 z-30 w-40 rounded-2xl border border-gray-100 bg-white p-1.5 shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
+              {sortOptions.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => {
+                    setSelectedSort(option);
+                    setShowSortMenu(false);
+                  }}
+                  className={`w-full rounded-xl px-3 py-2 text-left text-[12px] ${
+                    selectedSort === option
+                      ? "bg-black text-white"
+                      : "text-gray-700 hover:bg-gray-50"
+                  }`}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
-      <div className="mt-7 mb-4 flex items-center justify-between animate-[fadeIn_.55s_ease]">
+      <div className="mt-7 mb-4 flex items-center justify-between">
         <h2 className="text-[17px] font-medium text-black">Подборка</h2>
         <span className="text-[12px] text-gray-400">
           {filteredProducts.length} товара
@@ -242,9 +234,9 @@ export default function Home() {
       </div>
 
       {filteredProducts.length === 0 ? (
-        <div className="bg-white rounded-[28px] p-7 text-center shadow-[0_8px_28px_rgba(0,0,0,0.05)] animate-[fadeIn_.25s_ease]">
+        <div className="rounded-[28px] bg-white p-7 text-center shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
           <p className="text-[16px] font-medium text-black">Ничего не найдено</p>
-          <p className="text-sm text-gray-400 mt-2">
+          <p className="mt-2 text-sm text-gray-400">
             Попробуйте изменить фильтры
           </p>
         </div>
@@ -256,7 +248,7 @@ export default function Home() {
               onClick={() => router.push(`/product?id=${p.id}`)}
               className="group cursor-pointer overflow-hidden rounded-[26px] bg-white shadow-[0_10px_28px_rgba(0,0,0,0.05)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(0,0,0,0.08)] active:scale-[0.985]"
             >
-              <div className="relative aspect-[3/4] bg-[#EAEAEA] overflow-hidden">
+              <div className="relative aspect-[3/4] overflow-hidden bg-[#EAEAEA]">
                 <img
                   src={p.image}
                   alt={p.name}
@@ -289,7 +281,7 @@ export default function Home() {
               </div>
 
               <div className="p-3.5">
-                <div className="flex items-center gap-2 mb-1.5 text-[11px] text-gray-400">
+                <div className="mb-1.5 flex items-center gap-2 text-[11px] text-gray-400">
                   <span className="uppercase tracking-[0.14em]">{p.brand}</span>
                   <span>•</span>
                   <span>{p.category}</span>
@@ -315,26 +307,6 @@ export default function Home() {
           ))}
         </div>
       )}
-
-      <style jsx global>{`
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-            transform: translateY(6px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        .no-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-        .no-scrollbar {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-      `}</style>
 
       <BottomNav />
     </main>
