@@ -16,7 +16,7 @@ const brands = [
   "Essential Studio",
 ] as const;
 const sortOptions = ["По умолчанию", "Сначала дешевле", "Сначала дороже"] as const;
-const badgeFilters = ["Все", "В наличии", "Из-за рубежа", "Скидки"] as const;
+const badgeFilters = ["Все", "Новинки", "В наличии", "Из-за рубежа", "Скидки"] as const;
 
 type Category = (typeof categories)[number];
 type Brand = (typeof brands)[number];
@@ -97,6 +97,7 @@ export default function Home() {
       const matchesBadge =
         selectedBadge === "Все" ||
         (selectedBadge === "Скидки" && item.badge === "Скидка") ||
+        (selectedBadge === "Новинки" && item.badge === "Новинка") ||
         item.badge === selectedBadge;
 
       return matchesCategory && matchesBrand && matchesSearch && matchesBadge;
@@ -343,9 +344,11 @@ export default function Home() {
                         {p.price} ₽
                       </span>
 
-                      <span className="rounded-full bg-[#E8F7EE] px-1.5 py-0.5 text-[10px] font-medium text-[#16A34A]">
-                        -{discountPercent}%
-                      </span>
+                      {discountPercent > 0 && (
+                        <span className="rounded-full bg-[#E8F7EE] px-1.5 py-0.5 text-[10px] font-medium text-[#16A34A]">
+                          -{discountPercent}%
+                        </span>
+                      )}
                     </div>
 
                     <button
