@@ -2,12 +2,19 @@ export type Product = {
   id: string;
   name: string;
   brand:
-    | "MONTREAUX"
-    | "Premium Line"
-    | "Classic Line"
-    | "Urban Tailor"
-    | "North District"
-    | "Essential Studio";
+    | "Lacoste"
+    | "Polo Ralph Lauren"
+    | "Tommy Hilfiger"
+    | "Calvin Klein"
+    | "GANT"
+    | "BOSS"
+    | "Emporio Armani"
+    | "Armani Exchange"
+    | "Beymen Club"
+    | "Loro Piana"
+    | "Brunello Cucinelli"
+    | "BORZ"
+    | "Massimo Carino";
   price: number;
   oldPrice: number | null;
   badge: "Новинка" | "Скидка" | "В наличии" | "Из-за рубежа";
@@ -23,7 +30,7 @@ export const products: Product[] = [
   {
     id: "1",
     name: "Поло Premium",
-    brand: "Premium Line",
+    brand: "Lacoste",
     price: 3500,
     oldPrice: 4500,
     badge: "Новинка",
@@ -38,7 +45,7 @@ export const products: Product[] = [
   {
     id: "2",
     name: "Поло Classic",
-    brand: "Classic Line",
+    brand: "Polo Ralph Lauren",
     price: 3900,
     oldPrice: 4900,
     badge: "Скидка",
@@ -53,7 +60,7 @@ export const products: Product[] = [
   {
     id: "3",
     name: "Поло Black",
-    brand: "Urban Tailor",
+    brand: "BORZ",
     price: 5200,
     oldPrice: 6500,
     badge: "В наличии",
@@ -68,7 +75,7 @@ export const products: Product[] = [
   {
     id: "4",
     name: "Поло White",
-    brand: "Essential Studio",
+    brand: "Massimo Carino",
     price: 2900,
     oldPrice: 3900,
     badge: "Из-за рубежа",

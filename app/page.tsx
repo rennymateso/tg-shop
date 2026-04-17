@@ -8,12 +8,19 @@ import { products } from "./data/products";
 const categories = ["Все", "Футболки", "Поло", "Джинсы", "Брюки", "Костюмы"] as const;
 const brands = [
   "Все бренды",
-  "MONTREAUX",
-  "Premium Line",
-  "Classic Line",
-  "Urban Tailor",
-  "North District",
-  "Essential Studio",
+  "Lacoste",
+  "Polo Ralph Lauren",
+  "Tommy Hilfiger",
+  "Calvin Klein",
+  "GANT",
+  "BOSS",
+  "Emporio Armani",
+  "Armani Exchange",
+  "Beymen Club",
+  "Loro Piana",
+  "Brunello Cucinelli",
+  "BORZ",
+  "Massimo Carino",
 ] as const;
 const sortOptions = ["По умолчанию", "Сначала дешевле", "Сначала дороже"] as const;
 const badgeFilters = ["Все", "Новинки", "В наличии", "Из-за рубежа", "Скидки"] as const;
