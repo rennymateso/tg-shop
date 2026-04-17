@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import BottomNav from "../components/BottomNav";
 import { products } from "../data/products";
 
-type DraftItem = {
+type CartItem = {
   id: string;
   name: string;
   price: number;
@@ -71,7 +71,6 @@ export default function ProductPageClient() {
   };
 
   const article = product ? `ART-${product.id.padStart(4, "0")}` : "";
-
   const description = product?.description || "";
 
   const canOrder = selectedSizes.length > 0 && selectedColors.length > 0;
@@ -88,14 +87,16 @@ export default function ProductPageClient() {
     );
   };
 
-  const goToCheckout = () => {
+  const addToCart = () => {
     if (!product || !id || !canOrder) return;
 
-    const draft: DraftItem[] = [];
+    const existingCart: CartItem[] = JSON.parse(localStorage.getItem("cart") || "[]");
+
+    const newItems: CartItem[] = [];
 
     selectedSizes.forEach((size) => {
       selectedColors.forEach((color) => {
-        draft.push({
+        newItems.push({
           id,
           name: product.name,
           price: product.price,
@@ -106,8 +107,25 @@ export default function ProductPageClient() {
       });
     });
 
-    localStorage.setItem("checkoutDraft", JSON.stringify(draft));
-    router.push("/checkout");
+    const updatedCart = [...existingCart];
+
+    newItems.forEach((newItem) => {
+      const existingIndex = updatedCart.findIndex(
+        (item) =>
+          item.id === newItem.id &&
+          item.size === newItem.size &&
+          item.color === newItem.color
+      );
+
+      if (existingIndex >= 0) {
+        updatedCart[existingIndex].quantity += newItem.quantity;
+      } else {
+        updatedCart.push(newItem);
+      }
+    });
+
+    localStorage.setItem("cart", JSON.stringify(updatedCart));
+    router.push("/cart");
   };
 
   if (!product) {
@@ -187,14 +205,14 @@ export default function ProductPageClient() {
             </div>
           </div>
 
-          <div className="mb-3 flex items-end gap-2">
+          <div className="mb-3 flex items-center gap-2">
             {product.oldPrice && (
-              <span className="text-[13px] font-normal text-gray-400 line-through">
+              <span className="text-[14px] font-normal leading-none text-gray-400 line-through">
                 {product.oldPrice} ₽
               </span>
             )}
 
-            <span className="text-[21px] font-semibold tracking-[-0.02em] text-black">
+            <span className="text-[21px] font-semibold leading-none tracking-[-0.02em] text-black">
               {product.price} ₽
             </span>
           </div>
@@ -293,23 +311,23 @@ export default function ProductPageClient() {
           </div>
 
           <div className="mt-6 flex items-center justify-between rounded-2xl bg-[#F7F7F7] px-4 py-3">
-            <span className="text-sm text-gray-500">Товаров к оформлению</span>
+            <span className="text-sm text-gray-500">Товаров к добавлению</span>
             <span className="text-[18px] font-semibold tracking-[-0.02em] text-black">
               {selectedSizes.length * selectedColors.length || 0}
             </span>
           </div>
 
-          <div className="mt-5 flex gap-2">
+          <div className="mt-5">
             <button
-              onClick={goToCheckout}
+              onClick={addToCart}
               disabled={!canOrder}
-              className={`flex-1 rounded-2xl py-3.5 text-sm font-medium transition-all duration-200 ${
+              className={`w-full rounded-2xl py-3.5 text-sm font-medium transition-all duration-200 ${
                 canOrder
                   ? "bg-black text-white active:scale-[0.99]"
                   : "bg-gray-200 text-gray-500"
               }`}
             >
-              Оформить заказ
+              Добавить в корзину
             </button>
           </div>
         </div>

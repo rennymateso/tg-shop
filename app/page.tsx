@@ -101,7 +101,7 @@ export default function Home() {
   }, [selectedCategory, selectedBrand, selectedSort, search]);
 
   return (
-    <main className="min-h-screen bg-[#F5F5F5] px-4 pt-6 pb-32">
+    <main className="min-h-screen bg-[#F5F5F5] px-3 pt-6 pb-32">
       <div className="text-center">
         <p className="text-[11px] uppercase tracking-[0.28em] text-gray-400">
           Menswear
@@ -241,7 +241,7 @@ export default function Home() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-3">
           {filteredProducts.map((p) => (
             <div
               key={p.id}
@@ -280,10 +280,10 @@ export default function Home() {
                 </button>
               </div>
 
-              <div className="flex min-h-[190px] flex-col p-3.5">
-                <div className="h-[34px] overflow-hidden text-[10px] text-gray-400">
-                  <div className="flex items-start gap-2 leading-[1.25]">
-                    <span className="max-w-[90px] uppercase tracking-[0.14em] break-words">
+              <div className="flex min-h-[150px] flex-col p-3">
+                <div className="h-[28px] overflow-hidden text-[10px] text-gray-400">
+                  <div className="flex items-start gap-2 leading-[1.2]">
+                    <span className="max-w-[92px] uppercase tracking-[0.14em] break-words">
                       {p.brand}
                     </span>
                     <span className="shrink-0">•</span>
@@ -291,19 +291,19 @@ export default function Home() {
                   </div>
                 </div>
 
-                <h3 className="mt-2 min-h-[56px] text-[14px] font-medium leading-[1.3] text-black">
+                <h3 className="mt-1.5 min-h-[40px] text-[14px] font-medium leading-[1.25] text-black">
                   {p.name}
                 </h3>
 
-                <div className="mt-auto flex items-end justify-between gap-2">
-                  <div className="flex min-h-[32px] items-end gap-2">
+                <div className="mt-auto flex items-center justify-between gap-2 pt-2">
+                  <div className="flex items-center gap-2">
                     {p.oldPrice && (
-                      <span className="text-[12px] font-normal text-gray-400 line-through">
+                      <span className="text-[12px] font-normal leading-none text-gray-400 line-through">
                         {p.oldPrice} ₽
                       </span>
                     )}
 
-                    <span className="text-[17px] font-semibold tracking-[-0.02em] text-black">
+                    <span className="text-[16px] font-semibold leading-none tracking-[-0.02em] text-black">
                       {p.price} ₽
                     </span>
                   </div>
@@ -314,11 +314,11 @@ export default function Home() {
                       e.stopPropagation();
                       router.push(`/product?id=${p.id}`);
                     }}
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#F5F5F5] transition-transform duration-200 active:scale-90"
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#F5F5F5] transition-transform duration-200 active:scale-90"
                   >
                     <svg
-                      width="18"
-                      height="18"
+                      width="17"
+                      height="17"
                       viewBox="0 0 24 24"
                       fill="none"
                       stroke="black"

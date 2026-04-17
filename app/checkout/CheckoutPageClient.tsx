@@ -32,16 +32,15 @@ export default function CheckoutPageClient() {
   const paymentStatus = searchParams.get("payment");
 
   useEffect(() => {
-    const draft = JSON.parse(localStorage.getItem("checkoutDraft") || "[]");
-    if (Array.isArray(draft)) {
-      setItems(draft);
+    const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+    if (Array.isArray(cart)) {
+      setItems(cart);
     }
   }, []);
 
   useEffect(() => {
     if (paymentStatus === "success") {
       localStorage.removeItem("cart");
-      localStorage.removeItem("checkoutDraft");
       setItems([]);
     }
   }, [paymentStatus]);
@@ -51,14 +50,14 @@ export default function CheckoutPageClient() {
     const updated = [...items];
     updated[index] = { ...updated[index], quantity: safeQty };
     setItems(updated);
-    localStorage.setItem("checkoutDraft", JSON.stringify(updated));
+    localStorage.setItem("cart", JSON.stringify(updated));
   };
 
   const removeItem = (index: number) => {
     const updated = [...items];
     updated.splice(index, 1);
     setItems(updated);
-    localStorage.setItem("checkoutDraft", JSON.stringify(updated));
+    localStorage.setItem("cart", JSON.stringify(updated));
   };
 
   const totalItems = useMemo(
@@ -86,7 +85,6 @@ export default function CheckoutPageClient() {
     }
 
     localStorage.removeItem("cart");
-    localStorage.removeItem("checkoutDraft");
     alert("Заказ оформлен. Менеджер свяжется с вами.");
     router.push("/checkout?payment=success");
   };
