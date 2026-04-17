@@ -10,7 +10,7 @@ export type Product = {
     | "Essential Studio";
   price: number;
   oldPrice: number | null;
-  badge: string;
+  badge: "Новинка" | "Скидка" | "В наличии" | "Из-за рубежа";
   image: string;
   type: "top" | "bottom";
   category: "Футболки" | "Поло" | "Джинсы" | "Брюки" | "Костюмы";
@@ -39,8 +39,8 @@ export const products: Product[] = [
     id: "2",
     name: "Поло Classic",
     brand: "Classic Line",
-    price: 4500,
-    oldPrice: null,
+    price: 3900,
+    oldPrice: 4900,
     badge: "Скидка",
     image: "/products/product-2.jpg",
     type: "top",
@@ -54,8 +54,8 @@ export const products: Product[] = [
     id: "3",
     name: "Поло Black",
     brand: "Urban Tailor",
-    price: 6500,
-    oldPrice: null,
+    price: 5200,
+    oldPrice: 6500,
     badge: "В наличии",
     image: "/products/product-3.jpg",
     type: "top",
@@ -70,8 +70,8 @@ export const products: Product[] = [
     name: "Поло White",
     brand: "Essential Studio",
     price: 2900,
-    oldPrice: null,
-    badge: "Доступно",
+    oldPrice: 3900,
+    badge: "Из-за рубежа",
     image: "/products/product-4.jpg",
     type: "top",
     category: "Поло",

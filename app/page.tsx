@@ -16,10 +16,17 @@ const brands = [
   "Essential Studio",
 ] as const;
 const sortOptions = ["По умолчанию", "Сначала дешевле", "Сначала дороже"] as const;
+const badgeFilters = ["Все", "В наличии", "Из-за рубежа", "Скидки"] as const;
 
 type Category = (typeof categories)[number];
 type Brand = (typeof brands)[number];
 type SortOption = (typeof sortOptions)[number];
+type BadgeFilter = (typeof badgeFilters)[number];
+
+function getDiscountPercent(oldPrice: number | null, price: number) {
+  if (!oldPrice || oldPrice <= price) return 0;
+  return Math.round(((oldPrice - price) / oldPrice) * 100);
+}
 
 export default function Home() {
   const router = useRouter();
@@ -28,6 +35,7 @@ export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState<Category>("Все");
   const [selectedBrand, setSelectedBrand] = useState<Brand>("Все бренды");
   const [selectedSort, setSelectedSort] = useState<SortOption>("По умолчанию");
+  const [selectedBadge, setSelectedBadge] = useState<BadgeFilter>("Все");
   const [search, setSearch] = useState("");
 
   const [showSortMenu, setShowSortMenu] = useState(false);
@@ -86,7 +94,12 @@ export default function Home() {
         item.brand.toLowerCase().includes(search.toLowerCase()) ||
         item.category.toLowerCase().includes(search.toLowerCase());
 
-      return matchesCategory && matchesBrand && matchesSearch;
+      const matchesBadge =
+        selectedBadge === "Все" ||
+        (selectedBadge === "Скидки" && item.badge === "Скидка") ||
+        item.badge === selectedBadge;
+
+      return matchesCategory && matchesBrand && matchesSearch && matchesBadge;
     });
 
     if (selectedSort === "Сначала дешевле") {
@@ -98,7 +111,7 @@ export default function Home() {
     }
 
     return result;
-  }, [selectedCategory, selectedBrand, selectedSort, search]);
+  }, [selectedCategory, selectedBrand, selectedSort, selectedBadge, search]);
 
   return (
     <main className="min-h-screen bg-[#F5F5F5] px-3 pt-4 pb-32">
@@ -170,7 +183,7 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="mt-3 flex items-start justify-between gap-2">
+      <div className="mt-3 flex items-start gap-2 overflow-x-auto pb-1">
         <div className="relative shrink-0" ref={brandMenuRef}>
           <button
             type="button"
@@ -202,6 +215,29 @@ export default function Home() {
             </div>
           )}
         </div>
+
+        {badgeFilters
+          .filter((badge) => badge !== "Все")
+          .map((badge) => (
+            <button
+              key={badge}
+              type="button"
+              onClick={() =>
+                setSelectedBadge((prev) => (prev === badge ? "Все" : badge))
+              }
+              className={`shrink-0 rounded-full border px-3 py-2 text-[11px] transition-all duration-200 ${
+                selectedBadge === badge
+                  ? "border-black bg-black text-white"
+                  : "border-gray-200 bg-white text-gray-700"
+              }`}
+            >
+              {badge}
+            </button>
+          ))}
+      </div>
+
+      <div className="mt-7 mb-4 flex items-center justify-between">
+        <h2 className="text-[17px] font-medium text-black">Подборка</h2>
 
         <div className="relative shrink-0" ref={sortMenuRef}>
           <button
@@ -236,10 +272,6 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="mt-7 mb-4">
-        <h2 className="text-[17px] font-medium text-black">Подборка</h2>
-      </div>
-
       {filteredProducts.length === 0 ? (
         <div className="rounded-[24px] bg-white p-7 text-center shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
           <p className="text-[16px] font-medium text-black">Ничего не найдено</p>
@@ -249,94 +281,100 @@ export default function Home() {
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3">
-          {filteredProducts.map((p) => (
-            <div
-              key={p.id}
-              onClick={() => router.push(`/product?id=${p.id}`)}
-              className="group cursor-pointer overflow-hidden rounded-[20px] bg-white shadow-[0_10px_28px_rgba(0,0,0,0.05)] transition-all duration-300 active:scale-[0.985]"
-            >
-              <div className="relative aspect-[3/4] overflow-hidden bg-[#EAEAEA]">
-                <img
-                  src={p.image}
-                  alt={p.name}
-                  className="h-full w-full object-cover"
-                />
+          {filteredProducts.map((p) => {
+            const discountPercent = getDiscountPercent(p.oldPrice, p.price);
 
-                <div className="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-medium text-black backdrop-blur shadow-sm">
-                  {p.badge}
-                </div>
+            return (
+              <div
+                key={p.id}
+                onClick={() => router.push(`/product?id=${p.id}`)}
+                className="group cursor-pointer overflow-hidden rounded-[20px] bg-white shadow-[0_10px_28px_rgba(0,0,0,0.05)] transition-all duration-300 active:scale-[0.985]"
+              >
+                <div className="relative aspect-[3/4] overflow-hidden bg-[#EAEAEA]">
+                  <img
+                    src={p.image}
+                    alt={p.name}
+                    className="h-full w-full object-cover"
+                  />
 
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleFavorite(p.id);
-                  }}
-                  className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 backdrop-blur shadow-sm transition-transform duration-200 active:scale-90"
-                >
-                  <svg
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill={favorites.includes(p.id) ? "black" : "none"}
-                    stroke="black"
-                    strokeWidth="1.7"
-                  >
-                    <path d="M20.8 4.6c-1.8-1.8-4.7-1.8-6.5 0L12 6.9l-2.3-2.3c-1.8-1.8-4.7-1.8-6.5 0s-1.8 4.7 0 6.5L12 21l8.8-9.9c1.8-1.8 1.8-4.7 0-6.5z" />
-                  </svg>
-                </button>
-              </div>
-
-              <div className="flex min-h-[150px] flex-col p-3">
-                <div className="h-[20px] overflow-hidden text-[10px] text-gray-400">
-                  <span className="max-w-[110px] uppercase tracking-[0.14em] break-words">
-                    {p.brand}
-                  </span>
-                </div>
-
-                <h3 className="mt-1 min-h-[36px] text-[14px] font-medium leading-[1.2] text-black">
-                  {p.name}
-                </h3>
-
-                <div className="mt-auto flex items-center justify-between gap-2 pt-1">
-                  <div className="flex items-center gap-2">
-                    {p.oldPrice && (
-                      <span className="text-[12px] font-normal leading-none text-gray-400 line-through">
-                        {p.oldPrice} ₽
-                      </span>
-                    )}
-
-                    <span className="text-[16px] font-semibold leading-none tracking-[-0.02em] text-[#16A34A]">
-                      {p.price} ₽
-                    </span>
+                  <div className="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-medium text-black backdrop-blur shadow-sm">
+                    {p.badge}
                   </div>
 
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      router.push(`/product?id=${p.id}`);
+                      toggleFavorite(p.id);
                     }}
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#F5F5F5] transition-transform duration-200 active:scale-90"
+                    className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 backdrop-blur shadow-sm transition-transform duration-200 active:scale-90"
                   >
                     <svg
-                      width="17"
-                      height="17"
+                      width="18"
+                      height="18"
                       viewBox="0 0 24 24"
-                      fill="none"
+                      fill={favorites.includes(p.id) ? "black" : "none"}
                       stroke="black"
                       strokeWidth="1.7"
                     >
-                      <path d="M6 6h15l-1.5 9h-12z" />
-                      <path d="M6 6L5 3H2" />
-                      <circle cx="9" cy="20" r="1" />
-                      <circle cx="18" cy="20" r="1" />
+                      <path d="M20.8 4.6c-1.8-1.8-4.7-1.8-6.5 0L12 6.9l-2.3-2.3c-1.8-1.8-4.7-1.8-6.5 0s-1.8 4.7 0 6.5L12 21l8.8-9.9c1.8-1.8 1.8-4.7 0-6.5z" />
                     </svg>
                   </button>
                 </div>
+
+                <div className="flex min-h-[150px] flex-col p-3">
+                  <div className="h-[20px] overflow-hidden text-[10px] text-gray-400">
+                    <span className="max-w-[110px] uppercase tracking-[0.14em] break-words">
+                      {p.brand}
+                    </span>
+                  </div>
+
+                  <h3 className="mt-1 min-h-[36px] text-[14px] font-medium leading-[1.2] text-black">
+                    {p.name}
+                  </h3>
+
+                  <div className="mt-auto flex items-center justify-between gap-2 pt-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[12px] font-normal leading-none text-gray-400 line-through">
+                        {p.oldPrice} ₽
+                      </span>
+
+                      <span className="text-[16px] font-semibold leading-none tracking-[-0.02em] text-[#16A34A]">
+                        {p.price} ₽
+                      </span>
+
+                      <span className="rounded-full bg-[#E8F7EE] px-1.5 py-0.5 text-[10px] font-medium text-[#16A34A]">
+                        -{discountPercent}%
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        router.push(`/product?id=${p.id}`);
+                      }}
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#F5F5F5] transition-transform duration-200 active:scale-90"
+                    >
+                      <svg
+                        width="17"
+                        height="17"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="black"
+                        strokeWidth="1.7"
+                      >
+                        <path d="M6 6h15l-1.5 9h-12z" />
+                        <path d="M6 6L5 3H2" />
+                        <circle cx="9" cy="20" r="1" />
+                        <circle cx="18" cy="20" r="1" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

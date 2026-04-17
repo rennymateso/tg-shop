@@ -14,6 +14,16 @@ type CheckoutItem = {
   quantity: number;
 };
 
+function getOldUnitPrice(id: string, fallback: number) {
+  const product = products.find((item) => item.id === id);
+  return product?.oldPrice ?? fallback;
+}
+
+function getDiscountPercent(oldPrice: number, newPrice: number) {
+  if (oldPrice <= newPrice) return 0;
+  return Math.round(((oldPrice - newPrice) / oldPrice) * 100);
+}
+
 export default function CheckoutPageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -26,6 +36,7 @@ export default function CheckoutPageClient() {
   );
   const [paymentMethod, setPaymentMethod] = useState<"card" | "cash">("card");
   const [address, setAddress] = useState("");
+  const [promoCode, setPromoCode] = useState("");
   const [isPaying, setIsPaying] = useState(false);
   const [paymentError, setPaymentError] = useState("");
 
@@ -60,13 +71,24 @@ export default function CheckoutPageClient() {
     localStorage.setItem("cart", JSON.stringify(updated));
   };
 
-  const totalItems = useMemo(
-    () => items.reduce((sum, item) => sum + item.price * item.quantity, 0),
-    [items]
-  );
+  const totals = useMemo(() => {
+    const oldItemsTotal = items.reduce((sum, item) => {
+      const oldUnitPrice = getOldUnitPrice(item.id, item.price);
+      return sum + oldUnitPrice * item.quantity;
+    }, 0);
+
+    const newItemsTotal = items.reduce((sum, item) => {
+      return sum + item.price * item.quantity;
+    }, 0);
+
+    return { oldItemsTotal, newItemsTotal };
+  }, [items]);
 
   const deliveryPrice = deliveryMethod === "delivery" ? 500 : 0;
-  const total = totalItems + deliveryPrice;
+
+  const finalOldTotal = totals.oldItemsTotal + deliveryPrice;
+  const finalNewTotal = totals.newItemsTotal + deliveryPrice;
+  const finalDiscountPercent = getDiscountPercent(finalOldTotal, finalNewTotal);
 
   const isFormValid =
     name.trim() &&
@@ -111,6 +133,7 @@ export default function CheckoutPageClient() {
           address,
           deliveryMethod,
           paymentMethod,
+          promoCode,
           items,
         }),
       });
@@ -181,6 +204,10 @@ export default function CheckoutPageClient() {
         <div className="space-y-4">
           {items.map((item, i) => {
             const product = getProductById(item.id);
+            const oldUnitPrice = getOldUnitPrice(item.id, item.price);
+            const lineOldTotal = oldUnitPrice * item.quantity;
+            const lineNewTotal = item.price * item.quantity;
+            const lineDiscountPercent = getDiscountPercent(lineOldTotal, lineNewTotal);
 
             return (
               <div
@@ -227,8 +254,18 @@ export default function CheckoutPageClient() {
                     </div>
 
                     <div className="mt-4 flex items-center justify-between gap-3">
-                      <div className="text-[16px] font-semibold tracking-[-0.02em] text-[#16A34A]">
-                        {item.price * item.quantity} ₽
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-[13px] text-gray-400 line-through">
+                          {lineOldTotal} ₽
+                        </span>
+
+                        <span className="text-[16px] font-semibold tracking-[-0.02em] text-[#16A34A]">
+                          {lineNewTotal} ₽
+                        </span>
+
+                        <span className="rounded-full bg-[#E8F7EE] px-1.5 py-0.5 text-[10px] font-medium text-[#16A34A]">
+                          -{lineDiscountPercent}%
+                        </span>
                       </div>
 
                       <div className="flex items-center gap-2">
@@ -315,7 +352,7 @@ export default function CheckoutPageClient() {
             )}
 
             <p className="mb-2 text-sm text-gray-500">Способ оплаты</p>
-            <div className="mb-4 grid grid-cols-2 gap-2">
+            <div className="mb-3 grid grid-cols-2 gap-2">
               <button
                 onClick={() => setPaymentMethod("card")}
                 className={`rounded-2xl py-3 text-sm ${
@@ -339,20 +376,32 @@ export default function CheckoutPageClient() {
               </button>
             </div>
 
+            <input
+              placeholder="Промокод"
+              value={promoCode}
+              onChange={(e) => setPromoCode(e.target.value)}
+              className="mb-4 w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
+            />
+
             <div className="mb-4 rounded-2xl bg-[#F7F7F7] px-4 py-3 text-sm">
               <div className="mb-2 flex items-center justify-between">
-                <span className="text-gray-500">Товары</span>
-                <span className="text-[#16A34A]">{totalItems} ₽</span>
+                <span className="text-gray-500">До скидки</span>
+                <span className="text-gray-400 line-through">{finalOldTotal} ₽</span>
               </div>
 
               <div className="mb-2 flex items-center justify-between">
-                <span className="text-gray-500">Доставка</span>
-                <span className="text-black">{deliveryPrice} ₽</span>
+                <span className="text-gray-500">После скидки</span>
+                <span className="text-[#16A34A]">{finalNewTotal} ₽</span>
               </div>
 
-              <div className="flex items-center justify-between text-[16px] font-semibold">
-                <span>Итого</span>
-                <span className="text-[#16A34A]">{total} ₽</span>
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-gray-500">Скидка</span>
+                <span className="text-[#16A34A]">-{finalDiscountPercent}%</span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-gray-500">Доставка</span>
+                <span className="text-black">{deliveryPrice} ₽</span>
               </div>
             </div>
 
