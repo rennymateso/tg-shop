@@ -1,24 +1,37 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import BottomNav from "../components/BottomNav";
 import { products } from "../data/products";
 
 export default function ProductPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
-  const id =
-    typeof window !== "undefined"
-      ? new URLSearchParams(window.location.search).get("id")
-      : null;
+  const id = searchParams.get("id");
+  const product = products.find((item) => item.id === id);
 
-  const product = id ? products.find((item) => item.id === id) : null;
-
-  const [open, setOpen] = useState(false);
   const [size, setSize] = useState("");
   const [color, setColor] = useState("");
   const [quantity, setQuantity] = useState(1);
+  const [favorites, setFavorites] = useState<string[]>([]);
+
+  useEffect(() => {
+    const data = JSON.parse(localStorage.getItem("favorites") || "[]");
+    setFavorites(data);
+  }, []);
+
+  const toggleFavorite = () => {
+    if (!product) return;
+
+    const updated = favorites.includes(product.id)
+      ? favorites.filter((i) => i !== product.id)
+      : [...favorites, product.id];
+
+    setFavorites(updated);
+    localStorage.setItem("favorites", JSON.stringify(updated));
+  };
 
   const topSizes = [
     { label: "S", sub: "46" },
@@ -43,13 +56,26 @@ export default function ProductPage() {
     return product.type === "bottom" ? bottomSizes : topSizes;
   }, [product]);
 
-  const addToCart = () => {
-    if (!product || !id) return;
+  const canOrder = Boolean(size && color);
 
-    if (!size || !color) {
-      alert("Выберите размер и цвет");
-      return;
-    }
+  const colorMap: Record<string, string> = {
+    Черный: "#111111",
+    Белый: "#FFFFFF",
+    Серый: "#9CA3AF",
+    Синий: "#1D3557",
+    Бежевый: "#D6C2A1",
+  };
+
+  const article = product ? `ART-${product.id.padStart(4, "0")}` : "";
+
+  const shortDescription = product?.description || "";
+
+  const detailedDescription = product
+    ? "Модель выполнена в минималистичном стиле и подходит для повседневного гардероба. Материал комфортен в носке, силуэт аккуратный и универсальный. Товар хорошо сочетается с джинсами, брюками и базовой обувью."
+    : "";
+
+  const addToCart = () => {
+    if (!product || !id || !canOrder) return;
 
     const cart = JSON.parse(localStorage.getItem("cart") || "[]");
 
@@ -63,9 +89,7 @@ export default function ProductPage() {
     });
 
     localStorage.setItem("cart", JSON.stringify(cart));
-
-    setOpen(false);
-    router.push("/cart");
+    router.push("/cart?step=form");
   };
 
   if (!product) {
@@ -97,18 +121,9 @@ export default function ProductPage() {
           ← Назад
         </button>
 
-        <button className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-[0_4px_16px_rgba(0,0,0,0.04)] transition-transform duration-200 active:scale-95">
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="black"
-            strokeWidth="1.7"
-          >
-            <path d="M20.8 4.6c-1.8-1.8-4.7-1.8-6.5 0L12 6.9l-2.3-2.3c-1.8-1.8-4.7-1.8-6.5 0s-1.8 4.7 0 6.5L12 21l8.8-9.9c1.8-1.8 1.8-4.7 0-6.5z" />
-          </svg>
-        </button>
+        <div className="text-[11px] uppercase tracking-[0.16em] text-gray-400">
+          {article}
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-[24px] bg-white shadow-[0_10px_30px_rgba(0,0,0,0.05)]">
@@ -116,7 +131,7 @@ export default function ProductPage() {
           <img
             src={product.image}
             alt={product.name}
-            className="h-full w-full object-cover transition-transform duration-700 hover:scale-[1.02]"
+            className="h-full w-full object-cover"
           />
 
           {product.badge && (
@@ -127,10 +142,8 @@ export default function ProductPage() {
         </div>
 
         <div className="p-5">
-          <div className="mb-2 flex items-center gap-2 text-[11px] text-gray-400">
-            <span className="uppercase tracking-[0.16em]">{product.brand}</span>
-            <span>•</span>
-            <span>{product.category}</span>
+          <div className="mb-2 text-[11px] uppercase tracking-[0.16em] text-gray-400">
+            {product.brand}
           </div>
 
           <h1 className="text-[24px] font-medium leading-tight text-black">
@@ -149,62 +162,27 @@ export default function ProductPage() {
             </span>
           </div>
 
-          <p className="mt-4 text-[14px] leading-6 text-gray-500">
-            {product.description}
-          </p>
-
-          <div className="mt-5 flex flex-wrap gap-2">
-            {product.colors.map((c) => (
-              <span
-                key={c}
-                className="rounded-full bg-[#F5F5F5] px-3 py-1.5 text-[12px] text-gray-600"
-              >
-                {c}
-              </span>
-            ))}
+          <div className="mt-5">
+            <p className="text-[12px] uppercase tracking-[0.12em] text-gray-400">
+              Краткое описание
+            </p>
+            <p className="mt-2 text-[14px] leading-6 text-gray-600">
+              {shortDescription}
+            </p>
           </div>
 
-          <button
-            onClick={() => setOpen(true)}
-            className="mt-6 w-full rounded-2xl bg-black py-3.5 text-sm font-medium text-white transition-all duration-200 active:scale-[0.99]"
-          >
-            Выбрать параметры
-          </button>
-        </div>
-      </div>
+          <div className="mt-5">
+            <p className="text-[12px] uppercase tracking-[0.12em] text-gray-400">
+              Подробное описание
+            </p>
+            <p className="mt-2 text-[14px] leading-6 text-gray-600">
+              {detailedDescription}
+            </p>
+          </div>
 
-      {open && (
-        <div className="fixed inset-0 z-40 flex items-end bg-black/45">
-          <div className="w-full rounded-t-[28px] bg-white p-5 pb-6 shadow-2xl">
-            <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-gray-300" />
-
-            <h2 className="mb-4 text-[18px] font-medium text-black">
-              Выбор параметров
-            </h2>
-
-            <p className="mb-2 text-sm text-gray-500">Количество</p>
-            <div className="mb-5 flex items-center justify-between rounded-2xl border border-gray-200 px-4 py-3">
-              <button
-                onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-[#F5F5F5] text-lg text-black"
-              >
-                −
-              </button>
-
-              <span className="text-[16px] font-medium text-black">
-                {quantity}
-              </span>
-
-              <button
-                onClick={() => setQuantity((prev) => prev + 1)}
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-[#F5F5F5] text-lg text-black"
-              >
-                +
-              </button>
-            </div>
-
+          <div className="mt-6">
             <p className="mb-2 text-sm text-gray-500">Размер</p>
-            <div className="mb-5 grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               {sizes.map((s) => (
                 <button
                   key={s.label}
@@ -226,49 +204,110 @@ export default function ProductPage() {
                 </button>
               ))}
             </div>
+          </div>
 
+          <div className="mt-6">
             <p className="mb-2 text-sm text-gray-500">Цвет</p>
-            <div className="mb-6 flex flex-wrap gap-2">
-              {product.colors.map((c) => (
-                <button
-                  key={c}
-                  onClick={() => setColor(c)}
-                  className={`rounded-full border px-4 py-2.5 text-sm transition-all duration-200 active:scale-95 ${
-                    color === c
-                      ? "border-black bg-black text-white"
-                      : "border-gray-200 bg-white text-black"
-                  }`}
-                >
-                  {c}
-                </button>
-              ))}
+            <div className="flex flex-wrap gap-3">
+              {product.colors.map((c) => {
+                const swatch = colorMap[c] || "#E5E7EB";
+                const isSelected = color === c;
+                const isWhite = c === "Белый";
+
+                return (
+                  <button
+                    key={c}
+                    onClick={() => setColor(c)}
+                    aria-label={c}
+                    title={c}
+                    className={`flex h-11 w-11 items-center justify-center rounded-xl border transition-all duration-200 active:scale-95 ${
+                      isSelected
+                        ? "border-black ring-2 ring-black/10"
+                        : "border-gray-200"
+                    }`}
+                  >
+                    <span
+                      className={`block h-7 w-7 rounded-md ${
+                        isWhite ? "border border-gray-300" : ""
+                      }`}
+                      style={{ backgroundColor: swatch }}
+                    />
+                  </button>
+                );
+              })}
             </div>
 
-            <div className="mb-4 flex items-center justify-between rounded-2xl bg-[#F7F7F7] px-4 py-3">
-              <span className="text-sm text-gray-500">Итого</span>
-              <span className="text-[18px] font-semibold tracking-[-0.02em] text-black">
-                {product.price * quantity} ₽
-              </span>
+            <div className="mt-2 text-[12px] text-gray-400">
+              {color ? `Выбран цвет: ${color}` : "Выберите цвет"}
             </div>
+          </div>
 
-            <div className="flex gap-2">
+          <div className="mt-6">
+            <p className="mb-2 text-sm text-gray-500">Количество</p>
+            <div className="flex items-center justify-between rounded-2xl border border-gray-200 px-4 py-3">
               <button
-                onClick={() => setOpen(false)}
-                className="flex-1 rounded-2xl bg-gray-100 py-3.5 text-sm font-medium text-black transition-transform duration-200 active:scale-[0.99]"
+                onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-[#F5F5F5] text-lg text-black"
               >
-                Отмена
+                −
               </button>
 
+              <span className="text-[16px] font-medium text-black">
+                {quantity}
+              </span>
+
               <button
-                onClick={addToCart}
-                className="flex-1 rounded-2xl bg-black py-3.5 text-sm font-medium text-white transition-transform duration-200 active:scale-[0.99]"
+                onClick={() => setQuantity((prev) => prev + 1)}
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-[#F5F5F5] text-lg text-black"
               >
-                Перейти к заказу
+                +
               </button>
             </div>
           </div>
+
+          <div className="mt-6 mb-4 flex items-center justify-between rounded-2xl bg-[#F7F7F7] px-4 py-3">
+            <span className="text-sm text-gray-500">Итого</span>
+            <span className="text-[18px] font-semibold tracking-[-0.02em] text-black">
+              {product.price * quantity} ₽
+            </span>
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              onClick={addToCart}
+              disabled={!canOrder}
+              className={`flex-1 rounded-2xl py-3.5 text-sm font-medium transition-all duration-200 ${
+                canOrder
+                  ? "bg-black text-white active:scale-[0.99]"
+                  : "bg-gray-200 text-gray-500"
+              }`}
+            >
+              Оформить заказ
+            </button>
+
+            <button
+              onClick={toggleFavorite}
+              aria-label="В избранное"
+              className={`flex h-[50px] w-[50px] shrink-0 items-center justify-center rounded-2xl transition-all duration-200 active:scale-[0.99] ${
+                favorites.includes(product.id)
+                  ? "bg-black text-white"
+                  : "bg-gray-100 text-black"
+              }`}
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill={favorites.includes(product.id) ? "currentColor" : "none"}
+                stroke="currentColor"
+                strokeWidth="1.8"
+              >
+                <path d="M20.8 4.6c-1.8-1.8-4.7-1.8-6.5 0L12 6.9l-2.3-2.3c-1.8-1.8-4.7-1.8-6.5 0s-1.8 4.7 0 6.5L12 21l8.8-9.9c1.8-1.8 1.8-4.7 0-6.5z" />
+              </svg>
+            </button>
+          </div>
         </div>
-      )}
+      </div>
 
       <BottomNav />
     </main>

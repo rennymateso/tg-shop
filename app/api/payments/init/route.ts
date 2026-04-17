@@ -42,9 +42,8 @@ export async function POST(req: NextRequest) {
   try {
     const terminalKey = process.env.TBANK_TERMINAL_KEY;
     const terminalPassword = process.env.TBANK_TERMINAL_PASSWORD;
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
 
-    if (!terminalKey || !terminalPassword || !baseUrl) {
+    if (!terminalKey || !terminalPassword) {
       return NextResponse.json(
         { success: false, error: "Не заполнены переменные окружения T-Bank" },
         { status: 500 }
@@ -76,15 +75,6 @@ export async function POST(req: NextRequest) {
       Amount: amount,
       OrderId: orderId,
       Description: `Оплата заказа ${orderId}`,
-      PayType: "O",
-      Language: "ru",
-      NotificationURL: `${baseUrl}/api/payments/notify`,
-      SuccessURL: `${baseUrl}/cart?payment=success`,
-      FailURL: `${baseUrl}/cart?payment=fail`,
-      DATA: {
-        name,
-        phone,
-      },
     };
 
     const token = generateToken(payload, terminalPassword);

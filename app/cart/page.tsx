@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import BottomNav from "../components/BottomNav";
 import { products } from "../data/products";
 
@@ -16,16 +16,36 @@ type CartItem = {
 
 export default function CartPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [cart, setCart] = useState<CartItem[]>([]);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [step, setStep] = useState<"cart" | "form">("cart");
+  const [isPaying, setIsPaying] = useState(false);
+  const [paymentError, setPaymentError] = useState("");
+
+  const paymentStatus = searchParams.get("payment");
+  const urlStep = searchParams.get("step");
 
   useEffect(() => {
     const data = JSON.parse(localStorage.getItem("cart") || "[]");
     setCart(data);
   }, []);
+
+  useEffect(() => {
+    if (urlStep === "form") {
+      setStep("form");
+    }
+  }, [urlStep]);
+
+  useEffect(() => {
+    if (paymentStatus === "success") {
+      localStorage.removeItem("cart");
+      setCart([]);
+      setStep("cart");
+    }
+  }, [paymentStatus]);
 
   const removeItem = (index: number) => {
     const newCart = [...cart];
@@ -47,17 +67,54 @@ export default function CartPage() {
     return products.find((item) => item.id === id);
   };
 
-  const goToCheckout = () => {
-    setStep("form");
-  };
+  const handlePay = async () => {
+    setPaymentError("");
 
-  const handlePay = () => {
     if (!name.trim() || !phone.trim()) {
       alert("Введите имя и телефон");
       return;
     }
 
-    alert("Следующим шагом здесь подключим оплату Т-Банка");
+    if (cart.length === 0) {
+      alert("Корзина пустая");
+      return;
+    }
+
+    try {
+      setIsPaying(true);
+
+      const response = await fetch("/api/payments/init", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name,
+          phone,
+          items: cart,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result?.success || !result?.paymentUrl) {
+        const rawText = result?.raw
+          ? JSON.stringify(result.raw, null, 2)
+          : result?.details || result?.error || "Не удалось создать платеж";
+
+        setPaymentError(rawText);
+        throw new Error(result?.error || "Не удалось создать платеж");
+      }
+
+      window.location.href = result.paymentUrl;
+    } catch (error) {
+      if (!paymentError) {
+        setPaymentError(
+          error instanceof Error ? error.message : "Ошибка при переходе к оплате"
+        );
+      }
+      setIsPaying(false);
+    }
   };
 
   return (
@@ -74,6 +131,24 @@ export default function CartPage() {
 
         <div className="w-[86px]" />
       </div>
+
+      {paymentStatus === "success" && (
+        <div className="mb-4 rounded-[20px] bg-white p-4 text-sm text-black shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
+          Оплата завершена. Заказ успешно оформлен.
+        </div>
+      )}
+
+      {paymentStatus === "fail" && (
+        <div className="mb-4 rounded-[20px] bg-white p-4 text-sm text-black shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
+          Оплата не завершена. Можно попробовать снова.
+        </div>
+      )}
+
+      {paymentError && (
+        <div className="mb-4 rounded-[20px] bg-white p-4 text-xs text-black shadow-[0_8px_28px_rgba(0,0,0,0.05)] whitespace-pre-wrap break-words">
+          {paymentError}
+        </div>
+      )}
 
       {cart.length === 0 && (
         <div className="rounded-[24px] bg-white p-7 text-center shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
@@ -111,105 +186,101 @@ export default function CartPage() {
       )}
 
       {cart.length > 0 && (
-        <>
-          <div className="space-y-4">
-            {cart.map((item, i) => {
-              const product = getProductById(item.id);
-              const quantity = item.quantity || 1;
+        <div className="space-y-4">
+          {cart.map((item, i) => {
+            const product = getProductById(item.id);
+            const quantity = item.quantity || 1;
 
-              return (
-                <div
-                  key={i}
-                  className="rounded-[24px] bg-white p-4 shadow-[0_8px_28px_rgba(0,0,0,0.05)] transition-all duration-300 hover:shadow-[0_12px_30px_rgba(0,0,0,0.07)]"
-                >
-                  <div className="flex gap-4">
-                    <div className="w-[88px] shrink-0 overflow-hidden rounded-[18px] bg-[#ECECEC] aspect-[3/4]">
-                      <img
-                        src={product?.image || "/products/product-1.jpg"}
-                        alt={item.name}
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
+            return (
+              <div
+                key={i}
+                className="rounded-[24px] bg-white p-4 shadow-[0_8px_28px_rgba(0,0,0,0.05)]"
+              >
+                <div className="flex gap-4">
+                  <div className="w-[88px] shrink-0 overflow-hidden rounded-[18px] bg-[#ECECEC] aspect-[3/4]">
+                    <img
+                      src={product?.image || "/products/product-1.jpg"}
+                      alt={item.name}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
 
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <div className="mb-1 flex items-center gap-2 text-[11px] text-gray-400">
-                            <span className="uppercase tracking-[0.14em]">
-                              {product?.brand || "MONTREAUX"}
-                            </span>
-                          </div>
-
-                          <h2 className="text-[15px] font-medium leading-[1.3] text-black">
-                            {item.name}
-                          </h2>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="mb-1 flex items-center gap-2 text-[11px] text-gray-400">
+                          <span className="uppercase tracking-[0.14em]">
+                            {product?.brand || "MONTREAUX"}
+                          </span>
                         </div>
 
-                        <button
-                          onClick={() => removeItem(i)}
-                          className="whitespace-nowrap text-xs text-gray-400 transition-colors duration-200 hover:text-black"
-                        >
-                          удалить
-                        </button>
+                        <h2 className="text-[15px] font-medium leading-[1.3] text-black">
+                          {item.name}
+                        </h2>
                       </div>
 
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {item.size && (
-                          <span className="rounded-full bg-[#F3F3F3] px-2.5 py-1 text-[11px] text-gray-600">
-                            Размер: {item.size}
-                          </span>
-                        )}
+                      <button
+                        onClick={() => removeItem(i)}
+                        className="whitespace-nowrap text-xs text-gray-400"
+                      >
+                        удалить
+                      </button>
+                    </div>
 
-                        {item.color && (
-                          <span className="rounded-full bg-[#F3F3F3] px-2.5 py-1 text-[11px] text-gray-600">
-                            Цвет: {item.color}
-                          </span>
-                        )}
-
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {item.size && (
                         <span className="rounded-full bg-[#F3F3F3] px-2.5 py-1 text-[11px] text-gray-600">
-                          Кол-во: {quantity}
+                          Размер: {item.size}
                         </span>
-                      </div>
+                      )}
 
-                      <div className="mt-4 flex items-end justify-between">
-                        <span className="text-[12px] text-gray-400">
-                          {item.price} ₽ × {quantity}
+                      {item.color && (
+                        <span className="rounded-full bg-[#F3F3F3] px-2.5 py-1 text-[11px] text-gray-600">
+                          Цвет: {item.color}
                         </span>
+                      )}
 
-                        <span className="text-[17px] font-semibold tracking-[-0.02em] text-black">
-                          {item.price * quantity} ₽
-                        </span>
-                      </div>
+                      <span className="rounded-full bg-[#F3F3F3] px-2.5 py-1 text-[11px] text-gray-600">
+                        Кол-во: {quantity}
+                      </span>
+                    </div>
+
+                    <div className="mt-4 flex items-end justify-between">
+                      <span className="text-[12px] text-gray-400">
+                        {item.price} ₽ × {quantity}
+                      </span>
+
+                      <span className="text-[17px] font-semibold tracking-[-0.02em] text-black">
+                        {item.price * quantity} ₽
+                      </span>
                     </div>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-
-          {step === "cart" && (
-            <div className="fixed bottom-24 left-4 right-4 z-40 rounded-[24px] border border-white bg-white p-4 shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
-              <div className="mb-3 flex items-center justify-between">
-                <span className="text-sm text-gray-500">Итого</span>
-                <span className="text-[18px] font-semibold tracking-[-0.02em] text-black">
-                  {total} ₽
-                </span>
               </div>
+            );
+          })}
 
-              <button
-                onClick={goToCheckout}
-                className="w-full rounded-2xl bg-black py-3.5 text-sm font-medium text-white transition-transform duration-200 active:scale-[0.99]"
-              >
-                Оформить заказ
-              </button>
-            </div>
-          )}
+          <div className="h-2" />
 
-          {step === "form" && (
-            <div className="fixed inset-0 z-40 flex items-end bg-black/45">
-              <div className="w-full rounded-t-[28px] bg-white p-5 pb-6 shadow-2xl">
-                <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-gray-300" />
+          <div className="rounded-[24px] border border-white bg-white p-4 shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
+            {step === "cart" ? (
+              <>
+                <div className="mb-3 flex items-center justify-between">
+                  <span className="text-sm text-gray-500">Итого</span>
+                  <span className="text-[18px] font-semibold tracking-[-0.02em] text-black">
+                    {total} ₽
+                  </span>
+                </div>
 
+                <button
+                  onClick={() => setStep("form")}
+                  className="w-full rounded-2xl bg-black py-3.5 text-sm font-medium text-white"
+                >
+                  Оформить заказ
+                </button>
+              </>
+            ) : (
+              <>
                 <h2 className="mb-4 text-[18px] font-medium text-black">
                   Оформление заказа
                 </h2>
@@ -237,25 +308,17 @@ export default function CartPage() {
                   className="mb-4 w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
                 />
 
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setStep("cart")}
-                    className="flex-1 rounded-2xl bg-gray-100 py-3.5 text-sm font-medium text-black transition-transform duration-200 active:scale-[0.99]"
-                  >
-                    Назад
-                  </button>
-
-                  <button
-                    onClick={handlePay}
-                    className="flex-1 rounded-2xl bg-black py-3.5 text-sm font-medium text-white transition-transform duration-200 active:scale-[0.99]"
-                  >
-                    Оплатить
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-        </>
+                <button
+                  onClick={handlePay}
+                  disabled={isPaying}
+                  className="w-full rounded-2xl bg-black py-3.5 text-sm font-medium text-white disabled:opacity-60"
+                >
+                  {isPaying ? "Переход..." : "Оплатить"}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
       )}
 
       <BottomNav />
