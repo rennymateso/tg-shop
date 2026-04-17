@@ -212,7 +212,7 @@ export default function ProductPageClient() {
               </span>
             )}
 
-            <span className="text-[21px] font-semibold leading-none tracking-[-0.02em] text-black">
+            <span className="text-[21px] font-semibold leading-none tracking-[-0.02em] text-[#16A34A]">
               {product.price} ₽
             </span>
           </div>

@@ -101,7 +101,7 @@ export default function Home() {
   }, [selectedCategory, selectedBrand, selectedSort, search]);
 
   return (
-    <main className="min-h-screen bg-[#F5F5F5] px-3 pt-6 pb-32">
+    <main className="min-h-screen bg-[#F5F5F5] px-3 pt-4 pb-32">
       <div className="text-center">
         <p className="text-[11px] uppercase tracking-[0.28em] text-gray-400">
           Menswear
@@ -110,13 +110,9 @@ export default function Home() {
         <h1 className="mt-2 text-[30px] font-light tracking-[0.35em] text-black">
           MONTREAUX
         </h1>
-
-        <p className="mt-3 text-[13px] text-gray-500">
-          Новая коллекция мужской одежды
-        </p>
       </div>
 
-      <div className="mt-6">
+      <div className="mt-4">
         <div className="rounded-[22px] bg-white px-4 py-3 shadow-[0_8px_24px_rgba(0,0,0,0.04)]">
           <div className="flex items-center gap-3">
             <svg
@@ -151,7 +147,7 @@ export default function Home() {
           <img
             src="/banner.jpg"
             alt="Баннер"
-            className="h-[150px] w-full object-cover"
+            className="block h-[150px] w-full object-cover"
           />
         </button>
       </div>
@@ -162,7 +158,7 @@ export default function Home() {
             <button
               key={category}
               onClick={() => setSelectedCategory(category)}
-              className={`rounded-full px-3 py-2 text-[12px] border transition-all duration-200 active:scale-95 ${
+              className={`rounded-full px-2.5 py-1.5 text-[11px] border transition-all duration-200 active:scale-95 ${
                 selectedCategory === category
                   ? "bg-black text-white border-black"
                   : "bg-white text-gray-600 border-gray-200"
@@ -211,13 +207,13 @@ export default function Home() {
           <button
             type="button"
             onClick={() => setShowSortMenu((prev) => !prev)}
-            className="rounded-full border border-gray-200 bg-white px-3 py-2 text-[11px] text-gray-700 shadow-[0_4px_14px_rgba(0,0,0,0.04)]"
+            className="text-[12px] text-gray-400"
           >
-            Сортировка
+            {selectedSort}
           </button>
 
           {showSortMenu && (
-            <div className="absolute right-0 top-10 z-30 w-40 rounded-2xl border border-gray-100 bg-white p-1.5 shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
+            <div className="absolute right-0 top-6 z-30 w-40 rounded-2xl border border-gray-100 bg-white p-1.5 shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
               {sortOptions.map((option) => (
                 <button
                   key={option}
@@ -240,16 +236,8 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="mt-7 mb-4 flex items-center justify-between">
+      <div className="mt-7 mb-4">
         <h2 className="text-[17px] font-medium text-black">Подборка</h2>
-
-        <button
-          type="button"
-          onClick={() => setShowSortMenu((prev) => !prev)}
-          className="text-[12px] text-gray-400"
-        >
-          {selectedSort}
-        </button>
       </div>
 
       {filteredProducts.length === 0 ? (
@@ -300,14 +288,10 @@ export default function Home() {
               </div>
 
               <div className="flex min-h-[150px] flex-col p-3">
-                <div className="h-[28px] overflow-hidden text-[10px] text-gray-400">
-                  <div className="flex items-start gap-2 leading-[1.2]">
-                    <span className="max-w-[92px] uppercase tracking-[0.14em] break-words">
-                      {p.brand}
-                    </span>
-                    <span className="shrink-0">•</span>
-                    <span className="truncate">{p.category}</span>
-                  </div>
+                <div className="h-[20px] overflow-hidden text-[10px] text-gray-400">
+                  <span className="max-w-[110px] uppercase tracking-[0.14em] break-words">
+                    {p.brand}
+                  </span>
                 </div>
 
                 <h3 className="mt-1 min-h-[36px] text-[14px] font-medium leading-[1.2] text-black">
@@ -322,7 +306,7 @@ export default function Home() {
                       </span>
                     )}
 
-                    <span className="text-[16px] font-semibold leading-none tracking-[-0.02em] text-black">
+                    <span className="text-[16px] font-semibold leading-none tracking-[-0.02em] text-[#16A34A]">
                       {p.price} ₽
                     </span>
                   </div>

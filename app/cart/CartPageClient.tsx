@@ -31,6 +31,11 @@ export default function CartPageClient() {
     localStorage.setItem("cart", JSON.stringify(newCart));
   };
 
+  const clearCart = () => {
+    setCart([]);
+    localStorage.removeItem("cart");
+  };
+
   const total = useMemo(
     () =>
       cart.reduce(
@@ -45,7 +50,6 @@ export default function CartPageClient() {
   };
 
   const goToCheckout = () => {
-    localStorage.removeItem("checkoutDraft");
     router.push("/checkout");
   };
 
@@ -61,7 +65,12 @@ export default function CartPageClient() {
 
         <h1 className="text-[20px] font-medium">Корзина</h1>
 
-        <div className="w-[86px]" />
+        <button
+          onClick={clearCart}
+          className="text-xs text-gray-400"
+        >
+          очистить
+        </button>
       </div>
 
       {cart.length === 0 && (
@@ -107,7 +116,7 @@ export default function CartPageClient() {
 
             return (
               <div
-                key={i}
+                key={`${item.id}-${item.size}-${item.color}-${i}`}
                 className="rounded-[24px] bg-white p-4 shadow-[0_8px_28px_rgba(0,0,0,0.05)]"
               >
                 <div className="flex gap-4">
@@ -122,10 +131,8 @@ export default function CartPageClient() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <div className="mb-1 flex items-center gap-2 text-[11px] text-gray-400">
-                          <span className="uppercase tracking-[0.14em]">
-                            {product?.brand || "MONTREAUX"}
-                          </span>
+                        <div className="mb-1 text-[11px] text-gray-400 uppercase tracking-[0.14em]">
+                          {product?.brand || "MONTREAUX"}
                         </div>
 
                         <h2 className="text-[15px] font-medium leading-[1.3] text-black">
@@ -159,14 +166,10 @@ export default function CartPageClient() {
                       </span>
                     </div>
 
-                    <div className="mt-4 flex items-end justify-between">
-                      <span className="text-[12px] text-gray-400">
-                        {item.price} ₽ × {quantity}
-                      </span>
-
-                      <span className="text-[17px] font-semibold tracking-[-0.02em] text-black">
+                    <div className="mt-4 flex items-center justify-between gap-3">
+                      <div className="text-[16px] font-semibold tracking-[-0.02em] text-[#16A34A]">
                         {item.price * quantity} ₽
-                      </span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -177,7 +180,7 @@ export default function CartPageClient() {
           <div className="rounded-[24px] border border-white bg-white p-4 shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
             <div className="mb-3 flex items-center justify-between">
               <span className="text-sm text-gray-500">Итого</span>
-              <span className="text-[18px] font-semibold tracking-[-0.02em] text-black">
+              <span className="text-[18px] font-semibold tracking-[-0.02em] text-[#16A34A]">
                 {total} ₽
               </span>
             </div>
