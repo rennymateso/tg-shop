@@ -20,7 +20,7 @@ export default function CartPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [showCheckout, setShowCheckout] = useState(false);
+  const [step, setStep] = useState<"cart" | "form">("cart");
 
   useEffect(() => {
     const data = JSON.parse(localStorage.getItem("cart") || "[]");
@@ -43,30 +43,21 @@ export default function CartPage() {
     [cart]
   );
 
-  const submitOrder = () => {
-    if (!name || !phone) {
+  const getProductById = (id: string) => {
+    return products.find((item) => item.id === id);
+  };
+
+  const goToCheckout = () => {
+    setStep("form");
+  };
+
+  const handlePay = () => {
+    if (!name.trim() || !phone.trim()) {
       alert("Введите имя и телефон");
       return;
     }
 
-    const order = {
-      name,
-      phone,
-      items: cart,
-      total,
-    };
-
-    console.log("ORDER:", order);
-    alert("Заказ оформлен!");
-
-    localStorage.removeItem("cart");
-    setCart([]);
-    setShowCheckout(false);
-    router.push("/");
-  };
-
-  const getProductById = (id: string) => {
-    return products.find((item) => item.id === id);
+    alert("Следующим шагом здесь подключим оплату Т-Банка");
   };
 
   return (
@@ -119,145 +110,152 @@ export default function CartPage() {
         </div>
       )}
 
-      <div className="space-y-4">
-        {cart.map((item, i) => {
-          const product = getProductById(item.id);
-          const quantity = item.quantity || 1;
+      {cart.length > 0 && (
+        <>
+          <div className="space-y-4">
+            {cart.map((item, i) => {
+              const product = getProductById(item.id);
+              const quantity = item.quantity || 1;
 
-          return (
-            <div
-              key={i}
-              className="rounded-[24px] bg-white p-4 shadow-[0_8px_28px_rgba(0,0,0,0.05)] transition-all duration-300 hover:shadow-[0_12px_30px_rgba(0,0,0,0.07)]"
-            >
-              <div className="flex gap-4">
-                <div className="w-[88px] shrink-0 overflow-hidden rounded-[18px] bg-[#ECECEC] aspect-[3/4]">
-                  <img
-                    src={product?.image || "/products/product-1.jpg"}
-                    alt={item.name}
-                    className="h-full w-full object-cover transition-transform duration-500 hover:scale-[1.03]"
-                  />
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="mb-1 flex items-center gap-2 text-[11px] text-gray-400">
-                        <span className="uppercase tracking-[0.14em]">
-                          {product?.brand || "MONTREAUX"}
-                        </span>
-                        {product?.category && (
-                          <>
-                            <span>•</span>
-                            <span>{product.category}</span>
-                          </>
-                        )}
-                      </div>
-
-                      <h2 className="text-[15px] font-medium leading-[1.3] text-black">
-                        {item.name}
-                      </h2>
+              return (
+                <div
+                  key={i}
+                  className="rounded-[24px] bg-white p-4 shadow-[0_8px_28px_rgba(0,0,0,0.05)] transition-all duration-300 hover:shadow-[0_12px_30px_rgba(0,0,0,0.07)]"
+                >
+                  <div className="flex gap-4">
+                    <div className="w-[88px] shrink-0 overflow-hidden rounded-[18px] bg-[#ECECEC] aspect-[3/4]">
+                      <img
+                        src={product?.image || "/products/product-1.jpg"}
+                        alt={item.name}
+                        className="h-full w-full object-cover"
+                      />
                     </div>
 
-                    <button
-                      onClick={() => removeItem(i)}
-                      className="whitespace-nowrap text-xs text-gray-400 transition-colors duration-200 hover:text-black"
-                    >
-                      удалить
-                    </button>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="mb-1 flex items-center gap-2 text-[11px] text-gray-400">
+                            <span className="uppercase tracking-[0.14em]">
+                              {product?.brand || "MONTREAUX"}
+                            </span>
+                          </div>
+
+                          <h2 className="text-[15px] font-medium leading-[1.3] text-black">
+                            {item.name}
+                          </h2>
+                        </div>
+
+                        <button
+                          onClick={() => removeItem(i)}
+                          className="whitespace-nowrap text-xs text-gray-400 transition-colors duration-200 hover:text-black"
+                        >
+                          удалить
+                        </button>
+                      </div>
+
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {item.size && (
+                          <span className="rounded-full bg-[#F3F3F3] px-2.5 py-1 text-[11px] text-gray-600">
+                            Размер: {item.size}
+                          </span>
+                        )}
+
+                        {item.color && (
+                          <span className="rounded-full bg-[#F3F3F3] px-2.5 py-1 text-[11px] text-gray-600">
+                            Цвет: {item.color}
+                          </span>
+                        )}
+
+                        <span className="rounded-full bg-[#F3F3F3] px-2.5 py-1 text-[11px] text-gray-600">
+                          Кол-во: {quantity}
+                        </span>
+                      </div>
+
+                      <div className="mt-4 flex items-end justify-between">
+                        <span className="text-[12px] text-gray-400">
+                          {item.price} ₽ × {quantity}
+                        </span>
+
+                        <span className="text-[17px] font-semibold tracking-[-0.02em] text-black">
+                          {item.price * quantity} ₽
+                        </span>
+                      </div>
+                    </div>
                   </div>
+                </div>
+              );
+            })}
+          </div>
 
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {item.size && (
-                      <span className="rounded-full bg-[#F3F3F3] px-2.5 py-1 text-[11px] text-gray-600">
-                        Размер: {item.size}
-                      </span>
-                    )}
+          {step === "cart" && (
+            <div className="fixed bottom-24 left-4 right-4 z-40 rounded-[24px] border border-white bg-white p-4 shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
+              <div className="mb-3 flex items-center justify-between">
+                <span className="text-sm text-gray-500">Итого</span>
+                <span className="text-[18px] font-semibold tracking-[-0.02em] text-black">
+                  {total} ₽
+                </span>
+              </div>
 
-                    {item.color && (
-                      <span className="rounded-full bg-[#F3F3F3] px-2.5 py-1 text-[11px] text-gray-600">
-                        Цвет: {item.color}
-                      </span>
-                    )}
+              <button
+                onClick={goToCheckout}
+                className="w-full rounded-2xl bg-black py-3.5 text-sm font-medium text-white transition-transform duration-200 active:scale-[0.99]"
+              >
+                Оформить заказ
+              </button>
+            </div>
+          )}
 
-                    <span className="rounded-full bg-[#F3F3F3] px-2.5 py-1 text-[11px] text-gray-600">
-                      Кол-во: {quantity}
+          {step === "form" && (
+            <div className="fixed inset-0 z-40 flex items-end bg-black/45">
+              <div className="w-full rounded-t-[28px] bg-white p-5 pb-6 shadow-2xl">
+                <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-gray-300" />
+
+                <h2 className="mb-4 text-[18px] font-medium text-black">
+                  Оформление заказа
+                </h2>
+
+                <div className="mb-4 rounded-2xl bg-[#F7F7F7] px-4 py-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-500">Итого</span>
+                    <span className="text-[18px] font-semibold tracking-[-0.02em] text-black">
+                      {total} ₽
                     </span>
                   </div>
+                </div>
 
-                  <div className="mt-4 flex items-end justify-between">
-                    <span className="text-[12px] text-gray-400">
-                      {item.price} ₽ × {quantity}
-                    </span>
+                <input
+                  placeholder="Ваше имя"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="mb-3 w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
+                />
 
-                    <span className="text-[17px] font-semibold tracking-[-0.02em] text-black">
-                      {item.price * quantity} ₽
-                    </span>
-                  </div>
+                <input
+                  placeholder="Телефон"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="mb-4 w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
+                />
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setStep("cart")}
+                    className="flex-1 rounded-2xl bg-gray-100 py-3.5 text-sm font-medium text-black transition-transform duration-200 active:scale-[0.99]"
+                  >
+                    Назад
+                  </button>
+
+                  <button
+                    onClick={handlePay}
+                    className="flex-1 rounded-2xl bg-black py-3.5 text-sm font-medium text-white transition-transform duration-200 active:scale-[0.99]"
+                  >
+                    Оплатить
+                  </button>
                 </div>
               </div>
             </div>
-          );
-        })}
-      </div>
-
-      {cart.length > 0 && !showCheckout && (
-        <div className="fixed bottom-24 left-4 right-4 z-40 rounded-[24px] border border-white bg-white p-4 shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
-          <div className="mb-3 flex items-center justify-between">
-            <span className="text-sm text-gray-500">Итого</span>
-            <span className="text-[18px] font-semibold tracking-[-0.02em] text-black">
-              {total} ₽
-            </span>
-          </div>
-
-          <button
-            onClick={() => setShowCheckout(true)}
-            className="w-full rounded-2xl bg-black py-3.5 text-sm font-medium text-white transition-transform duration-200 active:scale-[0.99]"
-          >
-            Оформить заказ
-          </button>
-        </div>
-      )}
-
-      {showCheckout && (
-        <div className="fixed inset-0 z-40 flex items-end bg-black/45">
-          <div className="w-full rounded-t-[28px] bg-white p-5 pb-6 shadow-2xl">
-            <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-gray-300" />
-
-            <h2 className="mb-4 text-[18px] font-medium text-black">
-              Оформление заказа
-            </h2>
-
-            <input
-              placeholder="Ваше имя"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="mb-3 w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-            />
-
-            <input
-              placeholder="Телефон"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className="mb-4 w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-            />
-
-            <div className="flex gap-2">
-              <button
-                onClick={() => setShowCheckout(false)}
-                className="flex-1 rounded-2xl bg-gray-100 py-3.5 text-sm font-medium text-black transition-transform duration-200 active:scale-[0.99]"
-              >
-                Назад
-              </button>
-
-              <button
-                onClick={submitOrder}
-                className="flex-1 rounded-2xl bg-black py-3.5 text-sm font-medium text-white transition-transform duration-200 active:scale-[0.99]"
-              >
-                Подтвердить
-              </button>
-            </div>
-          </div>
-        </div>
+          )}
+        </>
       )}
 
       <BottomNav />

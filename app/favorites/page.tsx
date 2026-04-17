@@ -90,12 +90,8 @@ export default function FavoritesPage() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <div className="mb-1 flex items-center gap-2 text-[11px] text-gray-400">
-                      <span className="uppercase tracking-[0.14em]">
-                        {item.brand}
-                      </span>
-                      <span>•</span>
-                      <span>{item.category}</span>
+                    <div className="mb-1 text-[11px] text-gray-400 uppercase tracking-[0.14em]">
+                      {item.brand}
                     </div>
 
                     <h2 className="text-[15px] font-medium leading-[1.3] text-black">

@@ -8,12 +8,12 @@ import { products } from "./data/products";
 const categories = ["Все", "Футболки", "Поло", "Джинсы", "Брюки", "Костюмы"] as const;
 const brands = [
   "Все бренды",
-  "Lacoste",
-  "Tommy Hilfiger",
-  "Gant",
-  "Calvin Klein",
-  "Armani",
-  "Polo Ralph Lauren",
+  "MONTREAUX",
+  "Premium Line",
+  "Classic Line",
+  "Urban Tailor",
+  "North District",
+  "Essential Studio",
 ] as const;
 const sortOptions = ["По умолчанию", "Сначала дешевле", "Сначала дороже"] as const;
 
@@ -283,7 +283,7 @@ export default function Home() {
               <div className="flex min-h-[190px] flex-col p-3.5">
                 <div className="h-[34px] overflow-hidden text-[10px] text-gray-400">
                   <div className="flex items-start gap-2 leading-[1.25]">
-                    <span className="max-w-[78px] uppercase tracking-[0.14em] break-words">
+                    <span className="max-w-[90px] uppercase tracking-[0.14em] break-words">
                       {p.brand}
                     </span>
                     <span className="shrink-0">•</span>
