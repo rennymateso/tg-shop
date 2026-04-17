@@ -19,6 +19,7 @@ export type Product = {
   oldPrice: number | null;
   badge: "Новинка" | "Скидка" | "В наличии" | "Из-за рубежа";
   image: string;
+  images: string[];
   type: "top" | "bottom";
   category: "Футболки" | "Поло" | "Джинсы" | "Брюки" | "Костюмы";
   colors: string[];
@@ -35,6 +36,11 @@ export const products: Product[] = [
     oldPrice: 4500,
     badge: "Новинка",
     image: "/products/product-1.jpg",
+    images: [
+      "/products/product-1.jpg",
+      "/products/product-1.jpg",
+      "/products/product-1.jpg",
+    ],
     type: "top",
     category: "Поло",
     colors: ["Черный", "Белый", "Серый"],
@@ -50,6 +56,12 @@ export const products: Product[] = [
     oldPrice: 4900,
     badge: "Скидка",
     image: "/products/product-2.jpg",
+    images: [
+      "/products/product-2.jpg",
+      "/products/product-2.jpg",
+      "/products/product-2.jpg",
+      "/products/product-2.jpg",
+    ],
     type: "top",
     category: "Поло",
     colors: ["Белый", "Синий"],
@@ -65,6 +77,7 @@ export const products: Product[] = [
     oldPrice: 6500,
     badge: "В наличии",
     image: "/products/product-3.jpg",
+    images: ["/products/product-3.jpg", "/products/product-3.jpg"],
     type: "top",
     category: "Поло",
     colors: ["Черный"],
@@ -80,6 +93,11 @@ export const products: Product[] = [
     oldPrice: 3900,
     badge: "Из-за рубежа",
     image: "/products/product-4.jpg",
+    images: [
+      "/products/product-4.jpg",
+      "/products/product-4.jpg",
+      "/products/product-4.jpg",
+    ],
     type: "top",
     category: "Поло",
     colors: ["Белый", "Бежевый"],

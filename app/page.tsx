@@ -300,6 +300,7 @@ export default function Home() {
         <div className="grid grid-cols-2 gap-3">
           {filteredProducts.map((p) => {
             const discountPercent = getDiscountPercent(p.oldPrice, p.price);
+            const imageCount = p.images?.length || 1;
 
             return (
               <div
@@ -314,7 +315,13 @@ export default function Home() {
                     className="h-full w-full object-cover"
                   />
 
-                  <div className="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-medium text-black backdrop-blur shadow-sm">
+                  <div
+                    className={`absolute left-3 top-3 rounded-full px-2.5 py-1 text-[10px] font-medium backdrop-blur shadow-sm ${
+                      p.badge === "Из-за рубежа"
+                        ? "bg-black text-white"
+                        : "bg-white/90 text-black"
+                    }`}
+                  >
                     {p.badge}
                   </div>
 
@@ -337,6 +344,19 @@ export default function Home() {
                       <path d="M20.8 4.6c-1.8-1.8-4.7-1.8-6.5 0L12 6.9l-2.3-2.3c-1.8-1.8-4.7-1.8-6.5 0s-1.8 4.7 0 6.5L12 21l8.8-9.9c1.8-1.8 1.8-4.7 0-6.5z" />
                     </svg>
                   </button>
+
+                  <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1.5">
+                    {Array.from({ length: imageCount }).map((_, index) => (
+                      <span
+                        key={`${p.id}-dot-${index}`}
+                        className={`block rounded-full ${
+                          index === 0
+                            ? "h-1.5 w-1.5 bg-white"
+                            : "h-1.5 w-1.5 bg-white/45"
+                        }`}
+                      />
+                    ))}
+                  </div>
                 </div>
 
                 <div className="flex min-h-[150px] flex-col p-3">
