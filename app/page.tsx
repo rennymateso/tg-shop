@@ -184,57 +184,66 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="mt-3 flex items-start gap-2 overflow-x-auto pb-1">
-        <div className="relative shrink-0" ref={brandMenuRef}>
-          <button
-            type="button"
-            onClick={() => setShowBrandMenu((prev) => !prev)}
-            className="max-w-[170px] truncate rounded-full border border-gray-200 bg-white px-3 py-2 text-[11px] text-gray-700 shadow-[0_4px_14px_rgba(0,0,0,0.04)]"
-          >
-            {selectedBrand}
-          </button>
-
-          {showBrandMenu && (
-            <div className="absolute left-0 top-10 z-30 w-52 max-h-60 overflow-y-auto rounded-2xl border border-gray-100 bg-white p-1.5 shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
-              {brands.map((brand) => (
-                <button
-                  key={brand}
-                  type="button"
-                  onClick={() => {
-                    setSelectedBrand(brand);
-                    setShowBrandMenu(false);
-                  }}
-                  className={`w-full rounded-xl px-3 py-2 text-left text-[12px] ${
-                    selectedBrand === brand
-                      ? "bg-black text-white"
-                      : "text-gray-700 hover:bg-gray-50"
-                  }`}
-                >
-                  {brand}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {badgeFilters
-          .filter((badge) => badge !== "Все")
-          .map((badge) => (
+      <div className="relative z-20 mt-3">
+        <div className="flex items-start gap-2 overflow-x-auto pb-1">
+          <div className="shrink-0">
             <button
-              key={badge}
               type="button"
-              onClick={() =>
-                setSelectedBadge((prev) => (prev === badge ? "Все" : badge))
-              }
-              className={`shrink-0 rounded-full border px-3 py-2 text-[11px] transition-all duration-200 ${
-                selectedBadge === badge
+              onClick={() => setShowBrandMenu((prev) => !prev)}
+              className={`max-w-[170px] truncate rounded-full border px-3 py-2 text-[11px] shadow-[0_4px_14px_rgba(0,0,0,0.04)] transition-all ${
+                showBrandMenu
                   ? "border-black bg-black text-white"
                   : "border-gray-200 bg-white text-gray-700"
               }`}
             >
-              {badge}
+              {selectedBrand}
             </button>
-          ))}
+          </div>
+
+          {badgeFilters
+            .filter((badge) => badge !== "Все")
+            .map((badge) => (
+              <button
+                key={badge}
+                type="button"
+                onClick={() =>
+                  setSelectedBadge((prev) => (prev === badge ? "Все" : badge))
+                }
+                className={`shrink-0 rounded-full border px-3 py-2 text-[11px] transition-all duration-200 ${
+                  selectedBadge === badge
+                    ? "border-black bg-black text-white"
+                    : "border-gray-200 bg-white text-gray-700"
+                }`}
+              >
+                {badge}
+              </button>
+            ))}
+        </div>
+
+        {showBrandMenu && (
+          <div
+            ref={brandMenuRef}
+            className="absolute left-0 top-12 z-30 w-52 max-h-64 overflow-y-auto rounded-2xl border border-gray-100 bg-white p-1.5 shadow-[0_10px_30px_rgba(0,0,0,0.08)]"
+          >
+            {brands.map((brand) => (
+              <button
+                key={brand}
+                type="button"
+                onClick={() => {
+                  setSelectedBrand(brand);
+                  setShowBrandMenu(false);
+                }}
+                className={`w-full rounded-xl px-3 py-2 text-left text-[12px] ${
+                  selectedBrand === brand
+                    ? "bg-black text-white"
+                    : "text-gray-700 hover:bg-gray-50"
+                }`}
+              >
+                {brand}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="mt-7 mb-4 flex items-center justify-between">

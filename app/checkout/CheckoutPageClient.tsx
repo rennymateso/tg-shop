@@ -30,7 +30,7 @@ export default function CheckoutPageClient() {
 
   const [items, setItems] = useState<CheckoutItem[]>([]);
   const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
+  const [phone, setPhone] = useState("+7");
   const [deliveryMethod, setDeliveryMethod] = useState<"delivery" | "pickup">(
     "delivery"
   );
@@ -90,14 +90,32 @@ export default function CheckoutPageClient() {
   const finalNewTotal = totals.newItemsTotal + deliveryPrice;
   const finalDiscountPercent = getDiscountPercent(finalOldTotal, finalNewTotal);
 
+  const isPhoneValid = phone.trim().length > 2;
+
   const isFormValid =
     name.trim() &&
-    phone.trim() &&
+    isPhoneValid &&
     items.length > 0 &&
     (deliveryMethod === "pickup" || address.trim());
 
   const getProductById = (id: string) => {
     return products.find((item) => item.id === id);
+  };
+
+  const handlePhoneChange = (value: string) => {
+    if (!value.startsWith("+7")) {
+      if (value === "" || value === "+") {
+        setPhone("+7");
+        return;
+      }
+
+      const digits = value.replace(/\D/g, "");
+      const normalized = digits.startsWith("7") ? digits.slice(1) : digits;
+      setPhone(`+7${normalized}`);
+      return;
+    }
+
+    setPhone(value);
   };
 
   const handleCashOrder = () => {
@@ -107,7 +125,7 @@ export default function CheckoutPageClient() {
     }
 
     localStorage.removeItem("cart");
-    alert("Заказ оформлен. Менеджер свяжется с вами.");
+    alert("Заказ успешно оформлен. С вами свяжется менеджер для подтверждения.");
     router.push("/checkout?payment=success");
   };
 
@@ -176,8 +194,14 @@ export default function CheckoutPageClient() {
       </div>
 
       {paymentStatus === "success" && (
-        <div className="mb-4 rounded-[20px] bg-white p-4 text-sm text-black shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
-          Оплата завершена. Заказ успешно оформлен.
+        <div className="mb-4 rounded-[20px] bg-white p-4 shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
+          <p className="text-sm font-medium text-black">
+            Заказ успешно оформлен.
+          </p>
+          <p className="mt-2 text-sm leading-6 text-gray-500">
+            Вам придет сообщение о статусе заказа. Также с вами свяжется
+            менеджер для подтверждения и уточнения деталей.
+          </p>
         </div>
       )}
 
@@ -207,7 +231,10 @@ export default function CheckoutPageClient() {
             const oldUnitPrice = getOldUnitPrice(item.id, item.price);
             const lineOldTotal = oldUnitPrice * item.quantity;
             const lineNewTotal = item.price * item.quantity;
-            const lineDiscountPercent = getDiscountPercent(lineOldTotal, lineNewTotal);
+            const lineDiscountPercent = getDiscountPercent(
+              lineOldTotal,
+              lineNewTotal
+            );
 
             return (
               <div
@@ -309,7 +336,7 @@ export default function CheckoutPageClient() {
             <input
               placeholder="Телефон"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              onChange={(e) => handlePhoneChange(e.target.value)}
               className="mb-4 w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
             />
 
@@ -346,8 +373,9 @@ export default function CheckoutPageClient() {
                 className="mb-4 w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
               />
             ) : (
-              <div className="mb-4 rounded-2xl bg-[#F5F5F5] p-3.5 text-sm text-gray-600">
-                Самовывоз: адрес магазина уточняется менеджером после заказа.
+              <div className="mb-4 rounded-2xl bg-[#F5F5F5] p-3.5 text-sm leading-6 text-gray-600">
+                Самовывоз по адресу: г. Казань, Академика Глушко 16Г, ТЦ
+                "АКАДЕМИК", 2 этаж. Подробнее уточняйте у менеджера.
               </div>
             )}
 
@@ -386,7 +414,9 @@ export default function CheckoutPageClient() {
             <div className="mb-4 rounded-2xl bg-[#F7F7F7] px-4 py-3 text-sm">
               <div className="mb-2 flex items-center justify-between">
                 <span className="text-gray-500">До скидки</span>
-                <span className="text-gray-400 line-through">{finalOldTotal} ₽</span>
+                <span className="text-gray-400 line-through">
+                  {finalOldTotal} ₽
+                </span>
               </div>
 
               <div className="mb-2 flex items-center justify-between">
