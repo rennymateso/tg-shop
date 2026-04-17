@@ -42,8 +42,9 @@ export async function POST(req: NextRequest) {
   try {
     const terminalKey = process.env.TBANK_TERMINAL_KEY;
     const terminalPassword = process.env.TBANK_TERMINAL_PASSWORD;
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
 
-    if (!terminalKey || !terminalPassword) {
+    if (!terminalKey || !terminalPassword || !baseUrl) {
       return NextResponse.json(
         { success: false, error: "Не заполнены переменные окружения T-Bank" },
         { status: 500 }
@@ -51,8 +52,12 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
+
     const name = String(body?.name || "").trim();
     const phone = String(body?.phone || "").trim();
+    const address = String(body?.address || "").trim();
+    const deliveryMethod = String(body?.deliveryMethod || "delivery").trim();
+    const paymentMethod = String(body?.paymentMethod || "card").trim();
     const items = (body?.items || []) as CartItem[];
 
     if (!name || !phone || !Array.isArray(items) || items.length === 0) {
@@ -62,19 +67,33 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const totalRub = items.reduce((sum, item) => {
+    const itemsTotal = items.reduce((sum, item) => {
       const qty = item.quantity && item.quantity > 0 ? item.quantity : 1;
       return sum + item.price * qty;
     }, 0);
 
+    const deliveryPrice = deliveryMethod === "delivery" ? 500 : 0;
+    const totalRub = itemsTotal + deliveryPrice;
     const amount = Math.round(totalRub * 100);
     const orderId = `ORDER-${Date.now()}`;
+
+    const descriptionParts = [
+      `Заказ ${orderId}`,
+      `Получение: ${deliveryMethod === "delivery" ? "доставка" : "самовывоз"}`,
+      `Оплата: ${paymentMethod === "card" ? "картой" : "наличными"}`,
+    ];
+
+    if (address) {
+      descriptionParts.push(`Адрес: ${address}`);
+    }
 
     const payload: Record<string, unknown> = {
       TerminalKey: terminalKey,
       Amount: amount,
       OrderId: orderId,
-      Description: `Оплата заказа ${orderId}`,
+      Description: descriptionParts.join(" | "),
+      SuccessURL: `${baseUrl}/checkout?payment=success`,
+      FailURL: `${baseUrl}/checkout?payment=fail`,
     };
 
     const token = generateToken(payload, terminalPassword);

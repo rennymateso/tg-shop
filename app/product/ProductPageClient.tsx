@@ -1,9 +1,18 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import BottomNav from "../components/BottomNav";
 import { products } from "../data/products";
+
+type DraftItem = {
+  id: string;
+  name: string;
+  price: number;
+  size: string;
+  color: string;
+  quantity: number;
+};
 
 export default function ProductPageClient() {
   const router = useRouter();
@@ -12,9 +21,8 @@ export default function ProductPageClient() {
   const id = searchParams.get("id");
   const product = products.find((item) => item.id === id);
 
-  const [size, setSize] = useState("");
-  const [color, setColor] = useState("");
-  const [quantity, setQuantity] = useState(1);
+  const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
+  const [selectedColors, setSelectedColors] = useState<string[]>([]);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [showFullDescription, setShowFullDescription] = useState(false);
 
@@ -52,12 +60,7 @@ export default function ProductPageClient() {
     { label: "38", sub: "54" },
   ];
 
-  const sizes = useMemo(() => {
-    if (!product) return [];
-    return product.type === "bottom" ? bottomSizes : topSizes;
-  }, [product]);
-
-  const canOrder = Boolean(size && color);
+  const sizes = product?.type === "bottom" ? bottomSizes : topSizes;
 
   const colorMap: Record<string, string> = {
     Черный: "#111111",
@@ -69,25 +72,39 @@ export default function ProductPageClient() {
 
   const article = product ? `ART-${product.id.padStart(4, "0")}` : "";
 
-  const shortDescription = product?.description || "";
+  const description = product?.description || "";
 
-  const detailedDescription = product
-    ? "Модель выполнена в минималистичном стиле и подходит для повседневного гардероба. Материал комфортен в носке, силуэт аккуратный и универсальный. Товар хорошо сочетается с джинсами, брюками и базовой обувью."
-    : "";
+  const canOrder = selectedSizes.length > 0 && selectedColors.length > 0;
+
+  const toggleSize = (value: string) => {
+    setSelectedSizes((prev) =>
+      prev.includes(value) ? prev.filter((item) => item !== value) : [...prev, value]
+    );
+  };
+
+  const toggleColor = (value: string) => {
+    setSelectedColors((prev) =>
+      prev.includes(value) ? prev.filter((item) => item !== value) : [...prev, value]
+    );
+  };
 
   const goToCheckout = () => {
     if (!product || !id || !canOrder) return;
 
-    const draft = [
-      {
-        id,
-        name: product.name,
-        price: product.price,
-        size,
-        color,
-        quantity,
-      },
-    ];
+    const draft: DraftItem[] = [];
+
+    selectedSizes.forEach((size) => {
+      selectedColors.forEach((color) => {
+        draft.push({
+          id,
+          name: product.name,
+          price: product.price,
+          size,
+          color,
+          quantity: 1,
+        });
+      });
+    });
 
     localStorage.setItem("checkoutDraft", JSON.stringify(draft));
     router.push("/checkout");
@@ -122,9 +139,26 @@ export default function ProductPageClient() {
           ← Назад
         </button>
 
-        <div className="text-[11px] uppercase tracking-[0.16em] text-gray-400">
-          {article}
-        </div>
+        <button
+          onClick={toggleFavorite}
+          aria-label="В избранное"
+          className={`flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-2xl transition-all duration-200 active:scale-[0.99] ${
+            favorites.includes(product.id)
+              ? "bg-black text-white"
+              : "bg-white text-black shadow-[0_4px_16px_rgba(0,0,0,0.04)]"
+          }`}
+        >
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill={favorites.includes(product.id) ? "currentColor" : "none"}
+            stroke="currentColor"
+            strokeWidth="1.8"
+          >
+            <path d="M20.8 4.6c-1.8-1.8-4.7-1.8-6.5 0L12 6.9l-2.3-2.3c-1.8-1.8-4.7-1.8-6.5 0s-1.8 4.7 0 6.5L12 21l8.8-9.9c1.8-1.8 1.8-4.7 0-6.5z" />
+          </svg>
+        </button>
       </div>
 
       <div className="overflow-hidden rounded-[24px] bg-white shadow-[0_10px_30px_rgba(0,0,0,0.05)]">
@@ -143,15 +177,17 @@ export default function ProductPageClient() {
         </div>
 
         <div className="p-5">
-          <div className="mb-2 text-[11px] uppercase tracking-[0.16em] text-gray-400">
-            {product.brand}
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <div className="text-[11px] uppercase tracking-[0.16em] text-gray-400">
+              {product.brand}
+            </div>
+
+            <div className="text-[11px] uppercase tracking-[0.16em] text-gray-400">
+              {article}
+            </div>
           </div>
 
-          <h1 className="text-[24px] font-medium leading-tight text-black">
-            {product.name}
-          </h1>
-
-          <div className="mt-3 flex items-end gap-2">
+          <div className="mb-3 flex items-end gap-2">
             {product.oldPrice && (
               <span className="text-[13px] font-normal text-gray-400 line-through">
                 {product.oldPrice} ₽
@@ -164,50 +200,24 @@ export default function ProductPageClient() {
           </div>
 
           <div className="mt-5">
-            <p className="text-[12px] uppercase tracking-[0.12em] text-gray-400">
-              Краткое описание
-            </p>
-            <p className="mt-2 text-[14px] leading-6 text-gray-600">
-              {shortDescription}
-            </p>
-          </div>
-
-          <div className="mt-5">
-            <p className="text-[12px] uppercase tracking-[0.12em] text-gray-400">
-              Полное описание
-            </p>
-
-            <p className="mt-2 text-[14px] leading-6 text-gray-600">
-              {showFullDescription
-                ? detailedDescription
-                : `${detailedDescription.slice(0, 110)}...`}
-            </p>
-
-            <button
-              onClick={() => setShowFullDescription((prev) => !prev)}
-              className="mt-2 text-[13px] text-black underline underline-offset-2"
-            >
-              {showFullDescription ? "Свернуть" : "Читать полностью"}
-            </button>
-          </div>
-
-          <div className="mt-6">
             <p className="mb-2 text-sm text-gray-500">Размер</p>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-5 gap-1.5">
               {sizes.map((s) => (
                 <button
                   key={s.label}
-                  onClick={() => setSize(s.label)}
-                  className={`rounded-xl border px-2 py-2 text-center transition-all duration-200 active:scale-95 ${
-                    size === s.label
+                  onClick={() => toggleSize(s.label)}
+                  className={`rounded-xl border px-1.5 py-2 text-center transition-all duration-200 active:scale-95 ${
+                    selectedSizes.includes(s.label)
                       ? "border-black bg-black text-white"
                       : "border-gray-200 bg-white text-black"
                   }`}
                 >
-                  <div className="text-[12px] font-medium">{s.label}</div>
+                  <div className="text-[11px] font-medium">{s.label}</div>
                   <div
-                    className={`mt-0.5 text-[10px] ${
-                      size === s.label ? "text-white/70" : "text-gray-400"
+                    className={`mt-0.5 text-[9px] ${
+                      selectedSizes.includes(s.label)
+                        ? "text-white/70"
+                        : "text-gray-400"
                     }`}
                   >
                     {s.sub}
@@ -215,20 +225,26 @@ export default function ProductPageClient() {
                 </button>
               ))}
             </div>
+
+            <div className="mt-2 text-[12px] text-gray-400">
+              {selectedSizes.length > 0
+                ? `Выбрано размеров: ${selectedSizes.join(", ")}`
+                : "Можно выбрать несколько размеров"}
+            </div>
           </div>
 
-          <div className="mt-6">
+          <div className="mt-5">
             <p className="mb-2 text-sm text-gray-500">Цвет</p>
-            <div className="flex flex-wrap gap-2.5">
+            <div className="flex flex-wrap gap-2">
               {product.colors.map((c) => {
                 const swatch = colorMap[c] || "#E5E7EB";
-                const isSelected = color === c;
+                const isSelected = selectedColors.includes(c);
                 const isWhite = c === "Белый";
 
                 return (
                   <button
                     key={c}
-                    onClick={() => setColor(c)}
+                    onClick={() => toggleColor(c)}
                     aria-label={c}
                     title={c}
                     className={`flex h-9 w-9 items-center justify-center rounded-lg border transition-all duration-200 active:scale-95 ${
@@ -249,41 +265,41 @@ export default function ProductPageClient() {
             </div>
 
             <div className="mt-2 text-[12px] text-gray-400">
-              {color ? `Выбран цвет: ${color}` : "Выберите цвет"}
+              {selectedColors.length > 0
+                ? `Выбрано цветов: ${selectedColors.join(", ")}`
+                : "Можно выбрать несколько цветов"}
             </div>
           </div>
 
-          <div className="mt-6">
-            <p className="mb-2 text-sm text-gray-500">Количество</p>
-            <div className="flex items-center justify-between rounded-2xl border border-gray-200 px-4 py-3">
-              <button
-                onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-[#F5F5F5] text-lg text-black"
-              >
-                −
-              </button>
-
-              <span className="text-[16px] font-medium text-black">
-                {quantity}
-              </span>
-
-              <button
-                onClick={() => setQuantity((prev) => prev + 1)}
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-[#F5F5F5] text-lg text-black"
-              >
-                +
-              </button>
-            </div>
+          <div className="mt-5">
+            <h1 className="text-[24px] font-medium leading-tight text-black">
+              {product.name}
+            </h1>
           </div>
 
-          <div className="mt-6 mb-4 flex items-center justify-between rounded-2xl bg-[#F7F7F7] px-4 py-3">
-            <span className="text-sm text-gray-500">Итого</span>
+          <div className="mt-5">
+            <p className="text-[14px] leading-6 text-gray-600">
+              {showFullDescription ? description : `${description.slice(0, 110)}...`}
+            </p>
+
+            {description.length > 110 && (
+              <button
+                onClick={() => setShowFullDescription((prev) => !prev)}
+                className="mt-2 text-[13px] text-black underline underline-offset-2"
+              >
+                {showFullDescription ? "Свернуть" : "Читать полностью"}
+              </button>
+            )}
+          </div>
+
+          <div className="mt-6 flex items-center justify-between rounded-2xl bg-[#F7F7F7] px-4 py-3">
+            <span className="text-sm text-gray-500">Товаров к оформлению</span>
             <span className="text-[18px] font-semibold tracking-[-0.02em] text-black">
-              {product.price * quantity} ₽
+              {selectedSizes.length * selectedColors.length || 0}
             </span>
           </div>
 
-          <div className="flex gap-2">
+          <div className="mt-5 flex gap-2">
             <button
               onClick={goToCheckout}
               disabled={!canOrder}
@@ -294,27 +310,6 @@ export default function ProductPageClient() {
               }`}
             >
               Оформить заказ
-            </button>
-
-            <button
-              onClick={toggleFavorite}
-              aria-label="В избранное"
-              className={`flex h-[50px] w-[50px] shrink-0 items-center justify-center rounded-2xl transition-all duration-200 active:scale-[0.99] ${
-                favorites.includes(product.id)
-                  ? "bg-black text-white"
-                  : "bg-gray-100 text-black"
-              }`}
-            >
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill={favorites.includes(product.id) ? "currentColor" : "none"}
-                stroke="currentColor"
-                strokeWidth="1.8"
-              >
-                <path d="M20.8 4.6c-1.8-1.8-4.7-1.8-6.5 0L12 6.9l-2.3-2.3c-1.8-1.8-4.7-1.8-6.5 0s-1.8 4.7 0 6.5L12 21l8.8-9.9c1.8-1.8 1.8-4.7 0-6.5z" />
-              </svg>
             </button>
           </div>
         </div>

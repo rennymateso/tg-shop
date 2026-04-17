@@ -2,23 +2,23 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import BottomNav from "../components/BottomNav";
 import { products } from "../data/products";
+import BottomNav from "../components/BottomNav";
 
-type CartItem = {
+type CheckoutItem = {
   id: string;
   name: string;
   price: number;
-  size?: string;
-  color?: string;
-  quantity?: number;
+  size: string;
+  color: string;
+  quantity: number;
 };
 
 export default function CheckoutPageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [items, setItems] = useState<CartItem[]>([]);
+  const [items, setItems] = useState<CheckoutItem[]>([]);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [deliveryMethod, setDeliveryMethod] = useState<"delivery" | "pickup">(
@@ -32,13 +32,9 @@ export default function CheckoutPageClient() {
   const paymentStatus = searchParams.get("payment");
 
   useEffect(() => {
-    const draft = JSON.parse(localStorage.getItem("checkoutDraft") || "null");
-    const cart = JSON.parse(localStorage.getItem("cart") || "[]");
-
-    if (draft && Array.isArray(draft) && draft.length > 0) {
+    const draft = JSON.parse(localStorage.getItem("checkoutDraft") || "[]");
+    if (Array.isArray(draft)) {
       setItems(draft);
-    } else {
-      setItems(cart);
     }
   }, []);
 
@@ -50,26 +46,38 @@ export default function CheckoutPageClient() {
     }
   }, [paymentStatus]);
 
+  const updateQuantity = (index: number, nextQty: number) => {
+    const safeQty = Math.max(1, nextQty);
+    const updated = [...items];
+    updated[index] = { ...updated[index], quantity: safeQty };
+    setItems(updated);
+    localStorage.setItem("checkoutDraft", JSON.stringify(updated));
+  };
+
+  const removeItem = (index: number) => {
+    const updated = [...items];
+    updated.splice(index, 1);
+    setItems(updated);
+    localStorage.setItem("checkoutDraft", JSON.stringify(updated));
+  };
+
   const totalItems = useMemo(
-    () =>
-      items.reduce(
-        (sum, item) => sum + item.price * (item.quantity ? item.quantity : 1),
-        0
-      ),
+    () => items.reduce((sum, item) => sum + item.price * item.quantity, 0),
     [items]
   );
 
   const deliveryPrice = deliveryMethod === "delivery" ? 500 : 0;
   const total = totalItems + deliveryPrice;
 
-  const getProductById = (id: string) => {
-    return products.find((item) => item.id === id);
-  };
-
   const isFormValid =
     name.trim() &&
     phone.trim() &&
+    items.length > 0 &&
     (deliveryMethod === "pickup" || address.trim());
+
+  const getProductById = (id: string) => {
+    return products.find((item) => item.id === id);
+  };
 
   const handleCashOrder = () => {
     if (!isFormValid) {
@@ -80,7 +88,7 @@ export default function CheckoutPageClient() {
     localStorage.removeItem("cart");
     localStorage.removeItem("checkoutDraft");
     alert("Заказ оформлен. Менеджер свяжется с вами.");
-    router.push("/cart?payment=success");
+    router.push("/checkout?payment=success");
   };
 
   const handleCardPayment = async () => {
@@ -88,11 +96,6 @@ export default function CheckoutPageClient() {
 
     if (!isFormValid) {
       alert("Заполните все обязательные данные");
-      return;
-    }
-
-    if (items.length === 0) {
-      alert("Нет товаров для оформления");
       return;
     }
 
@@ -180,11 +183,10 @@ export default function CheckoutPageClient() {
         <div className="space-y-4">
           {items.map((item, i) => {
             const product = getProductById(item.id);
-            const quantity = item.quantity || 1;
 
             return (
               <div
-                key={i}
+                key={`${item.id}-${item.size}-${item.color}-${i}`}
                 className="rounded-[24px] bg-white p-4 shadow-[0_8px_28px_rgba(0,0,0,0.05)]"
               >
                 <div className="flex gap-4">
@@ -197,32 +199,59 @@ export default function CheckoutPageClient() {
                   </div>
 
                   <div className="min-w-0 flex-1">
-                    <div className="mb-1 text-[11px] text-gray-400 uppercase tracking-[0.14em]">
-                      {product?.brand || "MONTREAUX"}
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="mb-1 text-[11px] text-gray-400 uppercase tracking-[0.14em]">
+                          {product?.brand || "MONTREAUX"}
+                        </div>
+
+                        <h2 className="text-[15px] font-medium leading-[1.3] text-black">
+                          {item.name}
+                        </h2>
+                      </div>
+
+                      <button
+                        onClick={() => removeItem(i)}
+                        className="whitespace-nowrap text-xs text-gray-400"
+                      >
+                        удалить
+                      </button>
                     </div>
 
-                    <h2 className="text-[15px] font-medium leading-[1.3] text-black">
-                      {item.name}
-                    </h2>
-
                     <div className="mt-2 flex flex-wrap gap-2">
-                      {item.size && (
-                        <span className="rounded-full bg-[#F3F3F3] px-2.5 py-1 text-[11px] text-gray-600">
-                          Размер: {item.size}
-                        </span>
-                      )}
-                      {item.color && (
-                        <span className="rounded-full bg-[#F3F3F3] px-2.5 py-1 text-[11px] text-gray-600">
-                          Цвет: {item.color}
-                        </span>
-                      )}
                       <span className="rounded-full bg-[#F3F3F3] px-2.5 py-1 text-[11px] text-gray-600">
-                        Кол-во: {quantity}
+                        Размер: {item.size}
+                      </span>
+
+                      <span className="rounded-full bg-[#F3F3F3] px-2.5 py-1 text-[11px] text-gray-600">
+                        Цвет: {item.color}
                       </span>
                     </div>
 
-                    <div className="mt-4 text-[17px] font-semibold tracking-[-0.02em] text-black">
-                      {item.price * quantity} ₽
+                    <div className="mt-4 flex items-center justify-between gap-3">
+                      <div className="text-[16px] font-semibold tracking-[-0.02em] text-black">
+                        {item.price * item.quantity} ₽
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => updateQuantity(i, item.quantity - 1)}
+                          className="flex h-9 w-9 items-center justify-center rounded-full bg-[#F5F5F5] text-lg text-black"
+                        >
+                          −
+                        </button>
+
+                        <span className="w-6 text-center text-[15px] font-medium text-black">
+                          {item.quantity}
+                        </span>
+
+                        <button
+                          onClick={() => updateQuantity(i, item.quantity + 1)}
+                          className="flex h-9 w-9 items-center justify-center rounded-full bg-[#F5F5F5] text-lg text-black"
+                        >
+                          +
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -261,6 +290,7 @@ export default function CheckoutPageClient() {
               >
                 Доставка
               </button>
+
               <button
                 onClick={() => setDeliveryMethod("pickup")}
                 className={`rounded-2xl py-3 text-sm ${
@@ -273,16 +303,14 @@ export default function CheckoutPageClient() {
               </button>
             </div>
 
-            {deliveryMethod === "delivery" && (
+            {deliveryMethod === "delivery" ? (
               <input
                 placeholder="Адрес доставки"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 className="mb-4 w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
               />
-            )}
-
-            {deliveryMethod === "pickup" && (
+            ) : (
               <div className="mb-4 rounded-2xl bg-[#F5F5F5] p-3.5 text-sm text-gray-600">
                 Самовывоз: адрес магазина уточняется менеджером после заказа.
               </div>
@@ -300,6 +328,7 @@ export default function CheckoutPageClient() {
               >
                 Картой
               </button>
+
               <button
                 onClick={() => setPaymentMethod("cash")}
                 className={`rounded-2xl py-3 text-sm ${
@@ -317,10 +346,12 @@ export default function CheckoutPageClient() {
                 <span className="text-gray-500">Товары</span>
                 <span className="text-black">{totalItems} ₽</span>
               </div>
+
               <div className="mb-2 flex items-center justify-between">
                 <span className="text-gray-500">Доставка</span>
                 <span className="text-black">{deliveryPrice} ₽</span>
               </div>
+
               <div className="flex items-center justify-between text-[16px] font-semibold">
                 <span>Итого</span>
                 <span>{total} ₽</span>
