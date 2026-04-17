@@ -25,6 +25,19 @@ const brands = [
 const sortOptions = ["По умолчанию", "Сначала дешевле", "Сначала дороже"] as const;
 const badgeFilters = ["Все", "Новинки", "В наличии", "Из-за рубежа", "Скидки"] as const;
 
+const banners = [
+  {
+    image: "/banner.jpg",
+    alt: "Баннер 1",
+    link: "/",
+  },
+  {
+    image: "/banner-2.jpg",
+    alt: "Баннер 2",
+    link: "/",
+  },
+] as const;
+
 type Category = (typeof categories)[number];
 type Brand = (typeof brands)[number];
 type SortOption = (typeof sortOptions)[number];
@@ -44,6 +57,7 @@ export default function Home() {
   const [selectedSort, setSelectedSort] = useState<SortOption>("По умолчанию");
   const [selectedBadge, setSelectedBadge] = useState<BadgeFilter>("Все");
   const [search, setSearch] = useState("");
+  const [activeBanner, setActiveBanner] = useState(0);
 
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [showBrandMenu, setShowBrandMenu] = useState(false);
@@ -54,6 +68,14 @@ export default function Home() {
   useEffect(() => {
     const data = JSON.parse(localStorage.getItem("favorites") || "[]");
     setFavorites(data);
+  }, []);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setActiveBanner((prev) => (prev + 1) % banners.length);
+    }, 5000);
+
+    return () => clearInterval(timer);
   }, []);
 
   useEffect(() => {
@@ -162,14 +184,27 @@ export default function Home() {
       <div className="mt-4 overflow-hidden rounded-[24px] bg-white shadow-[0_10px_28px_rgba(0,0,0,0.05)]">
         <button
           type="button"
-          onClick={() => router.push("/")}
-          className="block w-full"
+          onClick={() => router.push(banners[activeBanner].link)}
+          className="relative block w-full"
         >
           <img
-            src="/banner.jpg"
-            alt="Баннер"
-            className="block h-[150px] w-full object-cover"
+            src={banners[activeBanner].image}
+            alt={banners[activeBanner].alt}
+            className="block h-[150px] w-full object-cover transition-all duration-500"
           />
+
+          <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1.5">
+            {banners.map((_, index) => (
+              <span
+                key={`banner-dot-${index}`}
+                className={`block rounded-full transition-all duration-300 ${
+                  index === activeBanner
+                    ? "h-1.5 w-4 bg-white"
+                    : "h-1.5 w-1.5 bg-white/55"
+                }`}
+              />
+            ))}
+          </div>
         </button>
       </div>
 
