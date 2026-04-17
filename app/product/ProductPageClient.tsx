@@ -16,6 +16,7 @@ export default function ProductPageClient() {
   const [color, setColor] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [favorites, setFavorites] = useState<string[]>([]);
+  const [showFullDescription, setShowFullDescription] = useState(false);
 
   useEffect(() => {
     const data = JSON.parse(localStorage.getItem("favorites") || "[]");
@@ -74,22 +75,22 @@ export default function ProductPageClient() {
     ? "Модель выполнена в минималистичном стиле и подходит для повседневного гардероба. Материал комфортен в носке, силуэт аккуратный и универсальный. Товар хорошо сочетается с джинсами, брюками и базовой обувью."
     : "";
 
-  const addToCart = () => {
+  const goToCheckout = () => {
     if (!product || !id || !canOrder) return;
 
-    const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+    const draft = [
+      {
+        id,
+        name: product.name,
+        price: product.price,
+        size,
+        color,
+        quantity,
+      },
+    ];
 
-    cart.push({
-      id,
-      name: product.name,
-      price: product.price,
-      size,
-      color,
-      quantity,
-    });
-
-    localStorage.setItem("cart", JSON.stringify(cart));
-    router.push("/cart?step=form");
+    localStorage.setItem("checkoutDraft", JSON.stringify(draft));
+    router.push("/checkout");
   };
 
   if (!product) {
@@ -173,29 +174,39 @@ export default function ProductPageClient() {
 
           <div className="mt-5">
             <p className="text-[12px] uppercase tracking-[0.12em] text-gray-400">
-              Подробное описание
+              Полное описание
             </p>
+
             <p className="mt-2 text-[14px] leading-6 text-gray-600">
-              {detailedDescription}
+              {showFullDescription
+                ? detailedDescription
+                : `${detailedDescription.slice(0, 110)}...`}
             </p>
+
+            <button
+              onClick={() => setShowFullDescription((prev) => !prev)}
+              className="mt-2 text-[13px] text-black underline underline-offset-2"
+            >
+              {showFullDescription ? "Свернуть" : "Читать полностью"}
+            </button>
           </div>
 
           <div className="mt-6">
             <p className="mb-2 text-sm text-gray-500">Размер</p>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-4 gap-2">
               {sizes.map((s) => (
                 <button
                   key={s.label}
                   onClick={() => setSize(s.label)}
-                  className={`rounded-2xl border px-3 py-3 text-center transition-all duration-200 active:scale-95 ${
+                  className={`rounded-xl border px-2 py-2 text-center transition-all duration-200 active:scale-95 ${
                     size === s.label
                       ? "border-black bg-black text-white"
                       : "border-gray-200 bg-white text-black"
                   }`}
                 >
-                  <div className="text-sm font-medium">{s.label}</div>
+                  <div className="text-[12px] font-medium">{s.label}</div>
                   <div
-                    className={`mt-1 text-[11px] ${
+                    className={`mt-0.5 text-[10px] ${
                       size === s.label ? "text-white/70" : "text-gray-400"
                     }`}
                   >
@@ -208,7 +219,7 @@ export default function ProductPageClient() {
 
           <div className="mt-6">
             <p className="mb-2 text-sm text-gray-500">Цвет</p>
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-2.5">
               {product.colors.map((c) => {
                 const swatch = colorMap[c] || "#E5E7EB";
                 const isSelected = color === c;
@@ -220,14 +231,14 @@ export default function ProductPageClient() {
                     onClick={() => setColor(c)}
                     aria-label={c}
                     title={c}
-                    className={`flex h-11 w-11 items-center justify-center rounded-xl border transition-all duration-200 active:scale-95 ${
+                    className={`flex h-9 w-9 items-center justify-center rounded-lg border transition-all duration-200 active:scale-95 ${
                       isSelected
                         ? "border-black ring-2 ring-black/10"
                         : "border-gray-200"
                     }`}
                   >
                     <span
-                      className={`block h-7 w-7 rounded-md ${
+                      className={`block h-5 w-5 rounded-md ${
                         isWhite ? "border border-gray-300" : ""
                       }`}
                       style={{ backgroundColor: swatch }}
@@ -274,7 +285,7 @@ export default function ProductPageClient() {
 
           <div className="flex gap-2">
             <button
-              onClick={addToCart}
+              onClick={goToCheckout}
               disabled={!canOrder}
               className={`flex-1 rounded-2xl py-3.5 text-sm font-medium transition-all duration-200 ${
                 canOrder

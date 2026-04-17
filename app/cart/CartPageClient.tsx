@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import BottomNav from "../components/BottomNav";
 import { products } from "../data/products";
 
@@ -16,36 +16,13 @@ type CartItem = {
 
 export default function CartPageClient() {
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [step, setStep] = useState<"cart" | "form">("cart");
-  const [isPaying, setIsPaying] = useState(false);
-  const [paymentError, setPaymentError] = useState("");
-
-  const paymentStatus = searchParams.get("payment");
-  const urlStep = searchParams.get("step");
 
   useEffect(() => {
     const data = JSON.parse(localStorage.getItem("cart") || "[]");
     setCart(data);
   }, []);
-
-  useEffect(() => {
-    if (urlStep === "form") {
-      setStep("form");
-    }
-  }, [urlStep]);
-
-  useEffect(() => {
-    if (paymentStatus === "success") {
-      localStorage.removeItem("cart");
-      setCart([]);
-      setStep("cart");
-    }
-  }, [paymentStatus]);
 
   const removeItem = (index: number) => {
     const newCart = [...cart];
@@ -67,54 +44,9 @@ export default function CartPageClient() {
     return products.find((item) => item.id === id);
   };
 
-  const handlePay = async () => {
-    setPaymentError("");
-
-    if (!name.trim() || !phone.trim()) {
-      alert("Введите имя и телефон");
-      return;
-    }
-
-    if (cart.length === 0) {
-      alert("Корзина пустая");
-      return;
-    }
-
-    try {
-      setIsPaying(true);
-
-      const response = await fetch("/api/payments/init", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name,
-          phone,
-          items: cart,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok || !result?.success || !result?.paymentUrl) {
-        const rawText = result?.raw
-          ? JSON.stringify(result.raw, null, 2)
-          : result?.details || result?.error || "Не удалось создать платеж";
-
-        setPaymentError(rawText);
-        throw new Error(result?.error || "Не удалось создать платеж");
-      }
-
-      window.location.href = result.paymentUrl;
-    } catch (error) {
-      if (!paymentError) {
-        setPaymentError(
-          error instanceof Error ? error.message : "Ошибка при переходе к оплате"
-        );
-      }
-      setIsPaying(false);
-    }
+  const goToCheckout = () => {
+    localStorage.removeItem("checkoutDraft");
+    router.push("/checkout");
   };
 
   return (
@@ -131,24 +63,6 @@ export default function CartPageClient() {
 
         <div className="w-[86px]" />
       </div>
-
-      {paymentStatus === "success" && (
-        <div className="mb-4 rounded-[20px] bg-white p-4 text-sm text-black shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
-          Оплата завершена. Заказ успешно оформлен.
-        </div>
-      )}
-
-      {paymentStatus === "fail" && (
-        <div className="mb-4 rounded-[20px] bg-white p-4 text-sm text-black shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
-          Оплата не завершена. Можно попробовать снова.
-        </div>
-      )}
-
-      {paymentError && (
-        <div className="mb-4 rounded-[20px] bg-white p-4 text-xs text-black shadow-[0_8px_28px_rgba(0,0,0,0.05)] whitespace-pre-wrap break-words">
-          {paymentError}
-        </div>
-      )}
 
       {cart.length === 0 && (
         <div className="rounded-[24px] bg-white p-7 text-center shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
@@ -260,63 +174,20 @@ export default function CartPageClient() {
             );
           })}
 
-          <div className="h-2" />
-
           <div className="rounded-[24px] border border-white bg-white p-4 shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
-            {step === "cart" ? (
-              <>
-                <div className="mb-3 flex items-center justify-between">
-                  <span className="text-sm text-gray-500">Итого</span>
-                  <span className="text-[18px] font-semibold tracking-[-0.02em] text-black">
-                    {total} ₽
-                  </span>
-                </div>
+            <div className="mb-3 flex items-center justify-between">
+              <span className="text-sm text-gray-500">Итого</span>
+              <span className="text-[18px] font-semibold tracking-[-0.02em] text-black">
+                {total} ₽
+              </span>
+            </div>
 
-                <button
-                  onClick={() => setStep("form")}
-                  className="w-full rounded-2xl bg-black py-3.5 text-sm font-medium text-white"
-                >
-                  Оформить заказ
-                </button>
-              </>
-            ) : (
-              <>
-                <h2 className="mb-4 text-[18px] font-medium text-black">
-                  Оформление заказа
-                </h2>
-
-                <div className="mb-4 rounded-2xl bg-[#F7F7F7] px-4 py-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-500">Итого</span>
-                    <span className="text-[18px] font-semibold tracking-[-0.02em] text-black">
-                      {total} ₽
-                    </span>
-                  </div>
-                </div>
-
-                <input
-                  placeholder="Ваше имя"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="mb-3 w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-                />
-
-                <input
-                  placeholder="Телефон"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="mb-4 w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-                />
-
-                <button
-                  onClick={handlePay}
-                  disabled={isPaying}
-                  className="w-full rounded-2xl bg-black py-3.5 text-sm font-medium text-white disabled:opacity-60"
-                >
-                  {isPaying ? "Переход..." : "Оплатить"}
-                </button>
-              </>
-            )}
+            <button
+              onClick={goToCheckout}
+              className="w-full rounded-2xl bg-black py-3.5 text-sm font-medium text-white"
+            >
+              Оформить заказ
+            </button>
           </div>
         </div>
       )}
