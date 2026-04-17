@@ -142,6 +142,20 @@ export default function Home() {
         </div>
       </div>
 
+      <div className="mt-4 overflow-hidden rounded-[24px] bg-white shadow-[0_10px_28px_rgba(0,0,0,0.05)]">
+        <button
+          type="button"
+          onClick={() => router.push("/")}
+          className="block w-full"
+        >
+          <img
+            src="/banner.jpg"
+            alt="Баннер"
+            className="h-[150px] w-full object-cover"
+          />
+        </button>
+      </div>
+
       <div className="mt-5 overflow-x-auto">
         <div className="flex min-w-max gap-2">
           {categories.map((category) => (
@@ -228,9 +242,14 @@ export default function Home() {
 
       <div className="mt-7 mb-4 flex items-center justify-between">
         <h2 className="text-[17px] font-medium text-black">Подборка</h2>
-        <span className="text-[12px] text-gray-400">
-          {filteredProducts.length} товара
-        </span>
+
+        <button
+          type="button"
+          onClick={() => setShowSortMenu((prev) => !prev)}
+          className="text-[12px] text-gray-400"
+        >
+          {selectedSort}
+        </button>
       </div>
 
       {filteredProducts.length === 0 ? (
@@ -291,11 +310,11 @@ export default function Home() {
                   </div>
                 </div>
 
-                <h3 className="mt-1.5 min-h-[40px] text-[14px] font-medium leading-[1.25] text-black">
+                <h3 className="mt-1 min-h-[36px] text-[14px] font-medium leading-[1.2] text-black">
                   {p.name}
                 </h3>
 
-                <div className="mt-auto flex items-center justify-between gap-2 pt-2">
+                <div className="mt-auto flex items-center justify-between gap-2 pt-1">
                   <div className="flex items-center gap-2">
                     {p.oldPrice && (
                       <span className="text-[12px] font-normal leading-none text-gray-400 line-through">
