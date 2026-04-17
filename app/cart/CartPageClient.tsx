@@ -14,6 +14,11 @@ type CartItem = {
   quantity?: number;
 };
 
+function getDiscountPercent(oldPrice: number | null, price: number) {
+  if (!oldPrice || oldPrice <= price) return 0;
+  return Math.round(((oldPrice - price) / oldPrice) * 100);
+}
+
 export default function CartPageClient() {
   const router = useRouter();
 
@@ -45,6 +50,17 @@ export default function CartPageClient() {
     [cart]
   );
 
+  const totalOld = useMemo(
+    () =>
+      cart.reduce((sum, item) => {
+        const product = products.find((p) => p.id === item.id);
+        const quantity = item.quantity || 1;
+        const oldPrice = product?.oldPrice ?? item.price;
+        return sum + oldPrice * quantity;
+      }, 0),
+    [cart]
+  );
+
   const getProductById = (id: string) => {
     return products.find((item) => item.id === id);
   };
@@ -65,10 +81,7 @@ export default function CartPageClient() {
 
         <h1 className="text-[20px] font-medium">Корзина</h1>
 
-        <button
-          onClick={clearCart}
-          className="text-xs text-gray-400"
-        >
+        <button onClick={clearCart} className="text-xs text-gray-400">
           очистить
         </button>
       </div>
@@ -113,6 +126,8 @@ export default function CartPageClient() {
           {cart.map((item, i) => {
             const product = getProductById(item.id);
             const quantity = item.quantity || 1;
+            const oldUnitPrice = product?.oldPrice ?? item.price;
+            const discountPercent = getDiscountPercent(product?.oldPrice ?? null, item.price);
 
             return (
               <div
@@ -167,8 +182,22 @@ export default function CartPageClient() {
                     </div>
 
                     <div className="mt-4 flex items-center justify-between gap-3">
-                      <div className="text-[16px] font-semibold tracking-[-0.02em] text-[#16A34A]">
-                        {item.price * quantity} ₽
+                      <div className="flex flex-wrap items-center gap-2">
+                        {oldUnitPrice > item.price && (
+                          <span className="text-[13px] text-gray-400 line-through">
+                            {oldUnitPrice * quantity} ₽
+                          </span>
+                        )}
+
+                        <span className="text-[16px] font-semibold tracking-[-0.02em] text-[#16A34A]">
+                          {item.price * quantity} ₽
+                        </span>
+
+                        {discountPercent > 0 && (
+                          <span className="rounded-full bg-[#E8F7EE] px-1.5 py-0.5 text-[10px] font-medium text-[#16A34A]">
+                            -{discountPercent}%
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -180,9 +209,18 @@ export default function CartPageClient() {
           <div className="rounded-[24px] border border-white bg-white p-4 shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
             <div className="mb-3 flex items-center justify-between">
               <span className="text-sm text-gray-500">Итого</span>
-              <span className="text-[18px] font-semibold tracking-[-0.02em] text-[#16A34A]">
-                {total} ₽
-              </span>
+
+              <div className="flex items-center gap-2">
+                {totalOld > total && (
+                  <span className="text-[13px] text-gray-400 line-through">
+                    {totalOld} ₽
+                  </span>
+                )}
+
+                <span className="text-[18px] font-semibold tracking-[-0.02em] text-[#16A34A]">
+                  {total} ₽
+                </span>
+              </div>
             </div>
 
             <button

@@ -14,6 +14,11 @@ type CartItem = {
   quantity: number;
 };
 
+function getDiscountPercent(oldPrice: number | null, price: number) {
+  if (!oldPrice || oldPrice <= price) return 0;
+  return Math.round(((oldPrice - price) / oldPrice) * 100);
+}
+
 export default function ProductPageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -147,6 +152,8 @@ export default function ProductPageClient() {
     );
   }
 
+  const discountPercent = getDiscountPercent(product.oldPrice, product.price);
+
   return (
     <main className="min-h-screen bg-[#F5F5F5] px-4 pt-5 pb-32">
       <div className="mb-4 flex items-center justify-between">
@@ -215,6 +222,12 @@ export default function ProductPageClient() {
             <span className="text-[21px] font-semibold leading-none tracking-[-0.02em] text-[#16A34A]">
               {product.price} ₽
             </span>
+
+            {discountPercent > 0 && (
+              <span className="rounded-full bg-[#E8F7EE] px-1.5 py-0.5 text-[10px] font-medium text-[#16A34A]">
+                -{discountPercent}%
+              </span>
+            )}
           </div>
 
           <div className="mt-5">
