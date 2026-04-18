@@ -51,6 +51,34 @@ export default function DeliveryPaymentPage() {
         </div>
 
         <div className="rounded-[24px] bg-white p-5 shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
+          <h2 className="text-[16px] font-medium text-black">Стоимость доставки</h2>
+
+          <div className="mt-3 space-y-3 text-sm leading-6 text-gray-600">
+            <p>
+              Стоимость доставки по <span className="text-black">г. Казань</span>{" "}
+              при покупке до <span className="text-black">10 000 ₽</span>{" "}
+              составляет <span className="text-black">300 ₽</span>.
+            </p>
+
+            <p>
+              При покупке от <span className="text-black">10 000 ₽</span> по
+              г. Казань действует <span className="text-black">бесплатная доставка</span>.
+            </p>
+
+            <p>
+              Стоимость доставки по России составляет{" "}
+              <span className="text-black">от 300 ₽ до 1 000 ₽</span> в
+              зависимости от региона и выбранного способа доставки.
+            </p>
+
+            <p>
+              При покупке от <span className="text-black">20 000 ₽</span> по
+              России действует <span className="text-black">бесплатная доставка</span>.
+            </p>
+          </div>
+        </div>
+
+        <div className="rounded-[24px] bg-white p-5 shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
           <h2 className="text-[16px] font-medium text-black">Сроки по наличию</h2>
 
           <div className="mt-3 space-y-3 text-sm leading-6 text-gray-600">

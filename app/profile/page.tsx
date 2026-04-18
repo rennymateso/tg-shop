@@ -22,16 +22,6 @@ export default function ProfilePage() {
       description: "Условия доставки и способы оплаты",
       onClick: () => router.push("/delivery-payment"),
     },
-    {
-      title: "Поддержка",
-      description: "Связаться с нами по вопросам заказа",
-      onClick: () => router.push("/support"),
-    },
-    {
-      title: "Перейти на наш канал",
-      description: "Новости, поступления и обновления",
-      onClick: () => router.push("/channel"),
-    },
   ];
 
   return (
@@ -75,6 +65,26 @@ export default function ProfilePage() {
             </div>
           </button>
         ))}
+
+        <button
+          onClick={() => router.push("/support")}
+          className="w-full rounded-[24px] bg-black p-4 text-left text-white shadow-[0_8px_28px_rgba(0,0,0,0.10)]"
+        >
+          <p className="text-[15px] font-medium">Поддержка</p>
+          <p className="mt-1 text-sm text-white/70">
+            Связаться с нами по вопросам заказа
+          </p>
+        </button>
+
+        <button
+          onClick={() => router.push("/channel")}
+          className="w-full rounded-[24px] bg-[#229ED9] p-4 text-left text-white shadow-[0_8px_28px_rgba(34,158,217,0.20)]"
+        >
+          <p className="text-[15px] font-medium">Перейти на наш канал</p>
+          <p className="mt-1 text-sm text-white/80">
+            Новости, поступления и обновления
+          </p>
+        </button>
       </div>
 
       <BottomNav />
