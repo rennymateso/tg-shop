@@ -22,6 +22,11 @@ export default function ProfilePage() {
       description: "Условия доставки и способы оплаты",
       onClick: () => router.push("/delivery-payment"),
     },
+    {
+      title: "Возврат и обмен",
+      description: "Правила возврата и обмена товара",
+      onClick: () => router.push("/return-exchange"),
+    },
   ];
 
   return (
@@ -43,8 +48,8 @@ export default function ProfilePage() {
         <p className="text-[18px] font-medium text-black">MONTREAUX</p>
         <p className="mt-2 text-sm leading-6 text-gray-500">
           Личный кабинет покупателя. Здесь можно перейти в избранное, корзину,
-          посмотреть условия доставки и оплаты, а также открыть раздел
-          поддержки.
+          посмотреть условия доставки и оплаты, ознакомиться с правилами
+          возврата и обмена, а также открыть раздел поддержки.
         </p>
       </div>
 
