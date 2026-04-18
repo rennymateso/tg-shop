@@ -22,6 +22,16 @@ export default function ProfilePage() {
       description: "Условия доставки и способы оплаты",
       onClick: () => router.push("/delivery-payment"),
     },
+    {
+      title: "Поддержка",
+      description: "Связаться с нами по вопросам заказа",
+      onClick: () => router.push("/support"),
+    },
+    {
+      title: "Перейти на наш канал",
+      description: "Новости, поступления и обновления",
+      onClick: () => router.push("/channel"),
+    },
   ];
 
   return (
@@ -42,8 +52,9 @@ export default function ProfilePage() {
       <div className="mb-4 rounded-[24px] bg-white p-5 shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
         <p className="text-[18px] font-medium text-black">MONTREAUX</p>
         <p className="mt-2 text-sm leading-6 text-gray-500">
-          Личный кабинет покупателя. Здесь можно перейти в избранное, корзину и
-          посмотреть информацию по доставке и оплате.
+          Личный кабинет покупателя. Здесь можно перейти в избранное, корзину,
+          посмотреть условия доставки и оплаты, а также открыть раздел
+          поддержки.
         </p>
       </div>
 
