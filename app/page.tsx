@@ -21,6 +21,7 @@ const brands = [
   "Brunello Cucinelli",
   "BORZ",
   "Massimo Carino",
+  "Другие бренды",
 ] as const;
 const sortOptions = ["По умолчанию", "Сначала дешевле", "Сначала дороже"] as const;
 const badgeFilters = ["Все", "Новинки", "В наличии", "Из-за рубежа", "Скидки"] as const;

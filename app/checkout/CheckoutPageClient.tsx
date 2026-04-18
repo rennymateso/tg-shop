@@ -24,6 +24,19 @@ function getDiscountPercent(oldPrice: number, newPrice: number) {
   return Math.round(((oldPrice - newPrice) / oldPrice) * 100);
 }
 
+function formatPhone(value: string) {
+  const digits = value.replace(/\D/g, "").replace(/^7/, "").slice(0, 10);
+
+  let result = "+7";
+  if (digits.length > 0) result += ` (${digits.slice(0, 3)}`;
+  if (digits.length >= 3) result += ")";
+  if (digits.length > 3) result += ` ${digits.slice(3, 6)}`;
+  if (digits.length > 6) result += `-${digits.slice(6, 8)}`;
+  if (digits.length > 8) result += `-${digits.slice(8, 10)}`;
+
+  return result;
+}
+
 export default function CheckoutPageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -31,9 +44,7 @@ export default function CheckoutPageClient() {
   const [items, setItems] = useState<CheckoutItem[]>([]);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("+7");
-  const [deliveryMethod, setDeliveryMethod] = useState<"delivery" | "pickup">(
-    "delivery"
-  );
+  const [deliveryMethod, setDeliveryMethod] = useState<"delivery" | "pickup">("delivery");
   const [paymentMethod, setPaymentMethod] = useState<"card" | "cash">("card");
   const [address, setAddress] = useState("");
   const [promoCode, setPromoCode] = useState("");
@@ -83,20 +94,18 @@ export default function CheckoutPageClient() {
       return sum + oldUnitPrice * item.quantity;
     }, 0);
 
-    const newItemsTotal = items.reduce((sum, item) => {
-      return sum + item.price * item.quantity;
-    }, 0);
+    const newItemsTotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
     return { oldItemsTotal, newItemsTotal };
   }, [items]);
 
   const deliveryPrice = deliveryMethod === "delivery" ? 500 : 0;
-
   const finalOldTotal = totals.oldItemsTotal + deliveryPrice;
   const finalNewTotal = totals.newItemsTotal + deliveryPrice;
   const finalDiscountPercent = getDiscountPercent(finalOldTotal, finalNewTotal);
 
-  const isPhoneValid = phone.trim().length > 2;
+  const phoneDigitsCount = phone.replace(/\D/g, "").replace(/^7/, "").length;
+  const isPhoneValid = phoneDigitsCount === 10;
 
   const isFormValid =
     name.trim() &&
@@ -104,24 +113,10 @@ export default function CheckoutPageClient() {
     items.length > 0 &&
     (deliveryMethod === "pickup" || address.trim());
 
-  const getProductById = (id: string) => {
-    return products.find((item) => item.id === id);
-  };
+  const getProductById = (id: string) => products.find((item) => item.id === id);
 
   const handlePhoneChange = (value: string) => {
-    if (!value.startsWith("+7")) {
-      if (value === "" || value === "+") {
-        setPhone("+7");
-        return;
-      }
-
-      const digits = value.replace(/\D/g, "");
-      const normalized = digits.startsWith("7") ? digits.slice(1) : digits;
-      setPhone(`+7${normalized}`);
-      return;
-    }
-
-    setPhone(value);
+    setPhone(formatPhone(value));
   };
 
   const handleCashOrder = () => {
@@ -206,27 +201,23 @@ export default function CheckoutPageClient() {
 
       {paymentStatus === "success" && (
         <div className="mb-4 rounded-[20px] bg-white p-4 shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
-          <p className="text-sm font-medium text-black">
-            Заказ успешно оформлен.
-          </p>
+          <p className="text-sm font-medium text-black">Заказ успешно оформлен.</p>
           <p className="mt-2 text-sm leading-6 text-gray-500">
-            Вам придет сообщение о статусе заказа. Также с вами свяжется
-            менеджер для подтверждения и уточнения деталей.
+            Вам придет сообщение о статусе заказа. Также с вами свяжется менеджер для
+            подтверждения и уточнения деталей.
           </p>
         </div>
       )}
 
       {paymentError && (
-        <div className="mb-4 rounded-[20px] bg-white p-4 text-xs text-black shadow-[0_8px_28px_rgba(0,0,0,0.05)] whitespace-pre-wrap break-words">
+        <div className="mb-4 whitespace-pre-wrap break-words rounded-[20px] bg-white p-4 text-xs text-black shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
           {paymentError}
         </div>
       )}
 
       {items.length === 0 ? (
         <div className="rounded-[24px] bg-white p-7 text-center shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
-          <p className="text-[16px] font-medium text-black">
-            Нет товаров для оформления
-          </p>
+          <p className="text-[16px] font-medium text-black">Нет товаров для оформления</p>
 
           <button
             onClick={() => router.push("/")}
@@ -242,10 +233,7 @@ export default function CheckoutPageClient() {
             const oldUnitPrice = getOldUnitPrice(item.id, item.price);
             const lineOldTotal = oldUnitPrice * item.quantity;
             const lineNewTotal = item.price * item.quantity;
-            const lineDiscountPercent = getDiscountPercent(
-              lineOldTotal,
-              lineNewTotal
-            );
+            const lineDiscountPercent = getDiscountPercent(lineOldTotal, lineNewTotal);
 
             return (
               <div
@@ -253,7 +241,7 @@ export default function CheckoutPageClient() {
                 className="rounded-[24px] bg-white p-4 shadow-[0_8px_28px_rgba(0,0,0,0.05)]"
               >
                 <div className="flex gap-4">
-                  <div className="w-[88px] shrink-0 overflow-hidden rounded-[18px] bg-[#ECECEC] aspect-[3/4]">
+                  <div className="aspect-[3/4] w-[88px] shrink-0 overflow-hidden rounded-[18px] bg-[#ECECEC]">
                     <img
                       src={product?.image || "/products/product-1.jpg"}
                       alt={item.name}
@@ -264,7 +252,7 @@ export default function CheckoutPageClient() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <div className="mb-1 text-[11px] text-gray-400 uppercase tracking-[0.14em]">
+                        <div className="mb-1 text-[11px] uppercase tracking-[0.14em] text-gray-400">
                           {product?.brand || "MONTREAUX"}
                         </div>
 
@@ -333,9 +321,7 @@ export default function CheckoutPageClient() {
           })}
 
           <div className="rounded-[24px] bg-white p-4 shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
-            <h2 className="mb-4 text-[18px] font-medium text-black">
-              Данные клиента
-            </h2>
+            <h2 className="mb-4 text-[18px] font-medium text-black">Данные клиента</h2>
 
             <input
               placeholder="Ваше имя"
@@ -345,7 +331,7 @@ export default function CheckoutPageClient() {
             />
 
             <input
-              placeholder="Телефон"
+              placeholder="+7 (___) ___-__-__"
               value={phone}
               onChange={(e) => handlePhoneChange(e.target.value)}
               className="mb-4 w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
@@ -356,9 +342,7 @@ export default function CheckoutPageClient() {
               <button
                 onClick={() => setDeliveryMethod("delivery")}
                 className={`rounded-2xl py-3 text-sm ${
-                  deliveryMethod === "delivery"
-                    ? "bg-black text-white"
-                    : "bg-gray-100 text-black"
+                  deliveryMethod === "delivery" ? "bg-black text-white" : "bg-gray-100 text-black"
                 }`}
               >
                 Доставка
@@ -367,9 +351,7 @@ export default function CheckoutPageClient() {
               <button
                 onClick={() => setDeliveryMethod("pickup")}
                 className={`rounded-2xl py-3 text-sm ${
-                  deliveryMethod === "pickup"
-                    ? "bg-black text-white"
-                    : "bg-gray-100 text-black"
+                  deliveryMethod === "pickup" ? "bg-black text-white" : "bg-gray-100 text-black"
                 }`}
               >
                 Самовывоз
@@ -385,8 +367,8 @@ export default function CheckoutPageClient() {
               />
             ) : (
               <div className="mb-4 rounded-2xl bg-[#F5F5F5] p-3.5 text-sm leading-6 text-gray-600">
-                Самовывоз по адресу: г. Казань, Академика Глушко 16Г, ТЦ
-                "АКАДЕМИК", 2 этаж. Подробнее уточняйте у менеджера.
+                Самовывоз по адресу: г. Казань, Академика Глушко 16Г, ТЦ "АКАДЕМИК", 2 этаж.
+                Подробнее уточняйте у менеджера.
               </div>
             )}
 
@@ -395,9 +377,7 @@ export default function CheckoutPageClient() {
               <button
                 onClick={() => setPaymentMethod("card")}
                 className={`rounded-2xl py-3 text-sm ${
-                  paymentMethod === "card"
-                    ? "bg-black text-white"
-                    : "bg-gray-100 text-black"
+                  paymentMethod === "card" ? "bg-black text-white" : "bg-gray-100 text-black"
                 }`}
               >
                 Картой
@@ -410,9 +390,7 @@ export default function CheckoutPageClient() {
                 }}
                 disabled={deliveryMethod !== "pickup"}
                 className={`rounded-2xl py-3 text-sm ${
-                  paymentMethod === "cash"
-                    ? "bg-black text-white"
-                    : "bg-gray-100 text-black"
+                  paymentMethod === "cash" ? "bg-black text-white" : "bg-gray-100 text-black"
                 } disabled:cursor-not-allowed disabled:opacity-50`}
               >
                 Наличными
@@ -435,9 +413,7 @@ export default function CheckoutPageClient() {
             <div className="mb-4 rounded-2xl bg-[#F7F7F7] px-4 py-3 text-sm">
               <div className="mb-2 flex items-center justify-between">
                 <span className="text-gray-500">До скидки</span>
-                <span className="text-gray-400 line-through">
-                  {finalOldTotal} ₽
-                </span>
+                <span className="text-gray-400 line-through">{finalOldTotal} ₽</span>
               </div>
 
               <div className="mb-2 flex items-center justify-between">

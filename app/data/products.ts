@@ -14,12 +14,14 @@ export type Product = {
     | "Loro Piana"
     | "Brunello Cucinelli"
     | "BORZ"
-    | "Massimo Carino";
+    | "Massimo Carino"
+    | "Другие бренды";
   price: number;
   oldPrice: number | null;
   badge: "Новинка" | "Скидка" | "В наличии" | "Из-за рубежа";
   image: string;
   images: string[];
+  colorImages?: Record<string, string>;
   type: "top" | "bottom";
   category: "Футболки" | "Поло" | "Джинсы" | "Брюки" | "Костюмы";
   colors: string[];
@@ -41,6 +43,11 @@ export const products: Product[] = [
       "/products/product-1.jpg",
       "/products/product-1.jpg",
     ],
+    colorImages: {
+      Черный: "/products/product-1.jpg",
+      Белый: "/products/product-1.jpg",
+      Серый: "/products/product-1.jpg",
+    },
     type: "top",
     category: "Поло",
     colors: ["Черный", "Белый", "Серый"],
@@ -62,6 +69,10 @@ export const products: Product[] = [
       "/products/product-2.jpg",
       "/products/product-2.jpg",
     ],
+    colorImages: {
+      Белый: "/products/product-2.jpg",
+      Синий: "/products/product-2.jpg",
+    },
     type: "top",
     category: "Поло",
     colors: ["Белый", "Синий"],
@@ -78,6 +89,9 @@ export const products: Product[] = [
     badge: "В наличии",
     image: "/products/product-3.jpg",
     images: ["/products/product-3.jpg", "/products/product-3.jpg"],
+    colorImages: {
+      Черный: "/products/product-3.jpg",
+    },
     type: "top",
     category: "Поло",
     colors: ["Черный"],
@@ -98,6 +112,10 @@ export const products: Product[] = [
       "/products/product-4.jpg",
       "/products/product-4.jpg",
     ],
+    colorImages: {
+      Белый: "/products/product-4.jpg",
+      Бежевый: "/products/product-4.jpg",
+    },
     type: "top",
     category: "Поло",
     colors: ["Белый", "Бежевый"],

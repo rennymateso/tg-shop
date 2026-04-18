@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import BottomNav from "../components/BottomNav";
 import { products } from "../data/products";
@@ -30,11 +30,17 @@ export default function ProductPageClient() {
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [showFullDescription, setShowFullDescription] = useState(false);
+  const [activeImage, setActiveImage] = useState("");
 
   useEffect(() => {
     const data = JSON.parse(localStorage.getItem("favorites") || "[]");
     setFavorites(data);
   }, []);
+
+  useEffect(() => {
+    if (!product) return;
+    setActiveImage(product.image);
+  }, [product]);
 
   const toggleFavorite = () => {
     if (!product) return;
@@ -77,8 +83,13 @@ export default function ProductPageClient() {
 
   const article = product ? `ART-${product.id.padStart(4, "0")}` : "";
   const description = product?.description || "";
-
   const canOrder = selectedSizes.length > 0 && selectedColors.length > 0;
+  const discountPercent = product ? getDiscountPercent(product.oldPrice, product.price) : 0;
+
+  const galleryImages = useMemo(() => {
+    if (!product) return [];
+    return product.images?.length ? product.images : [product.image];
+  }, [product]);
 
   const toggleSize = (value: string) => {
     setSelectedSizes((prev) =>
@@ -87,9 +98,17 @@ export default function ProductPageClient() {
   };
 
   const toggleColor = (value: string) => {
-    setSelectedColors((prev) =>
-      prev.includes(value) ? prev.filter((item) => item !== value) : [...prev, value]
-    );
+    setSelectedColors((prev) => {
+      const next = prev.includes(value)
+        ? prev.filter((item) => item !== value)
+        : [...prev, value];
+
+      return next;
+    });
+
+    if (product?.colorImages?.[value]) {
+      setActiveImage(product.colorImages[value]);
+    }
   };
 
   const addToCart = () => {
@@ -152,8 +171,6 @@ export default function ProductPageClient() {
     );
   }
 
-  const discountPercent = getDiscountPercent(product.oldPrice, product.price);
-
   return (
     <main className="min-h-screen bg-[#F5F5F5] px-4 pt-5 pb-32">
       <div className="mb-4 flex items-center justify-between">
@@ -189,16 +206,41 @@ export default function ProductPageClient() {
       <div className="overflow-hidden rounded-[24px] bg-white shadow-[0_10px_30px_rgba(0,0,0,0.05)]">
         <div className="relative aspect-[3/4] overflow-hidden bg-[#ECECEC]">
           <img
-            src={product.image}
+            src={activeImage || product.image}
             alt={product.name}
             className="h-full w-full object-cover"
           />
 
           {product.badge && (
-            <div className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-[10px] font-medium text-black backdrop-blur shadow-sm">
+            <div
+              className={`absolute left-4 top-4 rounded-full px-3 py-1 text-[10px] font-medium backdrop-blur shadow-sm ${
+                product.badge === "Из-за рубежа"
+                  ? "bg-black text-white"
+                  : "bg-white/90 text-black"
+              }`}
+            >
               {product.badge}
             </div>
           )}
+
+          <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-1.5">
+            {galleryImages.map((img, index) => {
+              const currentImage = activeImage || product.image;
+              const isActive = img === currentImage || (!currentImage && index === 0);
+
+              return (
+                <button
+                  key={`${img}-${index}`}
+                  type="button"
+                  onClick={() => setActiveImage(img)}
+                  className={`block rounded-full ${
+                    isActive ? "h-1.5 w-4 bg-white" : "h-1.5 w-1.5 bg-white/45"
+                  }`}
+                  aria-label={`Фото ${index + 1}`}
+                />
+              );
+            })}
+          </div>
         </div>
 
         <div className="p-5">
@@ -246,9 +288,7 @@ export default function ProductPageClient() {
                   <div className="text-[11px] font-medium">{s.label}</div>
                   <div
                     className={`mt-0.5 text-[9px] ${
-                      selectedSizes.includes(s.label)
-                        ? "text-white/70"
-                        : "text-gray-400"
+                      selectedSizes.includes(s.label) ? "text-white/70" : "text-gray-400"
                     }`}
                   >
                     {s.sub}
@@ -279,15 +319,11 @@ export default function ProductPageClient() {
                     aria-label={c}
                     title={c}
                     className={`flex h-9 w-9 items-center justify-center rounded-lg border transition-all duration-200 active:scale-95 ${
-                      isSelected
-                        ? "border-black ring-2 ring-black/10"
-                        : "border-gray-200"
+                      isSelected ? "border-black ring-2 ring-black/10" : "border-gray-200"
                     }`}
                   >
                     <span
-                      className={`block h-5 w-5 rounded-md ${
-                        isWhite ? "border border-gray-300" : ""
-                      }`}
+                      className={`block h-5 w-5 rounded-md ${isWhite ? "border border-gray-300" : ""}`}
                       style={{ backgroundColor: swatch }}
                     />
                   </button>
@@ -335,9 +371,7 @@ export default function ProductPageClient() {
               onClick={addToCart}
               disabled={!canOrder}
               className={`w-full rounded-2xl py-3.5 text-sm font-medium transition-all duration-200 ${
-                canOrder
-                  ? "bg-black text-white active:scale-[0.99]"
-                  : "bg-gray-200 text-gray-500"
+                canOrder ? "bg-black text-white active:scale-[0.99]" : "bg-gray-200 text-gray-500"
               }`}
             >
               Добавить в корзину
