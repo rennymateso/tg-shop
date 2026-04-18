@@ -56,6 +56,12 @@ export default function CheckoutPageClient() {
     }
   }, [paymentStatus]);
 
+  useEffect(() => {
+    if (deliveryMethod === "delivery" && paymentMethod === "cash") {
+      setPaymentMethod("card");
+    }
+  }, [deliveryMethod, paymentMethod]);
+
   const updateQuantity = (index: number, nextQty: number) => {
     const safeQty = Math.max(1, nextQty);
     const updated = [...items];
@@ -121,6 +127,11 @@ export default function CheckoutPageClient() {
   const handleCashOrder = () => {
     if (!isFormValid) {
       alert("Заполните все обязательные данные");
+      return;
+    }
+
+    if (deliveryMethod !== "pickup") {
+      alert("Оплата наличными доступна только при самовывозе");
       return;
     }
 
@@ -393,16 +404,26 @@ export default function CheckoutPageClient() {
               </button>
 
               <button
-                onClick={() => setPaymentMethod("cash")}
+                onClick={() => {
+                  if (deliveryMethod !== "pickup") return;
+                  setPaymentMethod("cash");
+                }}
+                disabled={deliveryMethod !== "pickup"}
                 className={`rounded-2xl py-3 text-sm ${
                   paymentMethod === "cash"
                     ? "bg-black text-white"
                     : "bg-gray-100 text-black"
-                }`}
+                } disabled:cursor-not-allowed disabled:opacity-50`}
               >
                 Наличными
               </button>
             </div>
+
+            {deliveryMethod !== "pickup" && (
+              <div className="mb-3 rounded-2xl bg-[#F5F5F5] p-3 text-sm text-gray-500">
+                Оплата наличными доступна только при выборе самовывоза.
+              </div>
+            )}
 
             <input
               placeholder="Промокод"
@@ -446,7 +467,7 @@ export default function CheckoutPageClient() {
             ) : (
               <button
                 onClick={handleCashOrder}
-                disabled={!isFormValid}
+                disabled={!isFormValid || deliveryMethod !== "pickup"}
                 className="w-full rounded-2xl bg-black py-3.5 text-sm font-medium text-white disabled:opacity-60"
               >
                 Оформить заказ

@@ -28,12 +28,7 @@ const badgeFilters = ["Все", "Новинки", "В наличии", "Из-з�
 const banners = [
   {
     image: "/banner.jpg",
-    alt: "Баннер 1",
-    link: "/",
-  },
-  {
-    image: "/banner-2.jpg",
-    alt: "Баннер 2",
+    alt: "Баннер",
     link: "/",
   },
 ] as const;
@@ -63,7 +58,7 @@ export default function Home() {
   const [showBrandMenu, setShowBrandMenu] = useState(false);
 
   const sortMenuRef = useRef<HTMLDivElement | null>(null);
-  const brandMenuRef = useRef<HTMLDivElement | null>(null);
+  const brandMenuWrapRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const data = JSON.parse(localStorage.getItem("favorites") || "[]");
@@ -71,6 +66,8 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    if (banners.length <= 1) return;
+
     const timer = setInterval(() => {
       setActiveBanner((prev) => (prev + 1) % banners.length);
     }, 5000);
@@ -88,8 +85,8 @@ export default function Home() {
       }
 
       if (
-        brandMenuRef.current &&
-        !brandMenuRef.current.contains(event.target as Node)
+        brandMenuWrapRef.current &&
+        !brandMenuWrapRef.current.contains(event.target as Node)
       ) {
         setShowBrandMenu(false);
       }
@@ -108,6 +105,17 @@ export default function Home() {
 
     setFavorites(updated);
     localStorage.setItem("favorites", JSON.stringify(updated));
+  };
+
+  const resetPage = () => {
+    setSelectedCategory("Все");
+    setSelectedBrand("Все бренды");
+    setSelectedSort("По умолчанию");
+    setSelectedBadge("Все");
+    setSearch("");
+    setShowSortMenu(false);
+    setShowBrandMenu(false);
+    router.push("/");
   };
 
   const filteredProducts = useMemo(() => {
@@ -150,9 +158,13 @@ export default function Home() {
           Menswear
         </p>
 
-        <h1 className="mt-2 text-[30px] font-light tracking-[0.35em] text-black">
+        <button
+          type="button"
+          onClick={resetPage}
+          className="mt-2 text-[30px] font-light tracking-[0.35em] text-black"
+        >
           MONTREAUX
-        </h1>
+        </button>
       </div>
 
       <div className="mt-4">
@@ -190,21 +202,8 @@ export default function Home() {
           <img
             src={banners[activeBanner].image}
             alt={banners[activeBanner].alt}
-            className="block h-[150px] w-full object-cover transition-all duration-500"
+            className="block h-[150px] w-full object-cover"
           />
-
-          <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1.5">
-            {banners.map((_, index) => (
-              <span
-                key={`banner-dot-${index}`}
-                className={`block rounded-full transition-all duration-300 ${
-                  index === activeBanner
-                    ? "h-1.5 w-4 bg-white"
-                    : "h-1.5 w-1.5 bg-white/55"
-                }`}
-              />
-            ))}
-          </div>
         </button>
       </div>
 
@@ -228,7 +227,7 @@ export default function Home() {
 
       <div className="relative z-20 mt-3">
         <div className="flex items-start gap-2 overflow-x-auto pb-1">
-          <div className="shrink-0">
+          <div className="relative shrink-0" ref={brandMenuWrapRef}>
             <button
               type="button"
               onClick={() => setShowBrandMenu((prev) => !prev)}
@@ -240,6 +239,34 @@ export default function Home() {
             >
               {selectedBrand}
             </button>
+
+            {showBrandMenu && (
+              <div className="absolute left-0 top-12 z-30 w-52 max-h-64 overflow-y-auto rounded-2xl border border-gray-100 bg-white p-1.5 shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
+                {brands.map((brand) => (
+                  <button
+                    key={brand}
+                    type="button"
+                    onClick={() => {
+                      if (brand === "Все бренды") {
+                        setSelectedBrand("Все бренды");
+                        setShowBrandMenu(false);
+                        return;
+                      }
+
+                      setSelectedBrand(brand);
+                      setShowBrandMenu(false);
+                    }}
+                    className={`w-full rounded-xl px-3 py-2 text-left text-[12px] ${
+                      selectedBrand === brand
+                        ? "bg-black text-white"
+                        : "text-gray-700 hover:bg-gray-50"
+                    }`}
+                  >
+                    {brand}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {badgeFilters
@@ -261,31 +288,6 @@ export default function Home() {
               </button>
             ))}
         </div>
-
-        {showBrandMenu && (
-          <div
-            ref={brandMenuRef}
-            className="absolute left-0 top-12 z-30 w-52 max-h-64 overflow-y-auto rounded-2xl border border-gray-100 bg-white p-1.5 shadow-[0_10px_30px_rgba(0,0,0,0.08)]"
-          >
-            {brands.map((brand) => (
-              <button
-                key={brand}
-                type="button"
-                onClick={() => {
-                  setSelectedBrand(brand);
-                  setShowBrandMenu(false);
-                }}
-                className={`w-full rounded-xl px-3 py-2 text-left text-[12px] ${
-                  selectedBrand === brand
-                    ? "bg-black text-white"
-                    : "text-gray-700 hover:bg-gray-50"
-                }`}
-              >
-                {brand}
-              </button>
-            ))}
-          </div>
-        )}
       </div>
 
       <div className="mt-7 mb-4 flex items-center justify-between">
