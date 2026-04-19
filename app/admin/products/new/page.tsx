@@ -1,0 +1,692 @@
+"use client";
+
+import { useMemo, useState } from "react";
+
+type ProductStatus = "Активен" | "Скрыт";
+type BadgeType =
+  | "Без бейджа"
+  | "Новинка"
+  | "Скидка"
+  | "В наличии"
+  | "Из-за рубежа";
+
+type ColorGalleryMap = Record<string, string[]>;
+
+const brandOptions = [
+  "Lacoste",
+  "Polo Ralph Lauren",
+  "Tommy Hilfiger",
+  "Calvin Klein",
+  "GANT",
+  "BOSS",
+  "Emporio Armani",
+  "Armani Exchange",
+  "Beymen Club",
+  "Loro Piana",
+  "Brunello Cucinelli",
+  "BORZ",
+  "Massimo Carino",
+  "Другие бренды",
+] as const;
+
+const categoryOptions = [
+  "Футболки",
+  "Поло",
+  "Джинсы",
+  "Брюки",
+  "Костюмы",
+] as const;
+
+const badgeOptions: BadgeType[] = [
+  "Без бейджа",
+  "Новинка",
+  "Скидка",
+  "В наличии",
+  "Из-за рубежа",
+];
+
+const statusOptions: ProductStatus[] = ["Активен", "Скрыт"];
+
+const sizeOptions = [
+  "S",
+  "M",
+  "L",
+  "XL",
+  "XXL",
+  "30",
+  "31",
+  "32",
+  "33",
+  "34",
+  "36",
+  "38",
+] as const;
+
+const colorOptions = [
+  "Черный",
+  "Белый",
+  "Серый",
+  "Синий",
+  "Бежевый",
+  "Зеленый",
+  "Коричневый",
+] as const;
+
+const colorSwatches: Record<string, string> = {
+  Черный: "#111111",
+  Белый: "#FFFFFF",
+  Серый: "#9CA3AF",
+  Синий: "#1D3557",
+  Бежевый: "#D6C2A1",
+  Зеленый: "#3F6B4B",
+  Коричневый: "#7A5230",
+};
+
+function makeArticle(name: string) {
+  const base = name
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-ZА-Я0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 14);
+
+  return base ? `ART-${base}` : "ART-NEW";
+}
+
+export default function AdminNewProductPage() {
+  const [name, setName] = useState("");
+  const [brand, setBrand] = useState<(typeof brandOptions)[number]>("Lacoste");
+  const [category, setCategory] =
+    useState<(typeof categoryOptions)[number]>("Поло");
+  const [price, setPrice] = useState("");
+  const [oldPrice, setOldPrice] = useState("");
+  const [badge, setBadge] = useState<BadgeType>("Без бейджа");
+  const [status, setStatus] = useState<ProductStatus>("Активен");
+  const [description, setDescription] = useState("");
+  const [article, setArticle] = useState("");
+  const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
+  const [selectedColors, setSelectedColors] = useState<string[]>([]);
+  const [activeColor, setActiveColor] = useState<string>("");
+  const [colorImages, setColorImages] = useState<ColorGalleryMap>({});
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [message, setMessage] = useState("");
+
+  const discountPercent = useMemo(() => {
+    const p = Number(price);
+    const o = Number(oldPrice);
+    if (!p || !o || o <= p) return 0;
+    return Math.round(((o - p) / o) * 100);
+  }, [price, oldPrice]);
+
+  const activeImages = activeColor ? colorImages[activeColor] || [] : [];
+
+  const previewImage = useMemo(() => {
+    if (activeColor && colorImages[activeColor]?.length) {
+      return colorImages[activeColor][0];
+    }
+
+    const firstColorWithImages = selectedColors.find(
+      (color) => colorImages[color]?.length
+    );
+
+    if (firstColorWithImages) {
+      return colorImages[firstColorWithImages][0];
+    }
+
+    return "";
+  }, [activeColor, colorImages, selectedColors]);
+
+  const toggleSize = (value: string) => {
+    setSelectedSizes((prev) =>
+      prev.includes(value)
+        ? prev.filter((item) => item !== value)
+        : [...prev, value]
+    );
+  };
+
+  const toggleColor = (value: string) => {
+    setSelectedColors((prev) => {
+      const exists = prev.includes(value);
+      const next = exists
+        ? prev.filter((item) => item !== value)
+        : [...prev, value];
+
+      if (!exists && !activeColor) setActiveColor(value);
+      if (exists && activeColor === value) setActiveColor(next[0] || "");
+
+      return next;
+    });
+  };
+
+  const fillArticle = () => {
+    setArticle(makeArticle(name));
+  };
+
+  const handleColorImagesUpload = (color: string, files: FileList | null) => {
+    if (!files || files.length === 0) return;
+
+    const current = colorImages[color] || [];
+    const freeSlots = 6 - current.length;
+
+    if (freeSlots <= 0) {
+      setMessage(`Для цвета ${color} уже загружено 6 фото`);
+      return;
+    }
+
+    const urls = Array.from(files)
+      .slice(0, freeSlots)
+      .map((file) => URL.createObjectURL(file));
+
+    setColorImages((prev) => ({
+      ...prev,
+      [color]: [...(prev[color] || []), ...urls],
+    }));
+
+    setActiveColor(color);
+
+    if (files.length > freeSlots) {
+      setMessage(`Для цвета ${color} добавили только первые 6 фото`);
+    } else {
+      setMessage("");
+    }
+  };
+
+  const removeColorImage = (color: string, index: number) => {
+    setColorImages((prev) => ({
+      ...prev,
+      [color]: (prev[color] || []).filter((_, i) => i !== index),
+    }));
+  };
+
+  const handleDragStart = (index: number) => {
+    setDragIndex(index);
+  };
+
+  const handleDrop = (dropIndex: number) => {
+    if (dragIndex === null || dragIndex === dropIndex || !activeColor) return;
+
+    setColorImages((prev) => {
+      const current = [...(prev[activeColor] || [])];
+      const dragged = current[dragIndex];
+      current.splice(dragIndex, 1);
+      current.splice(dropIndex, 0, dragged);
+      return {
+        ...prev,
+        [activeColor]: current,
+      };
+    });
+
+    setDragIndex(null);
+  };
+
+  const totalImagesCount = useMemo(() => {
+    return Object.values(colorImages).reduce((sum, arr) => sum + arr.length, 0);
+  }, [colorImages]);
+
+  const handleSave = () => {
+    if (!name.trim()) {
+      setMessage("Введите название товара");
+      return;
+    }
+
+    if (!price.trim()) {
+      setMessage("Введите цену товара");
+      return;
+    }
+
+    if (selectedSizes.length === 0) {
+      setMessage("Выберите хотя бы один размер");
+      return;
+    }
+
+    if (selectedColors.length === 0) {
+      setMessage("Выберите хотя бы один цвет");
+      return;
+    }
+
+    const hasImages = selectedColors.some((color) => (colorImages[color] || []).length);
+
+    if (!hasImages) {
+      setMessage("Добавьте хотя бы одно фото хотя бы для одного цвета");
+      return;
+    }
+
+    setMessage(
+      "Товар заполнен. Фото загружаются отдельно для каждого цвета, до 6 штук."
+    );
+  };
+
+  const handleDelete = () => {
+    setName("");
+    setBrand("Lacoste");
+    setCategory("Поло");
+    setPrice("");
+    setOldPrice("");
+    setBadge("Без бейджа");
+    setStatus("Активен");
+    setDescription("");
+    setArticle("");
+    setSelectedSizes([]);
+    setSelectedColors([]);
+    setActiveColor("");
+    setColorImages({});
+    setDragIndex(null);
+    setMessage("Товар удален из формы.");
+  };
+
+  return (
+    <>
+      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <p className="text-sm text-gray-500">Админ-панель</p>
+          <h1 className="text-2xl font-semibold text-black">Добавить товар</h1>
+        </div>
+
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <button className="rounded-2xl bg-white px-5 py-3 text-sm font-medium text-gray-700 shadow-sm">
+            Сохранить как черновик
+          </button>
+
+          <button
+            onClick={handleDelete}
+            className="rounded-2xl bg-red-50 px-5 py-3 text-sm font-medium text-red-600"
+          >
+            Удалить
+          </button>
+
+          <button
+            onClick={handleSave}
+            className="rounded-2xl bg-black px-5 py-3 text-sm font-medium text-white"
+          >
+            Сохранить товар
+          </button>
+        </div>
+      </div>
+
+      {message && (
+        <div className="mb-6 rounded-[24px] bg-white p-4 text-sm text-black shadow-sm">
+          {message}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_320px]">
+        <section className="space-y-6">
+          <div className="rounded-[28px] bg-white p-5 shadow-sm">
+            <h2 className="text-lg font-medium text-black">Основная информация</h2>
+
+            <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="md:col-span-2">
+                <label className="mb-2 block text-sm text-gray-500">
+                  Название товара
+                </label>
+                <input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Например: Поло Premium"
+                  className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm text-gray-500">Бренд</label>
+                <select
+                  value={brand}
+                  onChange={(e) =>
+                    setBrand(e.target.value as (typeof brandOptions)[number])
+                  }
+                  className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
+                >
+                  {brandOptions.map((item) => (
+                    <option key={item}>{item}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm text-gray-500">Категория</label>
+                <select
+                  value={category}
+                  onChange={(e) =>
+                    setCategory(e.target.value as (typeof categoryOptions)[number])
+                  }
+                  className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
+                >
+                  {categoryOptions.map((item) => (
+                    <option key={item}>{item}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm text-gray-500">Цена</label>
+                <input
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                  placeholder="3500"
+                  className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm text-gray-500">Старая цена</label>
+                <input
+                  value={oldPrice}
+                  onChange={(e) => setOldPrice(e.target.value)}
+                  placeholder="4500"
+                  className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm text-gray-500">Бейдж</label>
+                <select
+                  value={badge}
+                  onChange={(e) => setBadge(e.target.value as BadgeType)}
+                  className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
+                >
+                  {badgeOptions.map((item) => (
+                    <option key={item}>{item}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm text-gray-500">Статус</label>
+                <select
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value as ProductStatus)}
+                  className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
+                >
+                  {statusOptions.map((item) => (
+                    <option key={item}>{item}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm text-gray-500">Артикул</label>
+                <div className="flex gap-2">
+                  <input
+                    value={article}
+                    onChange={(e) => setArticle(e.target.value)}
+                    placeholder="ART-POLO-PREMIUM"
+                    className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={fillArticle}
+                    className="shrink-0 rounded-2xl bg-black px-4 text-sm text-white"
+                  >
+                    Сгенерировать
+                  </button>
+                </div>
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="mb-2 block text-sm text-gray-500">Описание</label>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Введите подробное описание товара"
+                  rows={5}
+                  className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-[28px] bg-white p-5 shadow-sm">
+            <h2 className="text-lg font-medium text-black">Размеры</h2>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {sizeOptions.map((size) => {
+                const active = selectedSizes.includes(size);
+                return (
+                  <button
+                    key={size}
+                    type="button"
+                    onClick={() => toggleSize(size)}
+                    className={`rounded-2xl px-4 py-2 text-sm transition ${
+                      active ? "bg-black text-white" : "bg-[#F5F5F5] text-gray-700"
+                    }`}
+                  >
+                    {size}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="rounded-[28px] bg-white p-5 shadow-sm">
+            <h2 className="text-lg font-medium text-black">Цвета</h2>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {colorOptions.map((color) => {
+                const active = selectedColors.includes(color);
+                return (
+                  <button
+                    key={color}
+                    type="button"
+                    onClick={() => toggleColor(color)}
+                    className={`flex items-center gap-2 rounded-2xl px-4 py-2 text-sm transition ${
+                      active ? "bg-black text-white" : "bg-[#F5F5F5] text-gray-700"
+                    }`}
+                  >
+                    <span
+                      className={`block h-4 w-4 rounded-full ${
+                        color === "Белый" ? "border border-gray-300" : ""
+                      }`}
+                      style={{ backgroundColor: colorSwatches[color] || "#E5E7EB" }}
+                    />
+                    {color}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="rounded-[28px] bg-white p-5 shadow-sm">
+            <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div>
+                <h2 className="text-lg font-medium text-black">Фото по цвету</h2>
+                <p className="mt-1 text-sm text-gray-500">
+                  Выбери цвет и загрузи до 6 фото именно для него.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {selectedColors.map((color) => (
+                  <button
+                    key={color}
+                    type="button"
+                    onClick={() => setActiveColor(color)}
+                    className={`flex items-center gap-2 rounded-2xl px-4 py-2 text-sm ${
+                      activeColor === color
+                        ? "bg-black text-white"
+                        : "bg-[#F5F5F5] text-gray-700"
+                    }`}
+                  >
+                    <span
+                      className={`block h-4 w-4 rounded-full ${
+                        color === "Белый" ? "border border-gray-300" : ""
+                      }`}
+                      style={{ backgroundColor: colorSwatches[color] || "#E5E7EB" }}
+                    />
+                    {color}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {!activeColor ? (
+              <div className="rounded-2xl bg-[#F7F7F7] p-5 text-sm text-gray-500">
+                Выбери цвет выше, чтобы загружать фото именно для него.
+              </div>
+            ) : (
+              <>
+                <div className="mb-4 flex items-center justify-between">
+                  <p className="text-sm font-medium text-black">Цвет: {activeColor}</p>
+                  <span className="text-sm text-gray-500">
+                    {activeImages.length}/6 фото
+                  </span>
+                </div>
+
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={(e) => handleColorImagesUpload(activeColor, e.target.files)}
+                  className="block w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none file:mr-4 file:rounded-xl file:border-0 file:bg-black file:px-4 file:py-2 file:text-sm file:text-white"
+                />
+
+                {activeImages.length > 0 && (
+                  <div className="mt-4 grid grid-cols-[260px_1fr] gap-3">
+                    <div
+                      draggable
+                      onDragStart={() => handleDragStart(0)}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={() => handleDrop(0)}
+                      className="overflow-hidden rounded-2xl bg-[#F7F7F7] p-2"
+                    >
+                      <div className="relative">
+                        <img
+                          src={activeImages[0]}
+                          alt={`${activeColor} главное`}
+                          className="h-[180px] w-full rounded-xl object-cover"
+                        />
+                        <span className="absolute left-2 top-2 rounded-full bg-black px-2 py-1 text-[10px] text-white">
+                          Главное
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeColorImage(activeColor, 0)}
+                          className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-white text-sm text-black shadow"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      {activeImages.slice(1).map((img, idx) => {
+                        const realIndex = idx + 1;
+                        return (
+                          <div
+                            key={`${activeColor}-${img}-${realIndex}`}
+                            draggable
+                            onDragStart={() => handleDragStart(realIndex)}
+                            onDragOver={(e) => e.preventDefault()}
+                            onDrop={() => handleDrop(realIndex)}
+                            className="overflow-hidden rounded-2xl bg-[#F7F7F7] p-2"
+                          >
+                            <div className="relative">
+                              <img
+                                src={img}
+                                alt={`${activeColor} ${realIndex + 1}`}
+                                className="h-[84px] w-full rounded-xl object-cover"
+                              />
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  removeColorImage(activeColor, realIndex)
+                                }
+                                className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-white text-xs text-black shadow"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {activeImages.length > 0 && (
+                  <p className="mt-3 text-xs text-gray-400">
+                    Перетаскивай фото курсором. Самое первое фото будет главным.
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+        </section>
+
+        <aside className="space-y-6">
+          <div className="rounded-[28px] bg-white p-4 shadow-sm">
+            <h2 className="text-base font-medium text-black">Предпросмотр</h2>
+
+            <div className="mt-3 overflow-hidden rounded-[20px] border border-black/5 bg-[#FAFAFA]">
+              <div className="aspect-[3/4] bg-[#ECECEC]">
+                {previewImage ? (
+                  <img
+                    src={previewImage}
+                    alt="Предпросмотр товара"
+                    className="h-full w-full object-cover"
+                  />
+                ) : null}
+              </div>
+
+              <div className="p-3">
+                <p className="text-[10px] uppercase tracking-[0.14em] text-gray-400">
+                  {brand}
+                </p>
+
+                <h3 className="mt-2 text-[15px] font-medium text-black">
+                  {name || "Название товара"}
+                </h3>
+
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  {oldPrice && (
+                    <span className="text-xs text-gray-400 line-through">
+                      {oldPrice} ₽
+                    </span>
+                  )}
+
+                  <span className="text-[16px] font-semibold text-[#16A34A]">
+                    {price || "0"} ₽
+                  </span>
+
+                  {discountPercent > 0 && (
+                    <span className="rounded-full bg-[#E8F7EE] px-2 py-0.5 text-[10px] text-[#16A34A]">
+                      -{discountPercent}%
+                    </span>
+                  )}
+                </div>
+
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {badge !== "Без бейджа" && (
+                    <span
+                      className={`rounded-full px-2 py-1 text-[10px] ${
+                        badge === "Из-за рубежа"
+                          ? "bg-black text-white"
+                          : "bg-[#F5F5F5] text-gray-700"
+                      }`}
+                    >
+                      {badge}
+                    </span>
+                  )}
+
+                  <span
+                    className={`rounded-full px-2 py-1 text-[10px] ${
+                      status === "Активен"
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-gray-100 text-gray-500"
+                    }`}
+                  >
+                    {status}
+                  </span>
+                </div>
+
+                <div className="mt-3 space-y-1.5 text-xs text-gray-600">
+                  <p>Артикул: {article || "ART-NEW"}</p>
+                  <p>Размеров: {selectedSizes.length}</p>
+                  <p>Цветов: {selectedColors.length}</p>
+                  <p>Фото: {totalImagesCount}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </>
+  );
+}
