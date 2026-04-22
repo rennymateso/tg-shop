@@ -108,7 +108,6 @@ export default function AdminNewProductPage() {
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
   const [activeColor, setActiveColor] = useState<string>("");
   const [colorImages, setColorImages] = useState<ColorGalleryMap>({});
-  const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [message, setMessage] = useState("");
 
   const discountPercent = useMemo(() => {
@@ -135,6 +134,10 @@ export default function AdminNewProductPage() {
 
     return "";
   }, [activeColor, colorImages, selectedColors]);
+
+  const totalImagesCount = useMemo(() => {
+    return Object.values(colorImages).reduce((sum, arr) => sum + arr.length, 0);
+  }, [colorImages]);
 
   const toggleSize = (value: string) => {
     setSelectedSizes((prev) =>
@@ -198,30 +201,34 @@ export default function AdminNewProductPage() {
     }));
   };
 
-  const handleDragStart = (index: number) => {
-    setDragIndex(index);
-  };
-
-  const handleDrop = (dropIndex: number) => {
-    if (dragIndex === null || dragIndex === dropIndex || !activeColor) return;
-
+  const makeMainImage = (color: string, index: number) => {
     setColorImages((prev) => {
-      const current = [...(prev[activeColor] || [])];
-      const dragged = current[dragIndex];
-      current.splice(dragIndex, 1);
-      current.splice(dropIndex, 0, dragged);
-      return {
-        ...prev,
-        [activeColor]: current,
-      };
+      const arr = [...(prev[color] || [])];
+      if (!arr[index]) return prev;
+      const picked = arr[index];
+      arr.splice(index, 1);
+      arr.unshift(picked);
+      return { ...prev, [color]: arr };
     });
-
-    setDragIndex(null);
   };
 
-  const totalImagesCount = useMemo(() => {
-    return Object.values(colorImages).reduce((sum, arr) => sum + arr.length, 0);
-  }, [colorImages]);
+  const moveImageLeft = (color: string, index: number) => {
+    if (index <= 0) return;
+    setColorImages((prev) => {
+      const arr = [...(prev[color] || [])];
+      [arr[index - 1], arr[index]] = [arr[index], arr[index - 1]];
+      return { ...prev, [color]: arr };
+    });
+  };
+
+  const moveImageRight = (color: string, index: number) => {
+    setColorImages((prev) => {
+      const arr = [...(prev[color] || [])];
+      if (index >= arr.length - 1) return prev;
+      [arr[index + 1], arr[index]] = [arr[index], arr[index + 1]];
+      return { ...prev, [color]: arr };
+    });
+  };
 
   const handleSave = () => {
     if (!name.trim()) {
@@ -244,16 +251,16 @@ export default function AdminNewProductPage() {
       return;
     }
 
-    const hasImages = selectedColors.some((color) => (colorImages[color] || []).length);
+    const hasImages = selectedColors.some(
+      (color) => (colorImages[color] || []).length > 0
+    );
 
     if (!hasImages) {
       setMessage("Добавьте хотя бы одно фото хотя бы для одного цвета");
       return;
     }
 
-    setMessage(
-      "Товар заполнен. Фото загружаются отдельно для каждого цвета, до 6 штук."
-    );
+    setMessage("Фото исправлены под телефон. Теперь все миниатюры видны и управляются кнопками.");
   };
 
   const handleDelete = () => {
@@ -270,7 +277,6 @@ export default function AdminNewProductPage() {
     setSelectedColors([]);
     setActiveColor("");
     setColorImages({});
-    setDragIndex(null);
     setMessage("Товар удален из формы.");
   };
 
@@ -309,7 +315,7 @@ export default function AdminNewProductPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_320px]">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_290px]">
         <section className="space-y-6">
           <div className="rounded-[28px] bg-white p-5 shadow-sm">
             <h2 className="text-lg font-medium text-black">Основная информация</h2>
@@ -347,7 +353,9 @@ export default function AdminNewProductPage() {
                 <select
                   value={category}
                   onChange={(e) =>
-                    setCategory(e.target.value as (typeof categoryOptions)[number])
+                    setCategory(
+                      e.target.value as (typeof categoryOptions)[number]
+                    )
                   }
                   className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
                 >
@@ -446,7 +454,9 @@ export default function AdminNewProductPage() {
                     type="button"
                     onClick={() => toggleSize(size)}
                     className={`rounded-2xl px-4 py-2 text-sm transition ${
-                      active ? "bg-black text-white" : "bg-[#F5F5F5] text-gray-700"
+                      active
+                        ? "bg-black text-white"
+                        : "bg-[#F5F5F5] text-gray-700"
                     }`}
                   >
                     {size}
@@ -467,7 +477,9 @@ export default function AdminNewProductPage() {
                     type="button"
                     onClick={() => toggleColor(color)}
                     className={`flex items-center gap-2 rounded-2xl px-4 py-2 text-sm transition ${
-                      active ? "bg-black text-white" : "bg-[#F5F5F5] text-gray-700"
+                      active
+                        ? "bg-black text-white"
+                        : "bg-[#F5F5F5] text-gray-700"
                     }`}
                   >
                     <span
@@ -523,7 +535,9 @@ export default function AdminNewProductPage() {
             ) : (
               <>
                 <div className="mb-4 flex items-center justify-between">
-                  <p className="text-sm font-medium text-black">Цвет: {activeColor}</p>
+                  <p className="text-sm font-medium text-black">
+                    Цвет: {activeColor}
+                  </p>
                   <span className="text-sm text-gray-500">
                     {activeImages.length}/6 фото
                   </span>
@@ -538,19 +552,13 @@ export default function AdminNewProductPage() {
                 />
 
                 {activeImages.length > 0 && (
-                  <div className="mt-4 grid grid-cols-[260px_1fr] gap-3">
-                    <div
-                      draggable
-                      onDragStart={() => handleDragStart(0)}
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={() => handleDrop(0)}
-                      className="overflow-hidden rounded-2xl bg-[#F7F7F7] p-2"
-                    >
+                  <div className="mt-4 space-y-3">
+                    <div className="overflow-hidden rounded-2xl bg-[#F7F7F7] p-2">
                       <div className="relative">
                         <img
                           src={activeImages[0]}
                           alt={`${activeColor} главное`}
-                          className="h-[180px] w-full rounded-xl object-cover"
+                          className="h-[170px] w-full rounded-xl object-cover sm:h-[200px]"
                         />
                         <span className="absolute left-2 top-2 rounded-full bg-black px-2 py-1 text-[10px] text-white">
                           Главное
@@ -565,44 +573,79 @@ export default function AdminNewProductPage() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2">
-                      {activeImages.slice(1).map((img, idx) => {
-                        const realIndex = idx + 1;
-                        return (
-                          <div
-                            key={`${activeColor}-${img}-${realIndex}`}
-                            draggable
-                            onDragStart={() => handleDragStart(realIndex)}
-                            onDragOver={(e) => e.preventDefault()}
-                            onDrop={() => handleDrop(realIndex)}
-                            className="overflow-hidden rounded-2xl bg-[#F7F7F7] p-2"
-                          >
-                            <div className="relative">
-                              <img
-                                src={img}
-                                alt={`${activeColor} ${realIndex + 1}`}
-                                className="h-[84px] w-full rounded-xl object-cover"
-                              />
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  removeColorImage(activeColor, realIndex)
-                                }
-                                className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-white text-xs text-black shadow"
-                              >
-                                ✕
-                              </button>
+                    {activeImages.length > 1 && (
+                      <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                        {activeImages.slice(1).map((img, idx) => {
+                          const realIndex = idx + 1;
+
+                          return (
+                            <div
+                              key={`${activeColor}-${img}-${realIndex}`}
+                              draggable
+                              onDragStart={() => handleDragStart(realIndex)}
+                              onDragOver={(e) => e.preventDefault()}
+                              onDrop={() => handleDrop(realIndex)}
+                              className="overflow-hidden rounded-2xl bg-[#F7F7F7] p-2"
+                            >
+                              <div className="relative">
+                                <img
+                                  src={img}
+                                  alt={`${activeColor} ${realIndex + 1}`}
+                                  className="h-[74px] w-full rounded-xl object-cover sm:h-[86px]"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    removeColorImage(activeColor, realIndex)
+                                  }
+                                  className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-white text-[10px] text-black shadow"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+
+                              <div className="mt-2 flex flex-col gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => makeMainImage(activeColor, realIndex)}
+                                  className="rounded-lg bg-black px-2 py-1.5 text-[10px] text-white"
+                                >
+                                  Сделать главной
+                                </button>
+
+                                <div className="grid grid-cols-2 gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      moveImageLeft(activeColor, realIndex)
+                                    }
+                                    className="rounded-lg bg-white px-2 py-1.5 text-[10px] text-black"
+                                  >
+                                    Влево
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      moveImageRight(activeColor, realIndex)
+                                    }
+                                    className="rounded-lg bg-white px-2 py-1.5 text-[10px] text-black"
+                                  >
+                                    Вправо
+                                  </button>
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 )}
 
                 {activeImages.length > 0 && (
                   <p className="mt-3 text-xs text-gray-400">
-                    Перетаскивай фото курсором. Самое первое фото будет главным.
+                    На телефоне удобно менять порядок кнопками. Главное фото всегда сверху.
                   </p>
                 )}
               </>
@@ -611,11 +654,11 @@ export default function AdminNewProductPage() {
         </section>
 
         <aside className="space-y-6">
-          <div className="rounded-[28px] bg-white p-4 shadow-sm">
+          <div className="rounded-[24px] bg-white p-4 shadow-sm">
             <h2 className="text-base font-medium text-black">Предпросмотр</h2>
 
-            <div className="mt-3 overflow-hidden rounded-[20px] border border-black/5 bg-[#FAFAFA]">
-              <div className="aspect-[3/4] bg-[#ECECEC]">
+            <div className="mt-3 overflow-hidden rounded-[18px] border border-black/5 bg-[#FAFAFA]">
+              <div className="mx-auto aspect-[3/4] max-w-[190px] bg-[#ECECEC] sm:max-w-[220px]">
                 {previewImage ? (
                   <img
                     src={previewImage}
