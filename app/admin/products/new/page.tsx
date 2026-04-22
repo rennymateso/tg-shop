@@ -260,7 +260,7 @@ export default function AdminNewProductPage() {
       return;
     }
 
-    setMessage("Фото исправлены под телефон. Теперь все миниатюры видны и управляются кнопками.");
+    setMessage("Товар заполнен.");
   };
 
   const handleDelete = () => {
@@ -282,7 +282,7 @@ export default function AdminNewProductPage() {
 
   return (
     <>
-      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div className="mb-6 flex flex-col gap-4">
         <div>
           <p className="text-sm text-gray-500">Админ-панель</p>
           <h1 className="text-2xl font-semibold text-black">Добавить товар</h1>
@@ -315,7 +315,7 @@ export default function AdminNewProductPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_290px]">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_280px]">
         <section className="space-y-6">
           <div className="rounded-[28px] bg-white p-5 shadow-sm">
             <h2 className="text-lg font-medium text-black">Основная информация</h2>
@@ -496,7 +496,7 @@ export default function AdminNewProductPage() {
           </div>
 
           <div className="rounded-[28px] bg-white p-5 shadow-sm">
-            <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="mb-4 flex flex-col gap-3">
               <div>
                 <h2 className="text-lg font-medium text-black">Фото по цвету</h2>
                 <p className="mt-1 text-sm text-gray-500">
@@ -558,7 +558,7 @@ export default function AdminNewProductPage() {
                         <img
                           src={activeImages[0]}
                           alt={`${activeColor} главное`}
-                          className="h-[170px] w-full rounded-xl object-cover sm:h-[200px]"
+                          className="h-[180px] w-full rounded-xl object-cover"
                         />
                         <span className="absolute left-2 top-2 rounded-full bg-black px-2 py-1 text-[10px] text-white">
                           Главное
@@ -574,24 +574,20 @@ export default function AdminNewProductPage() {
                     </div>
 
                     {activeImages.length > 1 && (
-                      <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                      <div className="grid grid-cols-2 gap-2">
                         {activeImages.slice(1).map((img, idx) => {
                           const realIndex = idx + 1;
 
                           return (
                             <div
                               key={`${activeColor}-${img}-${realIndex}`}
-                              draggable
-                              onDragStart={() => handleDragStart(realIndex)}
-                              onDragOver={(e) => e.preventDefault()}
-                              onDrop={() => handleDrop(realIndex)}
                               className="overflow-hidden rounded-2xl bg-[#F7F7F7] p-2"
                             >
                               <div className="relative">
                                 <img
                                   src={img}
                                   alt={`${activeColor} ${realIndex + 1}`}
-                                  className="h-[74px] w-full rounded-xl object-cover sm:h-[86px]"
+                                  className="h-[96px] w-full rounded-xl object-cover"
                                 />
                                 <button
                                   type="button"
@@ -604,36 +600,36 @@ export default function AdminNewProductPage() {
                                 </button>
                               </div>
 
-                              <div className="mt-2 flex flex-col gap-1">
+                              <div className="mt-2 grid grid-cols-3 gap-1">
                                 <button
                                   type="button"
-                                  onClick={() => makeMainImage(activeColor, realIndex)}
+                                  onClick={() =>
+                                    makeMainImage(activeColor, realIndex)
+                                  }
                                   className="rounded-lg bg-black px-2 py-1.5 text-[10px] text-white"
                                 >
-                                  Сделать главной
+                                  Главная
                                 </button>
 
-                                <div className="grid grid-cols-2 gap-1">
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      moveImageLeft(activeColor, realIndex)
-                                    }
-                                    className="rounded-lg bg-white px-2 py-1.5 text-[10px] text-black"
-                                  >
-                                    Влево
-                                  </button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    moveImageLeft(activeColor, realIndex)
+                                  }
+                                  className="rounded-lg bg-white px-2 py-1.5 text-[10px] text-black"
+                                >
+                                  ←
+                                </button>
 
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      moveImageRight(activeColor, realIndex)
-                                    }
-                                    className="rounded-lg bg-white px-2 py-1.5 text-[10px] text-black"
-                                  >
-                                    Вправо
-                                  </button>
-                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    moveImageRight(activeColor, realIndex)
+                                  }
+                                  className="rounded-lg bg-white px-2 py-1.5 text-[10px] text-black"
+                                >
+                                  →
+                                </button>
                               </div>
                             </div>
                           );
@@ -645,7 +641,7 @@ export default function AdminNewProductPage() {
 
                 {activeImages.length > 0 && (
                   <p className="mt-3 text-xs text-gray-400">
-                    На телефоне удобно менять порядок кнопками. Главное фото всегда сверху.
+                    На телефоне порядок удобно менять кнопками. Главное фото всегда сверху.
                   </p>
                 )}
               </>
@@ -658,7 +654,7 @@ export default function AdminNewProductPage() {
             <h2 className="text-base font-medium text-black">Предпросмотр</h2>
 
             <div className="mt-3 overflow-hidden rounded-[18px] border border-black/5 bg-[#FAFAFA]">
-              <div className="mx-auto aspect-[3/4] max-w-[190px] bg-[#ECECEC] sm:max-w-[220px]">
+              <div className="mx-auto aspect-[3/4] max-w-[180px] bg-[#ECECEC]">
                 {previewImage ? (
                   <img
                     src={previewImage}
