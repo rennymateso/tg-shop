@@ -1,14 +1,17 @@
 "use client";
 
 import { useMemo, useState } from "react";
-
-type ProductStatus = "Активен" | "Скрыт";
-type BadgeType =
-  | "Без бейджа"
-  | "Новинка"
-  | "Скидка"
-  | "В наличии"
-  | "Из-за рубежа";
+import { useRouter } from "next/navigation";
+import {
+  addAdminProduct,
+  createAdminProductId,
+} from "../../../app/lib/admin-products-storage";
+import {
+  AdminProduct,
+  AdminProductBadge,
+  AdminProductCategory,
+  AdminProductStatus,
+} from "../../../app/types/admin-product";
 
 type ColorGalleryMap = Record<string, string[]>;
 
@@ -29,15 +32,15 @@ const brandOptions = [
   "Другие бренды",
 ] as const;
 
-const categoryOptions = [
+const categoryOptions: AdminProductCategory[] = [
   "Футболки",
   "Поло",
   "Джинсы",
   "Брюки",
   "Костюмы",
-] as const;
+];
 
-const badgeOptions: BadgeType[] = [
+const badgeOptions: AdminProductBadge[] = [
   "Без бейджа",
   "Новинка",
   "Скидка",
@@ -45,7 +48,7 @@ const badgeOptions: BadgeType[] = [
   "Из-за рубежа",
 ];
 
-const statusOptions: ProductStatus[] = ["Активен", "Скрыт"];
+const statusOptions: AdminProductStatus[] = ["Активен", "Скрыт"];
 
 const sizeOptions = [
   "S",
@@ -94,14 +97,15 @@ function makeArticle(name: string) {
 }
 
 export default function AdminNewProductPage() {
+  const router = useRouter();
+
   const [name, setName] = useState("");
   const [brand, setBrand] = useState<(typeof brandOptions)[number]>("Lacoste");
-  const [category, setCategory] =
-    useState<(typeof categoryOptions)[number]>("Поло");
+  const [category, setCategory] = useState<AdminProductCategory>("Поло");
   const [price, setPrice] = useState("");
   const [oldPrice, setOldPrice] = useState("");
-  const [badge, setBadge] = useState<BadgeType>("Без бейджа");
-  const [status, setStatus] = useState<ProductStatus>("Активен");
+  const [badge, setBadge] = useState<AdminProductBadge>("Без бейджа");
+  const [status, setStatus] = useState<AdminProductStatus>("Активен");
   const [description, setDescription] = useState("");
   const [article, setArticle] = useState("");
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
@@ -260,7 +264,30 @@ export default function AdminNewProductPage() {
       return;
     }
 
-    setMessage("Товар заполнен.");
+    const now = new Date().toLocaleString("ru-RU");
+
+    const product: AdminProduct = {
+      id: createAdminProductId(),
+      name: name.trim(),
+      brand,
+      category,
+      price: Number(price),
+      oldPrice: Number(oldPrice || price),
+      badge,
+      status,
+      description: description.trim(),
+      article: article.trim() || makeArticle(name),
+      sizes: selectedSizes,
+      colors: selectedColors,
+      image: previewImage,
+      colorImages,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    addAdminProduct(product);
+    router.push("/admin/products");
+    router.refresh();
   };
 
   const handleDelete = () => {
@@ -277,7 +304,7 @@ export default function AdminNewProductPage() {
     setSelectedColors([]);
     setActiveColor("");
     setColorImages({});
-    setMessage("Товар удален из формы.");
+    setMessage("Форма очищена.");
   };
 
   return (
@@ -297,7 +324,7 @@ export default function AdminNewProductPage() {
             onClick={handleDelete}
             className="rounded-2xl bg-red-50 px-5 py-3 text-sm font-medium text-red-600"
           >
-            Удалить
+            Очистить
           </button>
 
           <button
@@ -354,7 +381,7 @@ export default function AdminNewProductPage() {
                   value={category}
                   onChange={(e) =>
                     setCategory(
-                      e.target.value as (typeof categoryOptions)[number]
+                      e.target.value as AdminProductCategory
                     )
                   }
                   className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
@@ -389,7 +416,7 @@ export default function AdminNewProductPage() {
                 <label className="mb-2 block text-sm text-gray-500">Бейдж</label>
                 <select
                   value={badge}
-                  onChange={(e) => setBadge(e.target.value as BadgeType)}
+                  onChange={(e) => setBadge(e.target.value as AdminProductBadge)}
                   className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
                 >
                   {badgeOptions.map((item) => (
@@ -402,7 +429,7 @@ export default function AdminNewProductPage() {
                 <label className="mb-2 block text-sm text-gray-500">Статус</label>
                 <select
                   value={status}
-                  onChange={(e) => setStatus(e.target.value as ProductStatus)}
+                  onChange={(e) => setStatus(e.target.value as AdminProductStatus)}
                   className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
                 >
                   {statusOptions.map((item) => (
