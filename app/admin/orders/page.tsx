@@ -36,6 +36,21 @@ type OrderRow = {
   items: OrderItem[];
 };
 
+function getAutoOrderStatus(
+  payment: PaymentMethod,
+  delivery: DeliveryMethod
+): OrderStatus {
+  if (payment === "Картой" || payment === "СБП") {
+    return "Оплачен";
+  }
+
+  if (payment === "Наличными" && delivery === "Самовывоз") {
+    return "Новый";
+  }
+
+  return "Новый";
+}
+
 const initialOrders: OrderRow[] = [
   {
     id: "ORD-1001",
@@ -45,7 +60,7 @@ const initialOrders: OrderRow[] = [
     payment: "Картой",
     delivery: "Доставка",
     address: "г. Казань, ул. Чистопольская, 20",
-    status: "Новый",
+    status: getAutoOrderStatus("Картой", "Доставка"),
     createdAt: "Сегодня, 12:40",
     comment: "Позвонить перед доставкой",
     items: [
@@ -73,7 +88,7 @@ const initialOrders: OrderRow[] = [
     payment: "СБП",
     delivery: "Самовывоз",
     address: 'г. Казань, Академика Глушко 16Г, ТЦ "АКАДЕМИК", 2 этаж',
-    status: "Оплачен",
+    status: getAutoOrderStatus("СБП", "Самовывоз"),
     createdAt: "Сегодня, 11:05",
     comment: "",
     items: [
@@ -91,12 +106,12 @@ const initialOrders: OrderRow[] = [
     customer: "Тимур Гайнутдинов",
     phone: "+7 (903) 111-22-33",
     total: 10400,
-    payment: "Картой",
-    delivery: "Доставка",
-    address: "г. Москва, Ленинградский проспект, 48",
-    status: "В обработке",
+    payment: "Наличными",
+    delivery: "Самовывоз",
+    address: 'г. Казань, Академика Глушко 16Г, ТЦ "АКАДЕМИК", 2 этаж',
+    status: getAutoOrderStatus("Наличными", "Самовывоз"),
     createdAt: "Вчера, 18:22",
-    comment: "Доставка после 18:00",
+    comment: "Оплата при получении",
     items: [
       {
         name: "Поло White",
@@ -417,7 +432,9 @@ export default function AdminOrdersPage() {
 
               <div className="rounded-[24px] bg-[#F7F7F7] p-4">
                 <div className="mb-4 flex items-center justify-between">
-                  <h3 className="text-sm font-medium text-black">Состав заказа</h3>
+                  <h3 className="text-sm font-medium text-black">
+                    Состав заказа
+                  </h3>
                   <span className="text-sm text-gray-500">
                     {selectedOrder.items.length} поз.
                   </span>

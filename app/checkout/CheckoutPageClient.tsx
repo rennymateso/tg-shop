@@ -14,6 +14,40 @@ type CheckoutItem = {
   quantity: number;
 };
 
+type OrderStatus =
+  | "Новый"
+  | "Оплачен"
+  | "В обработке"
+  | "Собран"
+  | "В доставке"
+  | "Доставлен"
+  | "Отменен";
+
+type PaymentMethod = "Картой" | "Наличными";
+type DeliveryMethod = "Доставка" | "Самовывоз";
+
+type SavedOrderItem = {
+  name: string;
+  size: string;
+  color: string;
+  quantity: number;
+  price: number;
+};
+
+type SavedOrder = {
+  id: string;
+  customer: string;
+  phone: string;
+  total: number;
+  payment: PaymentMethod;
+  delivery: DeliveryMethod;
+  address: string;
+  status: OrderStatus;
+  createdAt: string;
+  comment: string;
+  items: SavedOrderItem[];
+};
+
 function getOldUnitPrice(id: string, fallback: number) {
   const product = products.find((item) => item.id === id);
   return product?.oldPrice ?? fallback;
@@ -35,6 +69,20 @@ function formatPhone(value: string) {
   if (digits.length > 8) result += `-${digits.slice(8, 10)}`;
 
   return result;
+}
+
+function buildOrderStatus(paymentMethod: "card" | "cash"): OrderStatus {
+  if (paymentMethod === "card") {
+    return "Оплачен";
+  }
+
+  return "Новый";
+}
+
+function saveOrderToLocalStorage(order: SavedOrder) {
+  const currentOrders = JSON.parse(localStorage.getItem("orders") || "[]");
+  const safeOrders = Array.isArray(currentOrders) ? currentOrders : [];
+  localStorage.setItem("orders", JSON.stringify([order, ...safeOrders]));
 }
 
 export default function CheckoutPageClient() {
@@ -119,6 +167,33 @@ export default function CheckoutPageClient() {
     setPhone(formatPhone(value));
   };
 
+  const createLocalOrder = (selectedPaymentMethod: "card" | "cash") => {
+    const order: SavedOrder = {
+      id: `ORD-${Date.now()}`,
+      customer: name.trim(),
+      phone,
+      total: finalNewTotal,
+      payment: selectedPaymentMethod === "card" ? "Картой" : "Наличными",
+      delivery: deliveryMethod === "pickup" ? "Самовывоз" : "Доставка",
+      address:
+        deliveryMethod === "pickup"
+          ? 'г. Казань, Академика Глушко 16Г, ТЦ "АКАДЕМИК", 2 этаж'
+          : address.trim(),
+      status: buildOrderStatus(selectedPaymentMethod),
+      createdAt: new Date().toLocaleString("ru-RU"),
+      comment: promoCode.trim() ? `Промокод: ${promoCode.trim()}` : "",
+      items: items.map((item) => ({
+        name: item.name,
+        size: item.size,
+        color: item.color,
+        quantity: item.quantity,
+        price: item.price,
+      })),
+    };
+
+    saveOrderToLocalStorage(order);
+  };
+
   const handleCashOrder = () => {
     if (!isFormValid) {
       alert("Заполните все обязательные данные");
@@ -130,6 +205,7 @@ export default function CheckoutPageClient() {
       return;
     }
 
+    createLocalOrder("cash");
     localStorage.removeItem("cart");
     alert("Заказ успешно оформлен. С вами свяжется менеджер для подтверждения.");
     router.push("/checkout?payment=success");
@@ -145,6 +221,8 @@ export default function CheckoutPageClient() {
 
     try {
       setIsPaying(true);
+
+      createLocalOrder("card");
 
       const response = await fetch("/api/payments/init", {
         method: "POST",
