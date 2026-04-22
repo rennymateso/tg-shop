@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 const menu = [
   { href: "/admin", label: "Главная", icon: "▣" },
@@ -30,6 +30,16 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await fetch("/api/admin-logout", {
+      method: "POST",
+    });
+
+    router.push("/admin/login");
+    router.refresh();
+  };
 
   return (
     <div className="min-h-screen bg-[#F5F5F5] text-black">
@@ -64,6 +74,14 @@ export default function AdminLayout({
               );
             })}
           </nav>
+
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="mt-6 w-full rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-red-600"
+          >
+            Выйти
+          </button>
         </aside>
 
         <main className="p-4 md:p-6 lg:p-8">{children}</main>
