@@ -2,16 +2,22 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  addAdminProduct,
-  createAdminProductId,
-} from "../../../app/lib/admin-products-storage";
-import {
-  AdminProduct,
-  AdminProductBadge,
-  AdminProductCategory,
-  AdminProductStatus,
-} from "../../../app/types/admin-product";
+import { supabase } from "../../../lib/supabase";
+
+type ProductStatus = "Активен" | "Скрыт";
+type BadgeType =
+  | "Без бейджа"
+  | "Новинка"
+  | "Скидка"
+  | "В наличии"
+  | "Из-за рубежа";
+
+type ProductCategory =
+  | "Футболки"
+  | "Поло"
+  | "Джинсы"
+  | "Брюки"
+  | "Костюмы";
 
 type ColorGalleryMap = Record<string, string[]>;
 
@@ -32,7 +38,7 @@ const brandOptions = [
   "Другие бренды",
 ] as const;
 
-const categoryOptions: AdminProductCategory[] = [
+const categoryOptions: ProductCategory[] = [
   "Футболки",
   "Поло",
   "Джинсы",
@@ -40,7 +46,7 @@ const categoryOptions: AdminProductCategory[] = [
   "Костюмы",
 ];
 
-const badgeOptions: AdminProductBadge[] = [
+const badgeOptions: BadgeType[] = [
   "Без бейджа",
   "Новинка",
   "Скидка",
@@ -48,7 +54,7 @@ const badgeOptions: AdminProductBadge[] = [
   "Из-за рубежа",
 ];
 
-const statusOptions: AdminProductStatus[] = ["Активен", "Скрыт"];
+const statusOptions: ProductStatus[] = ["Активен", "Скрыт"];
 
 const sizeOptions = [
   "S",
@@ -96,16 +102,20 @@ function makeArticle(name: string) {
   return base ? `ART-${base}` : "ART-NEW";
 }
 
+function createProductId() {
+  return `P-${Date.now()}`;
+}
+
 export default function AdminNewProductPage() {
   const router = useRouter();
 
   const [name, setName] = useState("");
   const [brand, setBrand] = useState<(typeof brandOptions)[number]>("Lacoste");
-  const [category, setCategory] = useState<AdminProductCategory>("Поло");
+  const [category, setCategory] = useState<ProductCategory>("Поло");
   const [price, setPrice] = useState("");
   const [oldPrice, setOldPrice] = useState("");
-  const [badge, setBadge] = useState<AdminProductBadge>("Без бейджа");
-  const [status, setStatus] = useState<AdminProductStatus>("Активен");
+  const [badge, setBadge] = useState<BadgeType>("Без бейджа");
+  const [status, setStatus] = useState<ProductStatus>("Активен");
   const [description, setDescription] = useState("");
   const [article, setArticle] = useState("");
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
@@ -113,6 +123,7 @@ export default function AdminNewProductPage() {
   const [activeColor, setActiveColor] = useState<string>("");
   const [colorImages, setColorImages] = useState<ColorGalleryMap>({});
   const [message, setMessage] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
   const discountPercent = useMemo(() => {
     const p = Number(price);
@@ -190,12 +201,7 @@ export default function AdminNewProductPage() {
     }));
 
     setActiveColor(color);
-
-    if (files.length > freeSlots) {
-      setMessage(`Для цвета ${color} добавили только первые 6 фото`);
-    } else {
-      setMessage("");
-    }
+    setMessage("");
   };
 
   const removeColorImage = (color: string, index: number) => {
@@ -234,7 +240,7 @@ export default function AdminNewProductPage() {
     });
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!name.trim()) {
       setMessage("Введите название товара");
       return;
@@ -264,33 +270,58 @@ export default function AdminNewProductPage() {
       return;
     }
 
-    const now = new Date().toLocaleString("ru-RU");
+    try {
+      setIsSaving(true);
+      setMessage("");
 
-    const product: AdminProduct = {
-      id: createAdminProductId(),
-      name: name.trim(),
-      brand,
-      category,
-      price: Number(price),
-      oldPrice: Number(oldPrice || price),
-      badge,
-      status,
-      description: description.trim(),
-      article: article.trim() || makeArticle(name),
-      sizes: selectedSizes,
-      colors: selectedColors,
-      image: previewImage,
-      colorImages,
-      createdAt: now,
-      updatedAt: now,
-    };
+      const now = new Date().toISOString();
 
-    addAdminProduct(product);
-    router.push("/admin/products");
-    router.refresh();
+      const payload = {
+        id: createProductId(),
+        name: name.trim(),
+        brand,
+        category,
+        price: Number(price),
+        old_price: Number(oldPrice || price),
+        badge,
+        status,
+        description: description.trim(),
+        article: article.trim() || makeArticle(name),
+        sizes: selectedSizes,
+        colors: selectedColors,
+        image: previewImage || "",
+        color_images: colorImages,
+        created_at: now,
+        updated_at: now,
+      };
+
+      const { data, error } = await supabase
+        .from("products")
+        .insert(payload)
+        .select();
+
+      if (error) {
+        alert(`Ошибка Supabase: ${error.message}`);
+        setMessage(`Ошибка сохранения: ${error.message}`);
+        setIsSaving(false);
+        return;
+      }
+
+      alert("Товар сохранен");
+      console.log("saved product", data);
+
+      router.push("/admin/products");
+      router.refresh();
+    } catch (error) {
+      const text =
+        error instanceof Error ? error.message : "Не удалось сохранить товар";
+      alert(text);
+      setMessage(text);
+      setIsSaving(false);
+    }
   };
 
-  const handleDelete = () => {
+  const handleClear = () => {
     setName("");
     setBrand("Lacoste");
     setCategory("Поло");
@@ -321,7 +352,7 @@ export default function AdminNewProductPage() {
           </button>
 
           <button
-            onClick={handleDelete}
+            onClick={handleClear}
             className="rounded-2xl bg-red-50 px-5 py-3 text-sm font-medium text-red-600"
           >
             Очистить
@@ -329,9 +360,10 @@ export default function AdminNewProductPage() {
 
           <button
             onClick={handleSave}
-            className="rounded-2xl bg-black px-5 py-3 text-sm font-medium text-white"
+            disabled={isSaving}
+            className="rounded-2xl bg-black px-5 py-3 text-sm font-medium text-white disabled:opacity-60"
           >
-            Сохранить товар
+            {isSaving ? "Сохраняем..." : "Сохранить товар"}
           </button>
         </div>
       </div>
@@ -349,9 +381,7 @@ export default function AdminNewProductPage() {
 
             <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="md:col-span-2">
-                <label className="mb-2 block text-sm text-gray-500">
-                  Название товара
-                </label>
+                <label className="mb-2 block text-sm text-gray-500">Название товара</label>
                 <input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -379,11 +409,7 @@ export default function AdminNewProductPage() {
                 <label className="mb-2 block text-sm text-gray-500">Категория</label>
                 <select
                   value={category}
-                  onChange={(e) =>
-                    setCategory(
-                      e.target.value as AdminProductCategory
-                    )
-                  }
+                  onChange={(e) => setCategory(e.target.value as ProductCategory)}
                   className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
                 >
                   {categoryOptions.map((item) => (
@@ -416,7 +442,7 @@ export default function AdminNewProductPage() {
                 <label className="mb-2 block text-sm text-gray-500">Бейдж</label>
                 <select
                   value={badge}
-                  onChange={(e) => setBadge(e.target.value as AdminProductBadge)}
+                  onChange={(e) => setBadge(e.target.value as BadgeType)}
                   className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
                 >
                   {badgeOptions.map((item) => (
@@ -429,7 +455,7 @@ export default function AdminNewProductPage() {
                 <label className="mb-2 block text-sm text-gray-500">Статус</label>
                 <select
                   value={status}
-                  onChange={(e) => setStatus(e.target.value as AdminProductStatus)}
+                  onChange={(e) => setStatus(e.target.value as ProductStatus)}
                   className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
                 >
                   {statusOptions.map((item) => (
@@ -481,9 +507,7 @@ export default function AdminNewProductPage() {
                     type="button"
                     onClick={() => toggleSize(size)}
                     className={`rounded-2xl px-4 py-2 text-sm transition ${
-                      active
-                        ? "bg-black text-white"
-                        : "bg-[#F5F5F5] text-gray-700"
+                      active ? "bg-black text-white" : "bg-[#F5F5F5] text-gray-700"
                     }`}
                   >
                     {size}
@@ -504,9 +528,7 @@ export default function AdminNewProductPage() {
                     type="button"
                     onClick={() => toggleColor(color)}
                     className={`flex items-center gap-2 rounded-2xl px-4 py-2 text-sm transition ${
-                      active
-                        ? "bg-black text-white"
-                        : "bg-[#F5F5F5] text-gray-700"
+                      active ? "bg-black text-white" : "bg-[#F5F5F5] text-gray-700"
                     }`}
                   >
                     <span
@@ -562,9 +584,7 @@ export default function AdminNewProductPage() {
             ) : (
               <>
                 <div className="mb-4 flex items-center justify-between">
-                  <p className="text-sm font-medium text-black">
-                    Цвет: {activeColor}
-                  </p>
+                  <p className="text-sm font-medium text-black">Цвет: {activeColor}</p>
                   <span className="text-sm text-gray-500">
                     {activeImages.length}/6 фото
                   </span>
@@ -618,9 +638,7 @@ export default function AdminNewProductPage() {
                                 />
                                 <button
                                   type="button"
-                                  onClick={() =>
-                                    removeColorImage(activeColor, realIndex)
-                                  }
+                                  onClick={() => removeColorImage(activeColor, realIndex)}
                                   className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-white text-[10px] text-black shadow"
                                 >
                                   ✕
@@ -630,9 +648,7 @@ export default function AdminNewProductPage() {
                               <div className="mt-2 grid grid-cols-3 gap-1">
                                 <button
                                   type="button"
-                                  onClick={() =>
-                                    makeMainImage(activeColor, realIndex)
-                                  }
+                                  onClick={() => makeMainImage(activeColor, realIndex)}
                                   className="rounded-lg bg-black px-2 py-1.5 text-[10px] text-white"
                                 >
                                   Главная
@@ -640,9 +656,7 @@ export default function AdminNewProductPage() {
 
                                 <button
                                   type="button"
-                                  onClick={() =>
-                                    moveImageLeft(activeColor, realIndex)
-                                  }
+                                  onClick={() => moveImageLeft(activeColor, realIndex)}
                                   className="rounded-lg bg-white px-2 py-1.5 text-[10px] text-black"
                                 >
                                   ←
@@ -650,9 +664,7 @@ export default function AdminNewProductPage() {
 
                                 <button
                                   type="button"
-                                  onClick={() =>
-                                    moveImageRight(activeColor, realIndex)
-                                  }
+                                  onClick={() => moveImageRight(activeColor, realIndex)}
                                   className="rounded-lg bg-white px-2 py-1.5 text-[10px] text-black"
                                 >
                                   →
@@ -664,12 +676,6 @@ export default function AdminNewProductPage() {
                       </div>
                     )}
                   </div>
-                )}
-
-                {activeImages.length > 0 && (
-                  <p className="mt-3 text-xs text-gray-400">
-                    На телефоне порядок удобно менять кнопками. Главное фото всегда сверху.
-                  </p>
                 )}
               </>
             )}

@@ -18,27 +18,6 @@ const initialStocks: StockRow[] = [
     size: "L",
     quantity: 4,
   },
-  {
-    id: "ST-002",
-    product: "Поло Premium",
-    color: "Белый",
-    size: "M",
-    quantity: 2,
-  },
-  {
-    id: "ST-003",
-    product: "Поло Classic",
-    color: "Синий",
-    size: "XL",
-    quantity: 5,
-  },
-  {
-    id: "ST-004",
-    product: "Поло White",
-    color: "Белый",
-    size: "M",
-    quantity: 0,
-  },
 ];
 
 export default function AdminStocksPage() {
@@ -97,22 +76,14 @@ export default function AdminStocksPage() {
     setStocks((prev) => prev.filter((item) => item.id !== id));
   };
 
-  const totalQuantity = useMemo(
-    () => stocks.reduce((sum, item) => sum + item.quantity, 0),
-    [stocks]
-  );
-
   return (
     <>
-      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <p className="text-sm text-gray-500">Админ-панель</p>
-          <h1 className="text-2xl font-semibold text-black">Остатки</h1>
-        </div>
-
-        <div className="rounded-2xl bg-white px-4 py-3 text-sm text-gray-500 shadow-sm">
-          Всего единиц товара: {totalQuantity}
-        </div>
+      <div className="mb-6">
+        <p className="text-sm text-gray-500">Админ-панель</p>
+        <h1 className="text-2xl font-semibold text-black">Остатки</h1>
+        <p className="mt-2 text-sm text-gray-500">
+          Остатки заполняются отдельно: товар → цвет → размер → количество
+        </p>
       </div>
 
       <section className="mb-6 rounded-[28px] bg-white p-5 shadow-sm">
@@ -166,86 +137,54 @@ export default function AdminStocksPage() {
       </section>
 
       <section className="rounded-[28px] bg-white p-5 shadow-sm">
-        <h2 className="text-lg font-medium text-black">Список остатков</h2>
-        <p className="mt-1 text-sm text-gray-500">
-          Формат: товар — цвет — размер — количество
-        </p>
+        {filteredStocks.length === 0 ? (
+          <div className="py-10 text-center text-sm text-gray-500">
+            Остатков пока нет
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {filteredStocks.map((item) => (
+              <div
+                key={item.id}
+                className="rounded-2xl bg-[#F7F7F7] p-4"
+              >
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-black">{item.product}</p>
+                    <p className="mt-1 text-xs text-gray-500">
+                      {item.color} • {item.size}
+                    </p>
+                  </div>
 
-        <div className="mt-4 overflow-x-auto">
-          <table className="min-w-full text-left">
-            <thead>
-              <tr className="border-b border-black/5 text-xs uppercase tracking-[0.18em] text-gray-400">
-                <th className="pb-3 pr-4 font-medium">Товар</th>
-                <th className="pb-3 pr-4 font-medium">Цвет</th>
-                <th className="pb-3 pr-4 font-medium">Размер</th>
-                <th className="pb-3 pr-4 font-medium">Количество</th>
-                <th className="pb-3 font-medium">Действия</th>
-              </tr>
-            </thead>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                      className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-black"
+                    >
+                      −
+                    </button>
 
-            <tbody>
-              {filteredStocks.map((item) => (
-                <tr
-                  key={item.id}
-                  className="border-b border-black/5 last:border-b-0"
-                >
-                  <td className="py-4 pr-4">
-                    <div>
-                      <p className="text-sm font-medium text-black">{item.product}</p>
-                      <p className="mt-1 text-xs text-gray-400">{item.id}</p>
-                    </div>
-                  </td>
+                    <span className="min-w-[48px] text-center text-sm font-medium text-black">
+                      {item.quantity}
+                    </span>
 
-                  <td className="py-4 pr-4 text-sm text-gray-600">{item.color}</td>
-                  <td className="py-4 pr-4 text-sm text-gray-600">{item.size}</td>
+                    <button
+                      onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                      className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-black"
+                    >
+                      +
+                    </button>
 
-                  <td className="py-4 pr-4">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                        className="flex h-8 w-8 items-center justify-center rounded-full bg-[#F5F5F5] text-black"
-                      >
-                        −
-                      </button>
-
-                      <span
-                        className={`min-w-[50px] rounded-full px-3 py-1 text-center text-sm ${
-                          item.quantity === 0
-                            ? "bg-red-100 text-red-600"
-                            : item.quantity <= 3
-                            ? "bg-amber-100 text-amber-700"
-                            : "bg-[#F5F5F5] text-gray-700"
-                        }`}
-                      >
-                        {item.quantity}
-                      </span>
-
-                      <button
-                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                        className="flex h-8 w-8 items-center justify-center rounded-full bg-[#F5F5F5] text-black"
-                      >
-                        +
-                      </button>
-                    </div>
-                  </td>
-
-                  <td className="py-4">
                     <button
                       onClick={() => removeStock(item.id)}
-                      className="rounded-2xl bg-red-50 px-3 py-2 text-xs text-red-600"
+                      className="rounded-xl bg-red-50 px-3 py-2 text-xs text-red-600"
                     >
                       Удалить
                     </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {filteredStocks.length === 0 && (
-          <div className="py-10 text-center text-sm text-gray-500">
-            Остатки не найдены
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </section>

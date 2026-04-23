@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useMemo, useRef } from "react";
 import BottomNav from "./components/BottomNav";
-import { products } from "./data/products";
+import { supabase } from "./lib/supabase";
 
 const categories = ["Все", "Футболки", "Поло", "Джинсы", "Брюки", "Костюмы"] as const;
 const brands = [
@@ -39,9 +39,105 @@ type Brand = (typeof brands)[number];
 type SortOption = (typeof sortOptions)[number];
 type BadgeFilter = (typeof badgeFilters)[number];
 
+type Product = {
+  id: string;
+  name: string;
+  brand:
+    | "Lacoste"
+    | "Polo Ralph Lauren"
+    | "Tommy Hilfiger"
+    | "Calvin Klein"
+    | "GANT"
+    | "BOSS"
+    | "Emporio Armani"
+    | "Armani Exchange"
+    | "Beymen Club"
+    | "Loro Piana"
+    | "Brunello Cucinelli"
+    | "BORZ"
+    | "Massimo Carino"
+    | "Другие бренды";
+  price: number;
+  oldPrice: number | null;
+  badge: "Новинка" | "Скидка" | "В наличии" | "Из-за рубежа";
+  image: string;
+  images: string[];
+  colorImages?: Record<string, string>;
+  type: "top" | "bottom";
+  category: "Футболки" | "Поло" | "Джинсы" | "Брюки" | "Костюмы";
+  colors: string[];
+  sizes: string[];
+  description: string;
+};
+
+type ProductRow = {
+  id: string;
+  name: string;
+  brand: Product["brand"];
+  category: Product["category"];
+  price: number;
+  old_price: number;
+  badge: Product["badge"];
+  status: "Активен" | "Скрыт";
+  description: string;
+  article: string;
+  sizes: string[] | null;
+  colors: string[] | null;
+  image: string;
+  color_images: Record<string, string[]> | null;
+  created_at: string;
+  updated_at: string;
+};
+
 function getDiscountPercent(oldPrice: number | null, price: number) {
   if (!oldPrice || oldPrice <= price) return 0;
   return Math.round(((oldPrice - price) / oldPrice) * 100);
+}
+
+function mapRowToProduct(row: ProductRow): Product {
+  const normalizedColorImages: Record<string, string> = {};
+
+  if (row.color_images && typeof row.color_images === "object") {
+    Object.entries(row.color_images).forEach(([color, images]) => {
+      if (Array.isArray(images) && images.length > 0) {
+        normalizedColorImages[color] = images[0];
+      }
+    });
+  }
+
+  const galleryFromDb =
+    row.color_images && typeof row.color_images === "object"
+      ? Object.values(row.color_images)
+          .filter((value) => Array.isArray(value))
+          .flat()
+      : [];
+
+  const uniqueImages = Array.from(
+    new Set([row.image, ...galleryFromDb].filter(Boolean))
+  );
+
+  return {
+    id: row.id,
+    name: row.name,
+    brand: row.brand,
+    price: row.price,
+    oldPrice: row.old_price || null,
+    badge: row.badge,
+    image: row.image || uniqueImages[0] || "/products/product-1.jpg",
+    images:
+      uniqueImages.length > 0
+        ? uniqueImages
+        : [row.image || "/products/product-1.jpg"],
+    colorImages: normalizedColorImages,
+    type:
+      row.category === "Джинсы" || row.category === "Брюки"
+        ? "bottom"
+        : "top",
+    category: row.category,
+    colors: Array.isArray(row.colors) ? row.colors : [],
+    sizes: Array.isArray(row.sizes) ? row.sizes : [],
+    description: row.description || "",
+  };
 }
 
 export default function Home() {
@@ -58,12 +154,40 @@ export default function Home() {
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [showBrandMenu, setShowBrandMenu] = useState(false);
 
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const sortMenuRef = useRef<HTMLDivElement | null>(null);
   const brandMenuWrapRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const data = JSON.parse(localStorage.getItem("favorites") || "[]");
     setFavorites(data);
+  }, []);
+
+  useEffect(() => {
+    const loadProducts = async () => {
+      setLoading(true);
+
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .eq("status", "Активен")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Ошибка загрузки товаров:", error.message);
+        setProducts([]);
+        setLoading(false);
+        return;
+      }
+
+      const mapped = ((data || []) as ProductRow[]).map(mapRowToProduct);
+      setProducts(mapped);
+      setLoading(false);
+    };
+
+    loadProducts();
   }, []);
 
   useEffect(() => {
@@ -140,7 +264,7 @@ export default function Home() {
     }
 
     return result;
-  }, [selectedCategory, selectedBrand, selectedSort, selectedBadge, search]);
+  }, [products, selectedCategory, selectedBrand, selectedSort, selectedBadge, search]);
 
   return (
     <main className="min-h-screen bg-[#F5F5F5] px-3 pt-4 pb-32">
@@ -315,7 +439,11 @@ export default function Home() {
         </div>
       </div>
 
-      {filteredProducts.length === 0 ? (
+      {loading ? (
+        <div className="rounded-[24px] bg-white p-7 text-center shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
+          <p className="text-[16px] font-medium text-black">Загрузка товаров...</p>
+        </div>
+      ) : filteredProducts.length === 0 ? (
         <div className="rounded-[24px] bg-white p-7 text-center shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
           <p className="text-[16px] font-medium text-black">Ничего не найдено</p>
           <p className="mt-2 text-sm text-gray-400">
