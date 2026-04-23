@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import BottomNav from "../components/BottomNav";
 import { supabase } from "../lib/supabase";
@@ -33,6 +33,8 @@ type Product = {
   image: string;
   images: string[];
   colorImages?: Record<string, string>;
+  galleryByColor?: Record<string, string[]>;
+  defaultColor: string;
   type: "top" | "bottom";
   category: ProductCategory;
   colors: string[];
@@ -74,26 +76,26 @@ function getDiscountPercent(oldPrice: number | null, price: number) {
 }
 
 function mapRowToProduct(row: ProductRow): Product {
+  const galleryByColor: Record<string, string[]> = {};
   const normalizedColorImages: Record<string, string> = {};
 
   if (row.color_images && typeof row.color_images === "object") {
     Object.entries(row.color_images).forEach(([color, images]) => {
-      if (Array.isArray(images) && images.length > 0) {
-        normalizedColorImages[color] = images[0];
+      const safeImages = Array.isArray(images) ? images.filter(Boolean) : [];
+      if (safeImages.length > 0) {
+        galleryByColor[color] = safeImages;
+        normalizedColorImages[color] = safeImages[0];
       }
     });
   }
 
-  const galleryFromDb =
-    row.color_images && typeof row.color_images === "object"
-      ? Object.values(row.color_images)
-          .filter((value) => Array.isArray(value))
-          .flat()
-      : [];
+  const defaultColor =
+    (Array.isArray(row.colors) && row.colors[0]) ||
+    Object.keys(galleryByColor)[0] ||
+    "Черный";
 
-  const uniqueImages = Array.from(
-    new Set([row.image, ...galleryFromDb].filter(Boolean))
-  );
+  const defaultImages = galleryByColor[defaultColor] || [];
+  const fallbackImage = row.image || defaultImages[0] || "/products/product-1.jpg";
 
   return {
     id: row.id,
@@ -102,12 +104,11 @@ function mapRowToProduct(row: ProductRow): Product {
     price: row.price,
     oldPrice: row.old_price || null,
     badge: row.badge,
-    image: row.image || uniqueImages[0] || "/products/product-1.jpg",
-    images:
-      uniqueImages.length > 0
-        ? uniqueImages
-        : [row.image || "/products/product-1.jpg"],
+    image: fallbackImage,
+    images: defaultImages.length ? defaultImages : [fallbackImage],
     colorImages: normalizedColorImages,
+    galleryByColor,
+    defaultColor,
     type:
       row.category === "Джинсы" || row.category === "Брюки"
         ? "bottom"
@@ -122,18 +123,19 @@ function mapRowToProduct(row: ProductRow): Product {
 export default function ProductPageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
-
   const id = searchParams.get("id");
 
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
 
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
-  const [selectedColors, setSelectedColors] = useState<string[]>([]);
+  const [selectedColor, setSelectedColor] = useState("");
   const [favorites, setFavorites] = useState<string[]>([]);
   const [showFullDescription, setShowFullDescription] = useState(false);
-  const [activeImage, setActiveImage] = useState("");
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [errorText, setErrorText] = useState("");
+
+  const touchStartXRef = useRef<number | null>(null);
 
   useEffect(() => {
     const data = JSON.parse(localStorage.getItem("favorites") || "[]");
@@ -174,12 +176,22 @@ export default function ProductPageClient() {
 
       const mapped = mapRowToProduct(data as ProductRow);
       setProduct(mapped);
-      setActiveImage(mapped.image);
+      setSelectedColor(mapped.defaultColor);
+      setActiveImageIndex(0);
       setLoading(false);
     };
 
     loadProduct();
   }, [id]);
+
+  const galleryImages = useMemo(() => {
+    if (!product) return [];
+    const colorGallery = product.galleryByColor?.[selectedColor] || [];
+    if (colorGallery.length > 0) return colorGallery;
+    return product.images?.length ? product.images : [product.image];
+  }, [product, selectedColor]);
+
+  const activeImage = galleryImages[activeImageIndex] || product?.image || "";
 
   const toggleFavorite = () => {
     if (!product) return;
@@ -224,13 +236,8 @@ export default function ProductPageClient() {
 
   const article = product ? `ART-${product.id}` : "";
   const description = product?.description || "";
-  const canOrder = selectedSizes.length > 0 && selectedColors.length > 0;
+  const canOrder = selectedSizes.length > 0 && !!selectedColor;
   const discountPercent = product ? getDiscountPercent(product.oldPrice, product.price) : 0;
-
-  const galleryImages = useMemo(() => {
-    if (!product) return [];
-    return product.images?.length ? product.images : [product.image];
-  }, [product]);
 
   const toggleSize = (value: string) => {
     setSelectedSizes((prev) =>
@@ -238,18 +245,38 @@ export default function ProductPageClient() {
     );
   };
 
-  const toggleColor = (value: string) => {
-    setSelectedColors((prev) => {
-      const next = prev.includes(value)
-        ? prev.filter((item) => item !== value)
-        : [...prev, value];
+  const selectColor = (value: string) => {
+    setSelectedColor(value);
+    setActiveImageIndex(0);
+  };
 
-      return next;
-    });
+  const nextImage = () => {
+    if (galleryImages.length <= 1) return;
+    setActiveImageIndex((prev) => (prev >= galleryImages.length - 1 ? 0 : prev + 1));
+  };
 
-    if (product?.colorImages?.[value]) {
-      setActiveImage(product.colorImages[value]);
+  const prevImage = () => {
+    if (galleryImages.length <= 1) return;
+    setActiveImageIndex((prev) => (prev <= 0 ? galleryImages.length - 1 : prev - 1));
+  };
+
+  const onTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    touchStartXRef.current = e.touches[0]?.clientX ?? null;
+  };
+
+  const onTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (touchStartXRef.current === null) return;
+    const endX = e.changedTouches[0]?.clientX ?? null;
+    if (endX === null) return;
+
+    const diff = touchStartXRef.current - endX;
+
+    if (Math.abs(diff) > 40) {
+      if (diff > 0) nextImage();
+      else prevImage();
     }
+
+    touchStartXRef.current = null;
   };
 
   const addToCart = () => {
@@ -257,20 +284,14 @@ export default function ProductPageClient() {
 
     const existingCart: CartItem[] = JSON.parse(localStorage.getItem("cart") || "[]");
 
-    const newItems: CartItem[] = [];
-
-    selectedSizes.forEach((size) => {
-      selectedColors.forEach((color) => {
-        newItems.push({
-          id,
-          name: product.name,
-          price: product.price,
-          size,
-          color,
-          quantity: 1,
-        });
-      });
-    });
+    const newItems: CartItem[] = selectedSizes.map((size) => ({
+      id,
+      name: product.name,
+      price: product.price,
+      size,
+      color: selectedColor,
+      quantity: 1,
+    }));
 
     const updatedCart = [...existingCart];
 
@@ -359,7 +380,11 @@ export default function ProductPageClient() {
       </div>
 
       <div className="overflow-hidden rounded-[24px] bg-white shadow-[0_10px_30px_rgba(0,0,0,0.05)]">
-        <div className="relative aspect-[3/4] overflow-hidden bg-[#ECECEC]">
+        <div
+          className="relative aspect-[3/4] overflow-hidden bg-[#ECECEC]"
+          onTouchStart={onTouchStart}
+          onTouchEnd={onTouchEnd}
+        >
           <img
             src={activeImage || product.image}
             alt={product.name}
@@ -378,23 +403,42 @@ export default function ProductPageClient() {
             </div>
           )}
 
-          <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-1.5">
-            {galleryImages.map((img, index) => {
-              const currentImage = activeImage || product.image;
-              const isActive = img === currentImage || (!currentImage && index === 0);
+          {galleryImages.length > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={prevImage}
+                className="absolute left-3 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/85 text-black shadow"
+                aria-label="Предыдущее фото"
+              >
+                ‹
+              </button>
 
-              return (
-                <button
-                  key={`${img}-${index}`}
-                  type="button"
-                  onClick={() => setActiveImage(img)}
-                  className={`block rounded-full ${
-                    isActive ? "h-1.5 w-4 bg-white" : "h-1.5 w-1.5 bg-white/45"
-                  }`}
-                  aria-label={`Фото ${index + 1}`}
-                />
-              );
-            })}
+              <button
+                type="button"
+                onClick={nextImage}
+                className="absolute right-3 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/85 text-black shadow"
+                aria-label="Следующее фото"
+              >
+                ›
+              </button>
+            </>
+          )}
+
+          <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-1.5">
+            {galleryImages.map((_, index) => (
+              <button
+                key={`${product.id}-dot-${index}`}
+                type="button"
+                onClick={() => setActiveImageIndex(index)}
+                className={`block rounded-full ${
+                  index === activeImageIndex
+                    ? "h-1.5 w-4 bg-white"
+                    : "h-1.5 w-1.5 bg-white/45"
+                }`}
+                aria-label={`Фото ${index + 1}`}
+              />
+            ))}
           </div>
         </div>
 
@@ -464,13 +508,13 @@ export default function ProductPageClient() {
             <div className="flex flex-wrap gap-2">
               {product.colors.map((c) => {
                 const swatch = colorMap[c] || "#E5E7EB";
-                const isSelected = selectedColors.includes(c);
+                const isSelected = selectedColor === c;
                 const isWhite = c === "Белый";
 
                 return (
                   <button
                     key={c}
-                    onClick={() => toggleColor(c)}
+                    onClick={() => selectColor(c)}
                     aria-label={c}
                     title={c}
                     className={`flex h-9 w-9 items-center justify-center rounded-lg border transition-all duration-200 active:scale-95 ${
@@ -487,10 +531,27 @@ export default function ProductPageClient() {
             </div>
 
             <div className="mt-2 text-[12px] text-gray-400">
-              {selectedColors.length > 0
-                ? `Выбрано цветов: ${selectedColors.join(", ")}`
-                : "Можно выбрать несколько цветов"}
+              {selectedColor ? `Выбран цвет: ${selectedColor}` : "Выберите цвет"}
             </div>
+          </div>
+
+          <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+            {galleryImages.map((img, index) => (
+              <button
+                key={`${img}-${index}`}
+                type="button"
+                onClick={() => setActiveImageIndex(index)}
+                className={`shrink-0 overflow-hidden rounded-xl border ${
+                  index === activeImageIndex ? "border-black" : "border-gray-200"
+                }`}
+              >
+                <img
+                  src={img}
+                  alt={`${product.name} ${index + 1}`}
+                  className="h-16 w-12 object-cover"
+                />
+              </button>
+            ))}
           </div>
 
           <div className="mt-5">
@@ -519,7 +580,7 @@ export default function ProductPageClient() {
           <div className="mt-6 flex items-center justify-between rounded-2xl bg-[#F7F7F7] px-4 py-3">
             <span className="text-sm text-gray-500">Товаров к добавлению</span>
             <span className="text-[18px] font-semibold tracking-[-0.02em] text-black">
-              {selectedSizes.length * selectedColors.length || 0}
+              {selectedSizes.length * (selectedColor ? 1 : 0)}
             </span>
           </div>
 

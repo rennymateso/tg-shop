@@ -63,6 +63,8 @@ type Product = {
   image: string;
   images: string[];
   colorImages?: Record<string, string>;
+  galleryByColor?: Record<string, string[]>;
+  defaultColor: string;
   type: "top" | "bottom";
   category: "Футболки" | "Поло" | "Джинсы" | "Брюки" | "Костюмы";
   colors: string[];
@@ -95,26 +97,26 @@ function getDiscountPercent(oldPrice: number | null, price: number) {
 }
 
 function mapRowToProduct(row: ProductRow): Product {
+  const galleryByColor: Record<string, string[]> = {};
   const normalizedColorImages: Record<string, string> = {};
 
   if (row.color_images && typeof row.color_images === "object") {
     Object.entries(row.color_images).forEach(([color, images]) => {
-      if (Array.isArray(images) && images.length > 0) {
-        normalizedColorImages[color] = images[0];
+      const safeImages = Array.isArray(images) ? images.filter(Boolean) : [];
+      if (safeImages.length > 0) {
+        galleryByColor[color] = safeImages;
+        normalizedColorImages[color] = safeImages[0];
       }
     });
   }
 
-  const galleryFromDb =
-    row.color_images && typeof row.color_images === "object"
-      ? Object.values(row.color_images)
-          .filter((value) => Array.isArray(value))
-          .flat()
-      : [];
+  const defaultColor =
+    (Array.isArray(row.colors) && row.colors[0]) ||
+    Object.keys(galleryByColor)[0] ||
+    "Черный";
 
-  const uniqueImages = Array.from(
-    new Set([row.image, ...galleryFromDb].filter(Boolean))
-  );
+  const defaultImages = galleryByColor[defaultColor] || [];
+  const fallbackImage = row.image || defaultImages[0] || "/products/product-1.jpg";
 
   return {
     id: row.id,
@@ -123,12 +125,11 @@ function mapRowToProduct(row: ProductRow): Product {
     price: row.price,
     oldPrice: row.old_price || null,
     badge: row.badge,
-    image: row.image || uniqueImages[0] || "/products/product-1.jpg",
-    images:
-      uniqueImages.length > 0
-        ? uniqueImages
-        : [row.image || "/products/product-1.jpg"],
+    image: fallbackImage,
+    images: defaultImages.length ? defaultImages : [fallbackImage],
     colorImages: normalizedColorImages,
+    galleryByColor,
+    defaultColor,
     type:
       row.category === "Джинсы" || row.category === "Брюки"
         ? "bottom"
@@ -156,7 +157,6 @@ export default function Home() {
 
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [cardImageIndexes, setCardImageIndexes] = useState<Record<string, number>>({});
 
   const sortMenuRef = useRef<HTMLDivElement | null>(null);
   const brandMenuWrapRef = useRef<HTMLDivElement | null>(null);
@@ -232,20 +232,6 @@ export default function Home() {
     setShowSortMenu(false);
     setShowBrandMenu(false);
     router.push("/");
-  };
-
-  const nextCardImage = (productId: string, totalImages: number) => {
-    if (totalImages <= 1) return;
-
-    setCardImageIndexes((prev) => {
-      const currentIndex = prev[productId] || 0;
-      const nextIndex = currentIndex >= totalImages - 1 ? 0 : currentIndex + 1;
-
-      return {
-        ...prev,
-        [productId]: nextIndex,
-      };
-    });
   };
 
   const filteredProducts = useMemo(() => {
@@ -469,9 +455,6 @@ export default function Home() {
         <div className="grid grid-cols-2 gap-3">
           {filteredProducts.map((p) => {
             const discountPercent = getDiscountPercent(p.oldPrice, p.price);
-            const imageCount = p.images?.length || 1;
-            const currentImageIndex = cardImageIndexes[p.id] || 0;
-            const currentImage = p.images[currentImageIndex] || p.image;
 
             return (
               <div
@@ -481,7 +464,7 @@ export default function Home() {
               >
                 <div className="relative aspect-[3/4] overflow-hidden bg-[#EAEAEA]">
                   <img
-                    src={currentImage}
+                    src={p.image}
                     alt={p.name}
                     className="h-full w-full object-cover"
                   />
@@ -516,24 +499,12 @@ export default function Home() {
                     </svg>
                   </button>
 
-                  {imageCount > 1 && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        nextCardImage(p.id, imageCount);
-                      }}
-                      className="absolute inset-x-0 bottom-0 top-0 z-10"
-                      aria-label="Следующее фото"
-                    />
-                  )}
-
-                  <div className="absolute bottom-3 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1.5">
-                    {Array.from({ length: imageCount }).map((_, index) => (
+                  <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1.5">
+                    {Array.from({ length: p.images.length || 1 }).map((_, index) => (
                       <span
                         key={`${p.id}-dot-${index}`}
                         className={`block rounded-full ${
-                          index === currentImageIndex
+                          index === 0
                             ? "h-1.5 w-4 bg-white"
                             : "h-1.5 w-1.5 bg-white/45"
                         }`}
