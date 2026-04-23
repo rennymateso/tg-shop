@@ -3,7 +3,61 @@
 import { useState, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import BottomNav from "../components/BottomNav";
-import { products } from "../data/products";
+import { supabase } from "../lib/supabase";
+
+type ProductBadge = "Новинка" | "Скидка" | "В наличии" | "Из-за рубежа";
+type ProductCategory = "Футболки" | "Поло" | "Джинсы" | "Брюки" | "Костюмы";
+type ProductBrand =
+  | "Lacoste"
+  | "Polo Ralph Lauren"
+  | "Tommy Hilfiger"
+  | "Calvin Klein"
+  | "GANT"
+  | "BOSS"
+  | "Emporio Armani"
+  | "Armani Exchange"
+  | "Beymen Club"
+  | "Loro Piana"
+  | "Brunello Cucinelli"
+  | "BORZ"
+  | "Massimo Carino"
+  | "Другие бренды";
+
+type Product = {
+  id: string;
+  name: string;
+  brand: ProductBrand;
+  price: number;
+  oldPrice: number | null;
+  badge: ProductBadge;
+  image: string;
+  images: string[];
+  colorImages?: Record<string, string>;
+  type: "top" | "bottom";
+  category: ProductCategory;
+  colors: string[];
+  sizes: string[];
+  description: string;
+};
+
+type ProductRow = {
+  id: string;
+  name: string;
+  brand: ProductBrand;
+  category: ProductCategory;
+  price: number;
+  old_price: number;
+  badge: ProductBadge;
+  status: "Активен" | "Скрыт";
+  description: string;
+  article: string;
+  sizes: string[] | null;
+  colors: string[] | null;
+  image: string;
+  color_images: Record<string, string[]> | null;
+  created_at: string;
+  updated_at: string;
+};
 
 type CartItem = {
   id: string;
@@ -19,18 +73,67 @@ function getDiscountPercent(oldPrice: number | null, price: number) {
   return Math.round(((oldPrice - price) / oldPrice) * 100);
 }
 
+function mapRowToProduct(row: ProductRow): Product {
+  const normalizedColorImages: Record<string, string> = {};
+
+  if (row.color_images && typeof row.color_images === "object") {
+    Object.entries(row.color_images).forEach(([color, images]) => {
+      if (Array.isArray(images) && images.length > 0) {
+        normalizedColorImages[color] = images[0];
+      }
+    });
+  }
+
+  const galleryFromDb =
+    row.color_images && typeof row.color_images === "object"
+      ? Object.values(row.color_images)
+          .filter((value) => Array.isArray(value))
+          .flat()
+      : [];
+
+  const uniqueImages = Array.from(
+    new Set([row.image, ...galleryFromDb].filter(Boolean))
+  );
+
+  return {
+    id: row.id,
+    name: row.name,
+    brand: row.brand,
+    price: row.price,
+    oldPrice: row.old_price || null,
+    badge: row.badge,
+    image: row.image || uniqueImages[0] || "/products/product-1.jpg",
+    images:
+      uniqueImages.length > 0
+        ? uniqueImages
+        : [row.image || "/products/product-1.jpg"],
+    colorImages: normalizedColorImages,
+    type:
+      row.category === "Джинсы" || row.category === "Брюки"
+        ? "bottom"
+        : "top",
+    category: row.category,
+    colors: Array.isArray(row.colors) ? row.colors : [],
+    sizes: Array.isArray(row.sizes) ? row.sizes : [],
+    description: row.description || "",
+  };
+}
+
 export default function ProductPageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const id = searchParams.get("id");
-  const product = products.find((item) => item.id === id);
+
+  const [product, setProduct] = useState<Product | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [activeImage, setActiveImage] = useState("");
+  const [errorText, setErrorText] = useState("");
 
   useEffect(() => {
     const data = JSON.parse(localStorage.getItem("favorites") || "[]");
@@ -38,9 +141,45 @@ export default function ProductPageClient() {
   }, []);
 
   useEffect(() => {
-    if (!product) return;
-    setActiveImage(product.image);
-  }, [product]);
+    const loadProduct = async () => {
+      if (!id) {
+        setProduct(null);
+        setLoading(false);
+        setErrorText("Не передан id товара");
+        return;
+      }
+
+      setLoading(true);
+      setErrorText("");
+
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .eq("id", id)
+        .maybeSingle();
+
+      if (error) {
+        setProduct(null);
+        setLoading(false);
+        setErrorText(error.message);
+        return;
+      }
+
+      if (!data) {
+        setProduct(null);
+        setLoading(false);
+        setErrorText(`Товар с id ${id} не найден`);
+        return;
+      }
+
+      const mapped = mapRowToProduct(data as ProductRow);
+      setProduct(mapped);
+      setActiveImage(mapped.image);
+      setLoading(false);
+    };
+
+    loadProduct();
+  }, [id]);
 
   const toggleFavorite = () => {
     if (!product) return;
@@ -79,9 +218,11 @@ export default function ProductPageClient() {
     Серый: "#9CA3AF",
     Синий: "#1D3557",
     Бежевый: "#D6C2A1",
+    Зеленый: "#3F6B4B",
+    Коричневый: "#7A5230",
   };
 
-  const article = product ? `ART-${product.id.padStart(4, "0")}` : "";
+  const article = product ? `ART-${product.id}` : "";
   const description = product?.description || "";
   const canOrder = selectedSizes.length > 0 && selectedColors.length > 0;
   const discountPercent = product ? getDiscountPercent(product.oldPrice, product.price) : 0;
@@ -152,6 +293,17 @@ export default function ProductPageClient() {
     router.push("/cart");
   };
 
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-[#F5F5F5] px-4 pt-5 pb-32">
+        <div className="rounded-[24px] bg-white p-5 shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
+          <p className="text-sm text-gray-500">Загрузка товара...</p>
+        </div>
+        <BottomNav />
+      </main>
+    );
+  }
+
   if (!product) {
     return (
       <main className="min-h-screen bg-[#F5F5F5] px-4 pt-5 pb-32">
@@ -164,6 +316,9 @@ export default function ProductPageClient() {
 
         <div className="rounded-[24px] bg-white p-5 shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
           <p className="text-sm text-gray-500">Товар не найден</p>
+          {errorText && (
+            <p className="mt-2 break-words text-xs text-gray-400">{errorText}</p>
+          )}
         </div>
 
         <BottomNav />
@@ -346,7 +501,9 @@ export default function ProductPageClient() {
 
           <div className="mt-5">
             <p className="text-[14px] leading-6 text-gray-600">
-              {showFullDescription ? description : `${description.slice(0, 110)}...`}
+              {description.length > 110 && !showFullDescription
+                ? `${description.slice(0, 110)}...`
+                : description}
             </p>
 
             {description.length > 110 && (

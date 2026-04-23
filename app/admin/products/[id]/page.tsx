@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { supabase } from "../../../lib/supabase";
 
 type ProductStatus = "Активен" | "Скрыт";
 type BadgeType =
@@ -38,7 +39,24 @@ type AdminProduct = {
   updatedAt: string;
 };
 
-const STORAGE_KEY = "admin_products";
+type ProductRow = {
+  id: string;
+  name: string;
+  brand: string;
+  category: string;
+  price: number;
+  old_price: number;
+  badge: string;
+  status: string;
+  description: string;
+  article: string;
+  sizes: string[] | null;
+  colors: string[] | null;
+  image: string;
+  color_images: Record<string, string[]> | null;
+  created_at: string;
+  updated_at: string;
+};
 
 const badgeOptions: BadgeType[] = [
   "Без бейджа",
@@ -58,38 +76,25 @@ const categoryOptions: ProductCategory[] = [
   "Костюмы",
 ];
 
-function getAdminProducts(): AdminProduct[] {
-  if (typeof window === "undefined") return [];
-
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveAdminProducts(products: AdminProduct[]) {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
-}
-
-function getAdminProductById(id: string) {
-  return getAdminProducts().find((item) => item.id === id) || null;
-}
-
-function updateAdminProduct(id: string, nextProduct: AdminProduct) {
-  const current = getAdminProducts();
-  const updated = current.map((item) => (item.id === id ? nextProduct : item));
-  saveAdminProducts(updated);
-}
-
-function deleteAdminProduct(id: string) {
-  const current = getAdminProducts();
-  const filtered = current.filter((item) => item.id !== id);
-  saveAdminProducts(filtered);
+function mapRowToProduct(row: ProductRow): AdminProduct {
+  return {
+    id: row.id,
+    name: row.name,
+    brand: row.brand,
+    category: row.category as ProductCategory,
+    price: row.price,
+    oldPrice: row.old_price,
+    badge: row.badge as BadgeType,
+    status: row.status as ProductStatus,
+    description: row.description || "",
+    article: row.article || "",
+    sizes: Array.isArray(row.sizes) ? row.sizes : [],
+    colors: Array.isArray(row.colors) ? row.colors : [],
+    image: row.image || "",
+    colorImages: row.color_images || {},
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
 }
 
 export default function AdminEditProductPage() {
@@ -99,9 +104,37 @@ export default function AdminEditProductPage() {
 
   const [product, setProduct] = useState<AdminProduct | null>(null);
   const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    setProduct(getAdminProductById(id));
+    const loadProduct = async () => {
+      if (!id) {
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      setMessage("");
+
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+      if (error || !data) {
+        setProduct(null);
+        setMessage(error?.message || "Товар не найден");
+        setLoading(false);
+        return;
+      }
+
+      setProduct(mapRowToProduct(data as ProductRow));
+      setLoading(false);
+    };
+
+    loadProduct();
   }, [id]);
 
   const discountPercent = useMemo(() => {
@@ -110,22 +143,81 @@ export default function AdminEditProductPage() {
     return Math.round(((product.oldPrice - product.price) / product.oldPrice) * 100);
   }, [product]);
 
-  const saveChanges = () => {
+  const saveChanges = async () => {
     if (!product) return;
 
-    updateAdminProduct(id, {
-      ...product,
-      updatedAt: new Date().toLocaleString("ru-RU"),
-    });
+    try {
+      setSaving(true);
+      setMessage("");
 
-    setMessage("Изменения сохранены.");
+      const now = new Date().toISOString();
+
+      const { error } = await supabase
+        .from("products")
+        .update({
+          name: product.name,
+          brand: product.brand,
+          category: product.category,
+          price: product.price,
+          old_price: product.oldPrice,
+          badge: product.badge,
+          status: product.status,
+          description: product.description,
+          article: product.article,
+          sizes: product.sizes,
+          colors: product.colors,
+          image: product.image,
+          color_images: product.colorImages,
+          updated_at: now,
+        })
+        .eq("id", id);
+
+      if (error) {
+        setMessage(`Ошибка сохранения: ${error.message}`);
+        setSaving(false);
+        return;
+      }
+
+      setProduct((prev) =>
+        prev
+          ? {
+              ...prev,
+              updatedAt: now,
+            }
+          : prev
+      );
+      setMessage("Изменения сохранены.");
+      setSaving(false);
+    } catch (error) {
+      setMessage(
+        error instanceof Error ? error.message : "Не удалось сохранить изменения"
+      );
+      setSaving(false);
+    }
   };
 
-  const handleDelete = () => {
-    deleteAdminProduct(id);
+  const handleDelete = async () => {
+    const confirmed = window.confirm("Удалить товар?");
+    if (!confirmed) return;
+
+    const { error } = await supabase.from("products").delete().eq("id", id);
+
+    if (error) {
+      setMessage(`Ошибка удаления: ${error.message}`);
+      return;
+    }
+
     router.push("/admin/products");
     router.refresh();
   };
+
+  if (loading) {
+    return (
+      <div className="rounded-[24px] bg-white p-6 text-sm text-gray-500 shadow-sm">
+        Загрузка товара...
+      </div>
+    );
+  }
 
   if (!product) {
     return (
@@ -161,9 +253,10 @@ export default function AdminEditProductPage() {
 
           <button
             onClick={saveChanges}
-            className="rounded-2xl bg-black px-5 py-3 text-sm font-medium text-white"
+            disabled={saving}
+            className="rounded-2xl bg-black px-5 py-3 text-sm font-medium text-white disabled:opacity-60"
           >
-            Сохранить
+            {saving ? "Сохраняем..." : "Сохранить"}
           </button>
         </div>
       </div>

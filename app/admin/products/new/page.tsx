@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../../lib/supabase";
+import { uploadProductImage } from "../../../lib/upload-product-image";
 
 type ProductStatus = "Активен" | "Скрыт";
 type BadgeType =
@@ -124,6 +125,7 @@ export default function AdminNewProductPage() {
   const [colorImages, setColorImages] = useState<ColorGalleryMap>({});
   const [message, setMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingImages, setIsUploadingImages] = useState(false);
 
   const discountPercent = useMemo(() => {
     const p = Number(price);
@@ -180,7 +182,7 @@ export default function AdminNewProductPage() {
     setArticle(makeArticle(name));
   };
 
-  const handleColorImagesUpload = (color: string, files: FileList | null) => {
+  const handleColorImagesUpload = async (color: string, files: FileList | null) => {
     if (!files || files.length === 0) return;
 
     const current = colorImages[color] || [];
@@ -191,17 +193,37 @@ export default function AdminNewProductPage() {
       return;
     }
 
-    const urls = Array.from(files)
-      .slice(0, freeSlots)
-      .map((file) => URL.createObjectURL(file));
+    try {
+      setIsUploadingImages(true);
+      setMessage("");
 
-    setColorImages((prev) => ({
-      ...prev,
-      [color]: [...(prev[color] || []), ...urls],
-    }));
+      const tempProductId = article.trim() || makeArticle(name) || createProductId();
 
-    setActiveColor(color);
-    setMessage("");
+      const pickedFiles = Array.from(files).slice(0, freeSlots);
+      const uploadedUrls: string[] = [];
+
+      for (const file of pickedFiles) {
+        const publicUrl = await uploadProductImage(file, tempProductId, color);
+        uploadedUrls.push(publicUrl);
+      }
+
+      setColorImages((prev) => ({
+        ...prev,
+        [color]: [...(prev[color] || []), ...uploadedUrls],
+      }));
+
+      setActiveColor(color);
+
+      if (files.length > freeSlots) {
+        setMessage(`Для цвета ${color} добавили только первые 6 фото`);
+      }
+    } catch (error) {
+      setMessage(
+        error instanceof Error ? `Ошибка загрузки фото: ${error.message}` : "Ошибка загрузки фото"
+      );
+    } finally {
+      setIsUploadingImages(false);
+    }
   };
 
   const removeColorImage = (color: string, index: number) => {
@@ -275,9 +297,11 @@ export default function AdminNewProductPage() {
       setMessage("");
 
       const now = new Date().toISOString();
+      const finalArticle = article.trim() || makeArticle(name);
+      const finalId = createProductId();
 
-      const payload = {
-        id: createProductId(),
+      const { error } = await supabase.from("products").insert({
+        id: finalId,
         name: name.trim(),
         brand,
         category,
@@ -286,37 +310,27 @@ export default function AdminNewProductPage() {
         badge,
         status,
         description: description.trim(),
-        article: article.trim() || makeArticle(name),
+        article: finalArticle,
         sizes: selectedSizes,
         colors: selectedColors,
         image: previewImage || "",
         color_images: colorImages,
         created_at: now,
         updated_at: now,
-      };
-
-      const { data, error } = await supabase
-        .from("products")
-        .insert(payload)
-        .select();
+      });
 
       if (error) {
-        alert(`Ошибка Supabase: ${error.message}`);
         setMessage(`Ошибка сохранения: ${error.message}`);
         setIsSaving(false);
         return;
       }
 
-      alert("Товар сохранен");
-      console.log("saved product", data);
-
       router.push("/admin/products");
       router.refresh();
     } catch (error) {
-      const text =
-        error instanceof Error ? error.message : "Не удалось сохранить товар";
-      alert(text);
-      setMessage(text);
+      setMessage(
+        error instanceof Error ? error.message : "Не удалось сохранить товар"
+      );
       setIsSaving(false);
     }
   };
@@ -360,7 +374,7 @@ export default function AdminNewProductPage() {
 
           <button
             onClick={handleSave}
-            disabled={isSaving}
+            disabled={isSaving || isUploadingImages}
             className="rounded-2xl bg-black px-5 py-3 text-sm font-medium text-white disabled:opacity-60"
           >
             {isSaving ? "Сохраняем..." : "Сохранить товар"}
@@ -597,6 +611,10 @@ export default function AdminNewProductPage() {
                   onChange={(e) => handleColorImagesUpload(activeColor, e.target.files)}
                   className="block w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none file:mr-4 file:rounded-xl file:border-0 file:bg-black file:px-4 file:py-2 file:text-sm file:text-white"
                 />
+
+                {isUploadingImages && (
+                  <p className="mt-3 text-sm text-gray-500">Загружаем фото...</p>
+                )}
 
                 {activeImages.length > 0 && (
                   <div className="mt-4 space-y-3">

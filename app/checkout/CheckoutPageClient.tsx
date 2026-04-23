@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { products } from "../data/products";
 import BottomNav from "../components/BottomNav";
+import { supabase } from "../lib/supabase";
 
 type CheckoutItem = {
   id: string;
@@ -48,9 +48,104 @@ type SavedOrder = {
   items: SavedOrderItem[];
 };
 
-function getOldUnitPrice(id: string, fallback: number) {
-  const product = products.find((item) => item.id === id);
-  return product?.oldPrice ?? fallback;
+type ProductBadge = "Новинка" | "Скидка" | "В наличии" | "Из-за рубежа";
+type ProductCategory = "Футболки" | "Поло" | "Джинсы" | "Брюки" | "Костюмы";
+type ProductBrand =
+  | "Lacoste"
+  | "Polo Ralph Lauren"
+  | "Tommy Hilfiger"
+  | "Calvin Klein"
+  | "GANT"
+  | "BOSS"
+  | "Emporio Armani"
+  | "Armani Exchange"
+  | "Beymen Club"
+  | "Loro Piana"
+  | "Brunello Cucinelli"
+  | "BORZ"
+  | "Massimo Carino"
+  | "Другие бренды";
+
+type Product = {
+  id: string;
+  name: string;
+  brand: ProductBrand;
+  price: number;
+  oldPrice: number | null;
+  badge: ProductBadge;
+  image: string;
+  images: string[];
+  colorImages?: Record<string, string>;
+  type: "top" | "bottom";
+  category: ProductCategory;
+  colors: string[];
+  sizes: string[];
+  description: string;
+};
+
+type ProductRow = {
+  id: string;
+  name: string;
+  brand: ProductBrand;
+  category: ProductCategory;
+  price: number;
+  old_price: number;
+  badge: ProductBadge;
+  status: "Активен" | "Скрыт";
+  description: string;
+  article: string;
+  sizes: string[] | null;
+  colors: string[] | null;
+  image: string;
+  color_images: Record<string, string[]> | null;
+  created_at: string;
+  updated_at: string;
+};
+
+function mapRowToProduct(row: ProductRow): Product {
+  const normalizedColorImages: Record<string, string> = {};
+
+  if (row.color_images && typeof row.color_images === "object") {
+    Object.entries(row.color_images).forEach(([color, images]) => {
+      if (Array.isArray(images) && images.length > 0) {
+        normalizedColorImages[color] = images[0];
+      }
+    });
+  }
+
+  const galleryFromDb =
+    row.color_images && typeof row.color_images === "object"
+      ? Object.values(row.color_images)
+          .filter((value) => Array.isArray(value))
+          .flat()
+      : [];
+
+  const uniqueImages = Array.from(
+    new Set([row.image, ...galleryFromDb].filter(Boolean))
+  );
+
+  return {
+    id: row.id,
+    name: row.name,
+    brand: row.brand,
+    price: row.price,
+    oldPrice: row.old_price || null,
+    badge: row.badge,
+    image: row.image || uniqueImages[0] || "/products/product-1.jpg",
+    images:
+      uniqueImages.length > 0
+        ? uniqueImages
+        : [row.image || "/products/product-1.jpg"],
+    colorImages: normalizedColorImages,
+    type:
+      row.category === "Джинсы" || row.category === "Брюки"
+        ? "bottom"
+        : "top",
+    category: row.category,
+    colors: Array.isArray(row.colors) ? row.colors : [],
+    sizes: Array.isArray(row.sizes) ? row.sizes : [],
+    description: row.description || "",
+  };
 }
 
 function getDiscountPercent(oldPrice: number, newPrice: number) {
@@ -90,6 +185,9 @@ export default function CheckoutPageClient() {
   const searchParams = useSearchParams();
 
   const [items, setItems] = useState<CheckoutItem[]>([]);
+  const [productsMap, setProductsMap] = useState<Record<string, Product>>({});
+  const [loadingProducts, setLoadingProducts] = useState(true);
+
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("+7");
   const [deliveryMethod, setDeliveryMethod] = useState<"delivery" | "pickup">("delivery");
@@ -106,6 +204,33 @@ export default function CheckoutPageClient() {
     if (Array.isArray(cart)) {
       setItems(cart);
     }
+  }, []);
+
+  useEffect(() => {
+    const loadProducts = async () => {
+      setLoadingProducts(true);
+
+      const { data, error } = await supabase.from("products").select("*");
+
+      if (error) {
+        console.error("Ошибка загрузки товаров для checkout:", error.message);
+        setProductsMap({});
+        setLoadingProducts(false);
+        return;
+      }
+
+      const mapped = ((data || []) as ProductRow[]).map(mapRowToProduct);
+      const nextMap: Record<string, Product> = {};
+
+      mapped.forEach((product) => {
+        nextMap[product.id] = product;
+      });
+
+      setProductsMap(nextMap);
+      setLoadingProducts(false);
+    };
+
+    loadProducts();
   }, []);
 
   useEffect(() => {
@@ -138,14 +263,14 @@ export default function CheckoutPageClient() {
 
   const totals = useMemo(() => {
     const oldItemsTotal = items.reduce((sum, item) => {
-      const oldUnitPrice = getOldUnitPrice(item.id, item.price);
+      const oldUnitPrice = productsMap[item.id]?.oldPrice ?? item.price;
       return sum + oldUnitPrice * item.quantity;
     }, 0);
 
     const newItemsTotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
     return { oldItemsTotal, newItemsTotal };
-  }, [items]);
+  }, [items, productsMap]);
 
   const deliveryPrice = deliveryMethod === "delivery" ? 500 : 0;
   const finalOldTotal = totals.oldItemsTotal + deliveryPrice;
@@ -161,7 +286,7 @@ export default function CheckoutPageClient() {
     items.length > 0 &&
     (deliveryMethod === "pickup" || address.trim());
 
-  const getProductById = (id: string) => products.find((item) => item.id === id);
+  const getProductById = (id: string) => productsMap[id];
 
   const handlePhoneChange = (value: string) => {
     setPhone(formatPhone(value));
@@ -306,9 +431,15 @@ export default function CheckoutPageClient() {
         </div>
       ) : (
         <div className="space-y-4">
+          {loadingProducts && (
+            <div className="rounded-[20px] bg-white p-4 text-sm text-gray-500 shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
+              Обновляем данные товаров...
+            </div>
+          )}
+
           {items.map((item, i) => {
             const product = getProductById(item.id);
-            const oldUnitPrice = getOldUnitPrice(item.id, item.price);
+            const oldUnitPrice = product?.oldPrice ?? item.price;
             const lineOldTotal = oldUnitPrice * item.quantity;
             const lineNewTotal = item.price * item.quantity;
             const lineDiscountPercent = getDiscountPercent(lineOldTotal, lineNewTotal);
