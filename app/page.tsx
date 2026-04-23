@@ -157,9 +157,11 @@ export default function Home() {
 
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [cardImageIndexes, setCardImageIndexes] = useState<Record<string, number>>({});
 
   const sortMenuRef = useRef<HTMLDivElement | null>(null);
   const brandMenuWrapRef = useRef<HTMLDivElement | null>(null);
+  const touchStartMapRef = useRef<Record<string, number | null>>({});
 
   useEffect(() => {
     const data = JSON.parse(localStorage.getItem("favorites") || "[]");
@@ -232,6 +234,60 @@ export default function Home() {
     setShowSortMenu(false);
     setShowBrandMenu(false);
     router.push("/");
+  };
+
+  const nextCardImage = (productId: string, totalImages: number) => {
+    if (totalImages <= 1) return;
+
+    setCardImageIndexes((prev) => {
+      const currentIndex = prev[productId] || 0;
+      const nextIndex = currentIndex >= totalImages - 1 ? 0 : currentIndex + 1;
+
+      return {
+        ...prev,
+        [productId]: nextIndex,
+      };
+    });
+  };
+
+  const prevCardImage = (productId: string, totalImages: number) => {
+    if (totalImages <= 1) return;
+
+    setCardImageIndexes((prev) => {
+      const currentIndex = prev[productId] || 0;
+      const nextIndex = currentIndex <= 0 ? totalImages - 1 : currentIndex - 1;
+
+      return {
+        ...prev,
+        [productId]: nextIndex,
+      };
+    });
+  };
+
+  const handleCardTouchStart = (productId: string, clientX: number) => {
+    touchStartMapRef.current[productId] = clientX;
+  };
+
+  const handleCardTouchEnd = (
+    productId: string,
+    clientX: number,
+    totalImages: number
+  ) => {
+    const startX = touchStartMapRef.current[productId];
+
+    if (startX == null) return;
+
+    const diff = startX - clientX;
+
+    if (Math.abs(diff) > 40) {
+      if (diff > 0) {
+        nextCardImage(productId, totalImages);
+      } else {
+        prevCardImage(productId, totalImages);
+      }
+    }
+
+    touchStartMapRef.current[productId] = null;
   };
 
   const filteredProducts = useMemo(() => {
@@ -455,6 +511,9 @@ export default function Home() {
         <div className="grid grid-cols-2 gap-3">
           {filteredProducts.map((p) => {
             const discountPercent = getDiscountPercent(p.oldPrice, p.price);
+            const imageCount = p.images?.length || 1;
+            const currentImageIndex = cardImageIndexes[p.id] || 0;
+            const currentImage = p.images[currentImageIndex] || p.image;
 
             return (
               <div
@@ -462,9 +521,21 @@ export default function Home() {
                 onClick={() => router.push(`/product?id=${p.id}`)}
                 className="group cursor-pointer overflow-hidden rounded-[20px] bg-white shadow-[0_10px_28px_rgba(0,0,0,0.05)] transition-all duration-300 active:scale-[0.985]"
               >
-                <div className="relative aspect-[3/4] overflow-hidden bg-[#EAEAEA]">
+                <div
+                  className="relative aspect-[3/4] overflow-hidden bg-[#EAEAEA]"
+                  onTouchStart={(e) =>
+                    handleCardTouchStart(p.id, e.touches[0]?.clientX ?? 0)
+                  }
+                  onTouchEnd={(e) =>
+                    handleCardTouchEnd(
+                      p.id,
+                      e.changedTouches[0]?.clientX ?? 0,
+                      imageCount
+                    )
+                  }
+                >
                   <img
-                    src={p.image}
+                    src={currentImage}
                     alt={p.name}
                     className="h-full w-full object-cover"
                   />
@@ -485,7 +556,7 @@ export default function Home() {
                       e.stopPropagation();
                       toggleFavorite(p.id);
                     }}
-                    className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 backdrop-blur shadow-sm transition-transform duration-200 active:scale-90"
+                    className="absolute right-3 top-3 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 backdrop-blur shadow-sm transition-transform duration-200 active:scale-90"
                   >
                     <svg
                       width="18"
@@ -499,12 +570,12 @@ export default function Home() {
                     </svg>
                   </button>
 
-                  <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1.5">
-                    {Array.from({ length: p.images.length || 1 }).map((_, index) => (
+                  <div className="pointer-events-none absolute bottom-3 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1.5">
+                    {Array.from({ length: imageCount }).map((_, index) => (
                       <span
                         key={`${p.id}-dot-${index}`}
                         className={`block rounded-full ${
-                          index === 0
+                          index === currentImageIndex
                             ? "h-1.5 w-4 bg-white"
                             : "h-1.5 w-1.5 bg-white/45"
                         }`}
