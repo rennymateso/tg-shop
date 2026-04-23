@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 const menu = [
   { href: "/admin", label: "Главная", icon: "▣" },
@@ -31,6 +32,11 @@ export default function AdminLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [pathname]);
 
   const handleLogout = async () => {
     await fetch("/api/admin-logout", {
@@ -45,43 +51,56 @@ export default function AdminLayout({
     <div className="min-h-screen bg-[#F5F5F5] text-black">
       <div className="mx-auto grid min-h-screen max-w-[1600px] grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)]">
         <aside className="border-b border-black/5 bg-white px-4 py-5 lg:border-b-0 lg:border-r">
-          <div className="mb-8">
-            <p className="text-[11px] uppercase tracking-[0.28em] text-gray-400">
-              Admin panel
-            </p>
-            <h1 className="mt-2 text-2xl font-light tracking-[0.35em]">
-              MONTREAUX
-            </h1>
+          <div className="mb-5 flex items-center justify-between lg:block">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.28em] text-gray-400">
+                Admin panel
+              </p>
+              <h1 className="mt-2 text-2xl font-light tracking-[0.35em]">
+                MONTREAUX
+              </h1>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen((prev) => !prev)}
+              className="rounded-2xl bg-black px-4 py-2 text-sm font-medium text-white lg:hidden"
+            >
+              {isMobileMenuOpen ? "Закрыть" : "Меню"}
+            </button>
           </div>
 
-          <nav className="space-y-2">
-            {menu.map((item) => {
-              const active = isActive(pathname, item.href);
+          <div className={`${isMobileMenuOpen ? "block" : "hidden"} lg:block`}>
+            <nav className="space-y-2">
+              {menu.map((item) => {
+                const active = isActive(pathname, item.href);
 
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left transition ${
-                    active
-                      ? "bg-black text-white"
-                      : "bg-[#F7F7F7] text-gray-700 hover:bg-[#EFEFEF]"
-                  }`}
-                >
-                  <span className="w-4 text-center text-sm">{item.icon}</span>
-                  <span className="text-sm font-medium">{item.label}</span>
-                </Link>
-              );
-            })}
-          </nav>
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left transition ${
+                      active
+                        ? "bg-black text-white"
+                        : "bg-[#F7F7F7] text-gray-700 hover:bg-[#EFEFEF]"
+                    }`}
+                  >
+                    <span className="w-4 text-center text-sm">{item.icon}</span>
+                    <span className="text-sm font-medium">{item.label}</span>
+                  </Link>
+                );
+              })}
+            </nav>
 
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="mt-6 w-full rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-red-600"
-          >
-            Выйти
-          </button>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="mt-6 w-full rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-red-600"
+            >
+              Выйти
+            </button>
+          </div>
         </aside>
 
         <main className="p-4 md:p-6 lg:p-8">{children}</main>

@@ -354,31 +354,10 @@ export default function AdminNewProductPage() {
 
   return (
     <>
-      <div className="mb-6 flex flex-col gap-4">
+      <div className="mb-6">
         <div>
           <p className="text-sm text-gray-500">Админ-панель</p>
           <h1 className="text-2xl font-semibold text-black">Добавить товар</h1>
-        </div>
-
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <button className="rounded-2xl bg-white px-5 py-3 text-sm font-medium text-gray-700 shadow-sm">
-            Сохранить как черновик
-          </button>
-
-          <button
-            onClick={handleClear}
-            className="rounded-2xl bg-red-50 px-5 py-3 text-sm font-medium text-red-600"
-          >
-            Очистить
-          </button>
-
-          <button
-            onClick={handleSave}
-            disabled={isSaving || isUploadingImages}
-            className="rounded-2xl bg-black px-5 py-3 text-sm font-medium text-white disabled:opacity-60"
-          >
-            {isSaving ? "Сохраняем..." : "Сохранить товар"}
-          </button>
         </div>
       </div>
 
@@ -391,6 +370,19 @@ export default function AdminNewProductPage() {
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_280px]">
         <section className="space-y-6">
           <div className="rounded-[28px] bg-white p-5 shadow-sm">
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row">
+              <button className="rounded-2xl bg-white px-5 py-3 text-sm font-medium text-gray-700 shadow-sm">
+                Сохранить как черновик
+              </button>
+
+              <button
+                onClick={handleClear}
+                className="rounded-2xl bg-red-50 px-5 py-3 text-sm font-medium text-red-600"
+              >
+                Очистить
+              </button>
+            </div>
+
             <h2 className="text-lg font-medium text-black">Основная информация</h2>
 
             <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -697,6 +689,25 @@ export default function AdminNewProductPage() {
                 )}
               </>
             )}
+          </div>
+
+          <div className="rounded-[28px] bg-white p-5 shadow-sm">
+            <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+              <button
+                onClick={handleClear}
+                className="rounded-2xl bg-red-50 px-5 py-3 text-sm font-medium text-red-600"
+              >
+                Очистить
+              </button>
+
+              <button
+                onClick={handleSave}
+                disabled={isSaving || isUploadingImages}
+                className="rounded-2xl bg-black px-5 py-3 text-sm font-medium text-white disabled:opacity-60"
+              >
+                {isSaving ? "Сохраняем..." : "Сохранить товар"}
+              </button>
+            </div>
           </div>
         </section>
 
