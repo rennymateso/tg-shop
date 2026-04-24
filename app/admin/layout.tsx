@@ -13,6 +13,7 @@ const menu = [
   { href: "/admin/promocodes", label: "Промокоды", icon: "%" },
   { href: "/admin/banners", label: "Баннеры", icon: "▭" },
   { href: "/admin/brands", label: "Бренды", icon: "◆" },
+  { href: "/admin/badges", label: "Бейджи", icon: "🏷" },
   { href: "/admin/stocks", label: "Остатки", icon: "≣" },
   { href: "/admin/warehouses", label: "Склады", icon: "▤" },
   { href: "/admin/settings", label: "Настройки", icon: "⚙" },

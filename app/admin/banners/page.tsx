@@ -1,123 +1,267 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { supabase } from "../../lib/supabase";
 
-export default function AdminBannersPage() {
-  const [banners, setBanners] = useState<string[]>([]);
+type BadgeRow = {
+  id: string;
+  name: string;
+  created_at: string;
+};
 
-  const handleBannerUpload = (files: FileList | null) => {
-    if (!files || files.length === 0) return;
+function createBadgeId() {
+  return `badge-${Date.now()}`;
+}
 
-    const freeSlots = 3 - banners.length;
-    if (freeSlots <= 0) return;
+export default function AdminBadgesPage() {
+  const [badges, setBadges] = useState<BadgeRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState("");
+  const [newBadge, setNewBadge] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState("");
 
-    const urls = Array.from(files)
-      .slice(0, freeSlots)
-      .map((file) => URL.createObjectURL(file));
+  const sortedBadges = useMemo(() => {
+    return [...badges].sort((a, b) => a.name.localeCompare(b.name, "ru"));
+  }, [badges]);
 
-    setBanners((prev) => [...prev, ...urls]);
+  const loadBadges = async () => {
+    setLoading(true);
+    setMessage("");
+
+    const { data, error } = await supabase
+      .from("badges")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      setMessage(`Ошибка загрузки: ${error.message}`);
+      setBadges([]);
+      setLoading(false);
+      return;
+    }
+
+    setBadges((data || []) as BadgeRow[]);
+    setLoading(false);
   };
 
-  const removeBanner = (index: number) => {
-    setBanners((prev) => prev.filter((_, i) => i !== index));
-  };
+  useEffect(() => {
+    loadBadges();
+  }, []);
 
-  const moveBannerLeft = (index: number) => {
-    if (index === 0) return;
-    setBanners((prev) => {
-      const next = [...prev];
-      [next[index - 1], next[index]] = [next[index], next[index - 1]];
-      return next;
+  const handleAddBadge = async () => {
+    const name = newBadge.trim();
+
+    if (!name) {
+      setMessage("Введите название бейджа");
+      return;
+    }
+
+    const alreadyExists = badges.some(
+      (item) => item.name.trim().toLowerCase() === name.toLowerCase()
+    );
+
+    if (alreadyExists) {
+      setMessage("Такой бейдж уже есть");
+      return;
+    }
+
+    setSaving(true);
+    setMessage("");
+
+    const { error } = await supabase.from("badges").insert({
+      id: createBadgeId(),
+      name,
     });
+
+    if (error) {
+      setMessage(`Ошибка добавления: ${error.message}`);
+      setSaving(false);
+      return;
+    }
+
+    setNewBadge("");
+    setSaving(false);
+    await loadBadges();
+    setMessage("Бейдж добавлен");
   };
 
-  const moveBannerRight = (index: number) => {
-    if (index === banners.length - 1) return;
-    setBanners((prev) => {
-      const next = [...prev];
-      [next[index + 1], next[index]] = [next[index], next[index + 1]];
-      return next;
-    });
+  const startEdit = (badge: BadgeRow) => {
+    setEditingId(badge.id);
+    setEditingName(badge.name);
+    setMessage("");
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditingName("");
+  };
+
+  const saveEdit = async () => {
+    if (!editingId) return;
+
+    const name = editingName.trim();
+
+    if (!name) {
+      setMessage("Название бейджа не может быть пустым");
+      return;
+    }
+
+    const alreadyExists = badges.some(
+      (item) =>
+        item.id !== editingId &&
+        item.name.trim().toLowerCase() === name.toLowerCase()
+    );
+
+    if (alreadyExists) {
+      setMessage("Бейдж с таким названием уже существует");
+      return;
+    }
+
+    setSaving(true);
+    setMessage("");
+
+    const { error } = await supabase
+      .from("badges")
+      .update({ name })
+      .eq("id", editingId);
+
+    if (error) {
+      setMessage(`Ошибка сохранения: ${error.message}`);
+      setSaving(false);
+      return;
+    }
+
+    setEditingId(null);
+    setEditingName("");
+    setSaving(false);
+    await loadBadges();
+    setMessage("Бейдж обновлен");
+  };
+
+  const handleDelete = async (badge: BadgeRow) => {
+    const confirmed = window.confirm(`Удалить бейдж "${badge.name}"?`);
+    if (!confirmed) return;
+
+    setMessage("");
+
+    const { error } = await supabase.from("badges").delete().eq("id", badge.id);
+
+    if (error) {
+      setMessage(`Ошибка удаления: ${error.message}`);
+      return;
+    }
+
+    await loadBadges();
+    setMessage("Бейдж удален");
   };
 
   return (
     <>
-      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <p className="text-sm text-gray-500">Админ-панель</p>
-          <h1 className="text-2xl font-semibold text-black">Баннеры</h1>
-        </div>
-
-        <div className="rounded-2xl bg-white px-4 py-3 text-sm text-gray-500 shadow-sm">
-          {banners.length}/3 баннера
-        </div>
+      <div className="mb-6">
+        <p className="text-sm text-gray-500">Админ-панель</p>
+        <h1 className="text-2xl font-semibold text-black">Бейджи</h1>
       </div>
 
-      <section className="mb-6 rounded-[28px] bg-white p-5 shadow-sm">
-        <h2 className="text-lg font-medium text-black">Загрузка баннеров</h2>
-        <p className="mt-1 text-sm text-gray-500">
-          Можно загрузить до 3 баннеров. Порядок можно менять кнопками.
-        </p>
+      {message && (
+        <div className="mb-6 rounded-[24px] bg-white p-4 text-sm text-black shadow-sm">
+          {message}
+        </div>
+      )}
 
-        <div className="mt-4">
+      <section className="mb-6 rounded-[28px] bg-white p-5 shadow-sm">
+        <h2 className="text-lg font-medium text-black">Добавить бейдж</h2>
+
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row">
           <input
-            type="file"
-            accept="image/*"
-            multiple
-            onChange={(e) => handleBannerUpload(e.target.files)}
-            className="block w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none file:mr-4 file:rounded-xl file:border-0 file:bg-black file:px-4 file:py-2 file:text-sm file:text-white"
+            value={newBadge}
+            onChange={(e) => setNewBadge(e.target.value)}
+            placeholder="Например: Хит"
+            className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
           />
+
+          <button
+            type="button"
+            onClick={handleAddBadge}
+            disabled={saving}
+            className="rounded-2xl bg-black px-5 py-3 text-sm font-medium text-white disabled:opacity-60"
+          >
+            {saving ? "Сохраняем..." : "Добавить"}
+          </button>
         </div>
       </section>
 
       <section className="rounded-[28px] bg-white p-5 shadow-sm">
-        <h2 className="text-lg font-medium text-black">Текущие баннеры</h2>
+        <div className="mb-4">
+          <h2 className="text-lg font-medium text-black">Список бейджей</h2>
+          <p className="text-sm text-gray-500">
+            Здесь ты можешь добавлять, менять и удалять бейджи
+          </p>
+        </div>
 
-        {banners.length === 0 ? (
-          <div className="mt-4 rounded-2xl bg-[#F7F7F7] p-6 text-sm text-gray-500">
-            Баннеры пока не загружены
+        {loading ? (
+          <div className="rounded-[24px] bg-[#F7F7F7] p-8 text-center text-sm text-gray-500">
+            Загрузка бейджей...
+          </div>
+        ) : sortedBadges.length === 0 ? (
+          <div className="rounded-[24px] bg-[#F7F7F7] p-8 text-center text-sm text-gray-500">
+            Бейджей пока нет
           </div>
         ) : (
-          <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-3">
-            {banners.map((banner, index) => (
-              <div
-                key={`${banner}-${index}`}
-                className="overflow-hidden rounded-[24px] bg-[#F7F7F7] p-3"
-              >
-                <div className="relative overflow-hidden rounded-[18px]">
-                  <img
-                    src={banner}
-                    alt={`Баннер ${index + 1}`}
-                    className="h-[180px] w-full object-cover"
-                  />
-                  <span className="absolute left-2 top-2 rounded-full bg-black px-2 py-1 text-[10px] text-white">
-                    Баннер {index + 1}
-                  </span>
-                </div>
+          <div className="space-y-3">
+            {sortedBadges.map((badge) => (
+              <div key={badge.id} className="rounded-[22px] bg-[#F7F7F7] p-4">
+                {editingId === badge.id ? (
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                    <input
+                      value={editingName}
+                      onChange={(e) => setEditingName(e.target.value)}
+                      className="w-full rounded-2xl bg-white p-3 text-sm outline-none"
+                    />
 
-                <div className="mt-3 grid grid-cols-3 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => moveBannerLeft(index)}
-                    className="rounded-xl bg-white px-3 py-2 text-xs text-black"
-                  >
-                    ←
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => moveBannerRight(index)}
-                    className="rounded-xl bg-white px-3 py-2 text-xs text-black"
-                  >
-                    →
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => removeBanner(index)}
-                    className="rounded-xl bg-[#FFF1F1] px-3 py-2 text-xs text-red-600"
-                  >
-                    Удалить
-                  </button>
-                </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={saveEdit}
+                        disabled={saving}
+                        className="rounded-2xl bg-black px-4 py-2 text-sm text-white disabled:opacity-60"
+                      >
+                        Сохранить
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={cancelEdit}
+                        className="rounded-2xl bg-white px-4 py-2 text-sm text-gray-700"
+                      >
+                        Отмена
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-sm font-medium text-black">{badge.name}</p>
+
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => startEdit(badge)}
+                        className="rounded-2xl bg-white px-4 py-2 text-sm text-gray-700"
+                      >
+                        Изменить
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(badge)}
+                        className="rounded-2xl bg-red-50 px-4 py-2 text-sm text-red-600"
+                      >
+                        Удалить
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
