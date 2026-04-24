@@ -57,6 +57,18 @@ function getRangeStart(range: RangeKey) {
   return next.toISOString();
 }
 
+function formatDayLabel(dateString: string) {
+  const date = new Date(dateString);
+  return date.toLocaleDateString("ru-RU", {
+    day: "2-digit",
+    month: "2-digit",
+  });
+}
+
+function getDayKey(dateString: string) {
+  return new Date(dateString).toISOString().slice(0, 10);
+}
+
 export default function AdminStatisticsPage() {
   const [range, setRange] = useState<RangeKey>("7d");
   const [orders, setOrders] = useState<OrderRow[]>([]);
@@ -335,6 +347,43 @@ export default function AdminStatisticsPage() {
       .slice(0, 5);
   }, [orderItems]);
 
+  const dailyStats = useMemo(() => {
+    const map = new Map<
+      string,
+      { date: string; orders: number; revenue: number; paid: number }
+    >();
+
+    orders.forEach((order) => {
+      const key = getDayKey(order.created_at);
+      const currentValue = map.get(key) || {
+        date: key,
+        orders: 0,
+        revenue: 0,
+        paid: 0,
+      };
+
+      currentValue.orders += 1;
+
+      if (order.status !== "Отменен") {
+        currentValue.revenue += order.total;
+      }
+
+      if (order.status === "Оплачен") {
+        currentValue.paid += 1;
+      }
+
+      map.set(key, currentValue);
+    });
+
+    return Array.from(map.values())
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .slice(-10);
+  }, [orders]);
+
+  const maxDailyRevenue = useMemo(() => {
+    return dailyStats.reduce((max, item) => Math.max(max, item.revenue), 0) || 1;
+  }, [dailyStats]);
+
   return (
     <>
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -419,25 +468,43 @@ export default function AdminStatisticsPage() {
             </div>
 
             <div className="rounded-[28px] bg-white p-5 shadow-sm">
-              <h2 className="text-lg font-medium text-black">Что считает блок</h2>
+              <h2 className="text-lg font-medium text-black">Продажи по дням</h2>
+              <p className="mt-1 text-sm text-gray-500">Последние даты в выбранном периоде</p>
 
-              <div className="mt-4 space-y-3 text-sm text-gray-600">
-                <div className="rounded-2xl bg-[#F7F7F7] p-4">
-                  1. Реальные заказы за выбранный период из базы.
+              {dailyStats.length === 0 ? (
+                <div className="mt-4 rounded-[24px] bg-[#F7F7F7] p-6 text-center text-sm text-gray-500">
+                  Пока нет данных
                 </div>
-                <div className="rounded-2xl bg-[#F7F7F7] p-4">
-                  2. Количество товаров во всех заказах.
+              ) : (
+                <div className="mt-5 space-y-4">
+                  {dailyStats.map((item) => {
+                    const width = Math.max((item.revenue / maxDailyRevenue) * 100, item.revenue > 0 ? 8 : 0);
+
+                    return (
+                      <div key={item.date}>
+                        <div className="mb-2 flex items-center justify-between gap-3 text-sm">
+                          <span className="text-black">{formatDayLabel(item.date)}</span>
+                          <span className="text-gray-500">
+                            {item.revenue.toLocaleString("ru-RU")} ₽
+                          </span>
+                        </div>
+
+                        <div className="h-3 w-full rounded-full bg-[#F2F2F2]">
+                          <div
+                            className="h-3 rounded-full bg-black"
+                            style={{ width: `${width}%` }}
+                          />
+                        </div>
+
+                        <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
+                          <span>Заказов: {item.orders}</span>
+                          <span>Оплачено: {item.paid}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-                <div className="rounded-2xl bg-[#F7F7F7] p-4">
-                  3. Оплаченные и отмененные заказы.
-                </div>
-                <div className="rounded-2xl bg-[#F7F7F7] p-4">
-                  4. Реальную выручку и средний чек.
-                </div>
-                <div className="rounded-2xl bg-[#F7F7F7] p-4">
-                  5. Топ товаров, брендов, цветов и размеров.
-                </div>
-              </div>
+              )}
             </div>
           </section>
 
