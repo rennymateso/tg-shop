@@ -6,25 +6,7 @@ import BottomNav from "./components/BottomNav";
 import { supabase } from "./lib/supabase";
 
 const categories = ["Все", "Футболки", "Поло", "Джинсы", "Брюки", "Костюмы"] as const;
-const brands = [
-  "Все бренды",
-  "Lacoste",
-  "Polo Ralph Lauren",
-  "Tommy Hilfiger",
-  "Calvin Klein",
-  "GANT",
-  "BOSS",
-  "Emporio Armani",
-  "Armani Exchange",
-  "Beymen Club",
-  "Loro Piana",
-  "Brunello Cucinelli",
-  "BORZ",
-  "Massimo Carino",
-  "Другие бренды",
-] as const;
 const sortOptions = ["По умолчанию", "Сначала дешевле", "Сначала дороже"] as const;
-const badgeFilters = ["Все", "Новинки", "В наличии", "Из-за рубежа", "Скидки"] as const;
 
 const banners = [
   {
@@ -35,31 +17,27 @@ const banners = [
 ] as const;
 
 type Category = (typeof categories)[number];
-type Brand = (typeof brands)[number];
 type SortOption = (typeof sortOptions)[number];
-type BadgeFilter = (typeof badgeFilters)[number];
+
+type BrandRow = {
+  id: string;
+  name: string;
+  created_at: string;
+};
+
+type BadgeRow = {
+  id: string;
+  name: string;
+  created_at: string;
+};
 
 type Product = {
   id: string;
   name: string;
-  brand:
-    | "Lacoste"
-    | "Polo Ralph Lauren"
-    | "Tommy Hilfiger"
-    | "Calvin Klein"
-    | "GANT"
-    | "BOSS"
-    | "Emporio Armani"
-    | "Armani Exchange"
-    | "Beymen Club"
-    | "Loro Piana"
-    | "Brunello Cucinelli"
-    | "BORZ"
-    | "Massimo Carino"
-    | "Другие бренды";
+  brand: string;
   price: number;
   oldPrice: number | null;
-  badge: "Новинка" | "Скидка" | "В наличии" | "Из-за рубежа";
+  badge: string;
   image: string;
   images: string[];
   colorImages?: Record<string, string>;
@@ -75,17 +53,17 @@ type Product = {
 type ProductRow = {
   id: string;
   name: string;
-  brand: Product["brand"];
+  brand: string;
   category: Product["category"];
   price: number;
   old_price: number;
-  badge: Product["badge"];
+  badge: string | null;
   status: "Активен" | "Скрыт";
   description: string;
   article: string;
   sizes: string[] | null;
   colors: string[] | null;
-  image: string;
+  image: string | null;
   color_images: Record<string, string[]> | null;
   created_at: string;
   updated_at: string;
@@ -102,7 +80,10 @@ function mapRowToProduct(row: ProductRow): Product {
 
   if (row.color_images && typeof row.color_images === "object") {
     Object.entries(row.color_images).forEach(([color, images]) => {
-      const safeImages = Array.isArray(images) ? images.filter(Boolean) : [];
+      const safeImages = Array.isArray(images)
+        ? images.filter((img) => typeof img === "string" && img.trim().length > 0)
+        : [];
+
       if (safeImages.length > 0) {
         galleryByColor[color] = safeImages;
         normalizedColorImages[color] = safeImages[0];
@@ -110,13 +91,17 @@ function mapRowToProduct(row: ProductRow): Product {
     });
   }
 
-  const defaultColor =
-    (Array.isArray(row.colors) && row.colors[0]) ||
-    Object.keys(galleryByColor)[0] ||
-    "Черный";
-
+  const safeColors = Array.isArray(row.colors) ? row.colors : [];
+  const defaultColor = safeColors[0] || Object.keys(galleryByColor)[0] || "Черный";
   const defaultImages = galleryByColor[defaultColor] || [];
-  const fallbackImage = row.image || defaultImages[0] || "/products/product-1.jpg";
+
+  const safeRowImage =
+    typeof row.image === "string" && row.image.trim().length > 0
+      ? row.image.trim()
+      : "";
+
+  const fallbackImage = safeRowImage || defaultImages[0] || "/products/product-1.jpg";
+  const safeImages = defaultImages.length > 0 ? defaultImages : [fallbackImage];
 
   return {
     id: row.id,
@@ -124,9 +109,9 @@ function mapRowToProduct(row: ProductRow): Product {
     brand: row.brand,
     price: row.price,
     oldPrice: row.old_price || null,
-    badge: row.badge,
+    badge: row.badge || "",
     image: fallbackImage,
-    images: defaultImages.length ? defaultImages : [fallbackImage],
+    images: safeImages,
     colorImages: normalizedColorImages,
     galleryByColor,
     defaultColor,
@@ -135,7 +120,7 @@ function mapRowToProduct(row: ProductRow): Product {
         ? "bottom"
         : "top",
     category: row.category,
-    colors: Array.isArray(row.colors) ? row.colors : [],
+    colors: safeColors,
     sizes: Array.isArray(row.sizes) ? row.sizes : [],
     description: row.description || "",
   };
@@ -146,15 +131,17 @@ export default function Home() {
 
   const [favorites, setFavorites] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<Category>("Все");
-  const [selectedBrand, setSelectedBrand] = useState<Brand>("Все бренды");
+  const [selectedBrand, setSelectedBrand] = useState("Все бренды");
   const [selectedSort, setSelectedSort] = useState<SortOption>("По умолчанию");
-  const [selectedBadge, setSelectedBadge] = useState<BadgeFilter>("Все");
+  const [selectedBadge, setSelectedBadge] = useState("Все");
   const [search, setSearch] = useState("");
   const [activeBanner] = useState(0);
 
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [showBrandMenu, setShowBrandMenu] = useState(false);
 
+  const [brands, setBrands] = useState<BrandRow[]>([]);
+  const [badges, setBadges] = useState<BadgeRow[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [cardImageIndexes, setCardImageIndexes] = useState<Record<string, number>>({});
@@ -166,6 +153,44 @@ export default function Home() {
   useEffect(() => {
     const data = JSON.parse(localStorage.getItem("favorites") || "[]");
     setFavorites(data);
+  }, []);
+
+  useEffect(() => {
+    const loadBrands = async () => {
+      const { data, error } = await supabase
+        .from("brands")
+        .select("*")
+        .order("name", { ascending: true });
+
+      if (error) {
+        console.error("Ошибка загрузки брендов:", error.message);
+        setBrands([]);
+        return;
+      }
+
+      setBrands((data || []) as BrandRow[]);
+    };
+
+    loadBrands();
+  }, []);
+
+  useEffect(() => {
+    const loadBadges = async () => {
+      const { data, error } = await supabase
+        .from("badges")
+        .select("*")
+        .order("name", { ascending: true });
+
+      if (error) {
+        console.error("Ошибка загрузки бейджей:", error.message);
+        setBadges([]);
+        return;
+      }
+
+      setBadges((data || []) as BadgeRow[]);
+    };
+
+    loadBadges();
   }, []);
 
   useEffect(() => {
@@ -304,10 +329,7 @@ export default function Home() {
         item.category.toLowerCase().includes(search.toLowerCase());
 
       const matchesBadge =
-        selectedBadge === "Все" ||
-        (selectedBadge === "Скидки" && item.badge === "Скидка") ||
-        (selectedBadge === "Новинки" && item.badge === "Новинка") ||
-        item.badge === selectedBadge;
+        selectedBadge === "Все" || item.badge === selectedBadge;
 
       return matchesCategory && matchesBrand && matchesSearch && matchesBadge;
     });
@@ -385,10 +407,10 @@ export default function Home() {
             <button
               key={category}
               onClick={() => setSelectedCategory(category)}
-              className={`rounded-full px-2.5 py-1.5 text-[11px] border transition-all duration-200 active:scale-95 ${
+              className={`rounded-full border px-2.5 py-1.5 text-[11px] transition-all duration-200 active:scale-95 ${
                 selectedCategory === category
-                  ? "bg-black text-white border-black"
-                  : "bg-white text-gray-600 border-gray-200"
+                  ? "border-black bg-black text-white"
+                  : "border-gray-200 bg-white text-gray-600"
               }`}
             >
               {category}
@@ -413,22 +435,37 @@ export default function Home() {
             </button>
 
             {showBrandMenu && (
-              <div className="absolute left-0 top-12 z-50 w-56 max-h-72 overflow-y-auto rounded-2xl border border-gray-100 bg-white p-1.5 shadow-[0_16px_40px_rgba(0,0,0,0.14)]">
+              <div className="absolute left-0 top-12 z-50 max-h-72 w-56 overflow-y-auto rounded-2xl border border-gray-100 bg-white p-1.5 shadow-[0_16px_40px_rgba(0,0,0,0.14)]">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedBrand("Все бренды");
+                    setShowBrandMenu(false);
+                  }}
+                  className={`w-full rounded-xl px-3 py-2 text-left text-[12px] ${
+                    selectedBrand === "Все бренды"
+                      ? "bg-black text-white"
+                      : "text-gray-700 hover:bg-gray-50"
+                  }`}
+                >
+                  Все бренды
+                </button>
+
                 {brands.map((brand) => (
                   <button
-                    key={brand}
+                    key={brand.id}
                     type="button"
                     onClick={() => {
-                      setSelectedBrand(brand);
+                      setSelectedBrand(brand.name);
                       setShowBrandMenu(false);
                     }}
                     className={`w-full rounded-xl px-3 py-2 text-left text-[12px] ${
-                      selectedBrand === brand
+                      selectedBrand === brand.name
                         ? "bg-black text-white"
                         : "text-gray-700 hover:bg-gray-50"
                     }`}
                   >
-                    {brand}
+                    {brand.name}
                   </button>
                 ))}
               </div>
@@ -437,30 +474,44 @@ export default function Home() {
 
           <div className="min-w-0 flex-1 overflow-x-auto">
             <div className="flex min-w-max gap-2 pb-1">
-              {badgeFilters
-                .filter((badge) => badge !== "Все")
-                .map((badge) => (
-                  <button
-                    key={badge}
-                    type="button"
-                    onClick={() =>
-                      setSelectedBadge((prev) => (prev === badge ? "Все" : badge))
-                    }
-                    className={`shrink-0 rounded-full border px-3 py-2 text-[11px] transition-all duration-200 ${
-                      selectedBadge === badge
-                        ? "border-black bg-black text-white"
-                        : "border-gray-200 bg-white text-gray-700"
-                    }`}
-                  >
-                    {badge}
-                  </button>
-                ))}
+              <button
+                type="button"
+                onClick={() =>
+                  setSelectedBadge((prev) => (prev === "Все" ? "Все" : "Все"))
+                }
+                className={`shrink-0 rounded-full border px-3 py-2 text-[11px] transition-all duration-200 ${
+                  selectedBadge === "Все"
+                    ? "border-black bg-black text-white"
+                    : "border-gray-200 bg-white text-gray-700"
+                }`}
+              >
+                Все
+              </button>
+
+              {badges.map((badge) => (
+                <button
+                  key={badge.id}
+                  type="button"
+                  onClick={() =>
+                    setSelectedBadge((prev) =>
+                      prev === badge.name ? "Все" : badge.name
+                    )
+                  }
+                  className={`shrink-0 rounded-full border px-3 py-2 text-[11px] transition-all duration-200 ${
+                    selectedBadge === badge.name
+                      ? "border-black bg-black text-white"
+                      : "border-gray-200 bg-white text-gray-700"
+                  }`}
+                >
+                  {badge.name}
+                </button>
+              ))}
             </div>
           </div>
         </div>
       </div>
 
-      <div className="mt-7 mb-4 flex items-center justify-between">
+      <div className="mb-4 mt-7 flex items-center justify-between">
         <h2 className="text-[17px] font-medium text-black">Подборка</h2>
 
         <div className="relative shrink-0" ref={sortMenuRef}>
@@ -513,7 +564,8 @@ export default function Home() {
             const discountPercent = getDiscountPercent(p.oldPrice, p.price);
             const imageCount = p.images?.length || 1;
             const currentImageIndex = cardImageIndexes[p.id] || 0;
-            const currentImage = p.images[currentImageIndex] || p.image;
+            const currentImage =
+              p.images[currentImageIndex] || p.image || "/products/product-1.jpg";
 
             return (
               <div
@@ -538,17 +590,22 @@ export default function Home() {
                     src={currentImage}
                     alt={p.name}
                     className="h-full w-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.src = "/products/product-1.jpg";
+                    }}
                   />
 
-                  <div
-                    className={`absolute left-3 top-3 rounded-full px-2.5 py-1 text-[10px] font-medium backdrop-blur shadow-sm ${
-                      p.badge === "Из-за рубежа"
-                        ? "bg-black text-white"
-                        : "bg-white/90 text-black"
-                    }`}
-                  >
-                    {p.badge}
-                  </div>
+                  {p.badge.trim() && (
+                    <div
+                      className={`absolute left-3 top-3 rounded-full px-2.5 py-1 text-[10px] font-medium backdrop-blur shadow-sm ${
+                        p.badge.trim().toLowerCase() === "из-за рубежа"
+                          ? "bg-black text-white"
+                          : "bg-white/90 text-black"
+                      }`}
+                    >
+                      {p.badge}
+                    </div>
+                  )}
 
                   <button
                     type="button"
@@ -586,7 +643,7 @@ export default function Home() {
 
                 <div className="flex min-h-[150px] flex-col p-3">
                   <div className="h-[20px] overflow-hidden text-[10px] text-gray-400">
-                    <span className="max-w-[110px] uppercase tracking-[0.14em] break-words">
+                    <span className="max-w-[110px] break-words uppercase tracking-[0.14em]">
                       {p.brand}
                     </span>
                   </div>
