@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHash } from "crypto";
+import { createClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 
@@ -43,16 +44,27 @@ export async function POST(req: NextRequest) {
     const terminalKey = process.env.TBANK_TERMINAL_KEY;
     const terminalPassword = process.env.TBANK_TERMINAL_PASSWORD;
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-    if (!terminalKey || !terminalPassword || !baseUrl) {
+    if (
+      !terminalKey ||
+      !terminalPassword ||
+      !baseUrl ||
+      !supabaseUrl ||
+      !supabaseServiceRoleKey
+    ) {
       return NextResponse.json(
-        { success: false, error: "Не заполнены переменные окружения T-Bank" },
+        { success: false, error: "Не заполнены переменные окружения" },
         { status: 500 }
       );
     }
 
+    const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+
     const body = await req.json();
 
+    const localOrderId = String(body?.localOrderId || "").trim();
     const name = String(body?.name || "").trim();
     const phone = String(body?.phone || "").trim();
     const address = String(body?.address || "").trim();
@@ -60,7 +72,7 @@ export async function POST(req: NextRequest) {
     const paymentMethod = String(body?.paymentMethod || "card").trim();
     const items = (body?.items || []) as CartItem[];
 
-    if (!name || !phone || !Array.isArray(items) || items.length === 0) {
+    if (!localOrderId || !name || !phone || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json(
         { success: false, error: "Некорректные данные заказа" },
         { status: 400 }
@@ -75,10 +87,11 @@ export async function POST(req: NextRequest) {
     const deliveryPrice = deliveryMethod === "delivery" ? 500 : 0;
     const totalRub = itemsTotal + deliveryPrice;
     const amount = Math.round(totalRub * 100);
-    const orderId = `ORDER-${Date.now()}`;
+
+    const tbankOrderId = `TBANK-${localOrderId}`;
 
     const descriptionParts = [
-      `Заказ ${orderId}`,
+      `Заказ ${localOrderId}`,
       `Получение: ${deliveryMethod === "delivery" ? "доставка" : "самовывоз"}`,
       `Оплата: ${paymentMethod === "card" ? "картой" : "наличными"}`,
     ];
@@ -90,8 +103,9 @@ export async function POST(req: NextRequest) {
     const payload: Record<string, unknown> = {
       TerminalKey: terminalKey,
       Amount: amount,
-      OrderId: orderId,
+      OrderId: tbankOrderId,
       Description: descriptionParts.join(" | "),
+      NotificationURL: `${baseUrl}/api/payments/notification`,
       SuccessURL: `${baseUrl}/checkout?payment=success`,
       FailURL: `${baseUrl}/checkout?payment=fail`,
     };
@@ -123,10 +137,30 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const { error: updateError } = await supabase
+      .from("orders")
+      .update({
+        tbank_order_id: tbankOrderId,
+        tbank_payment_id: result.PaymentId ? String(result.PaymentId) : null,
+        tbank_payment_status: result.Status ? String(result.Status) : "NEW",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", localOrderId);
+
+    if (updateError) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Платеж создан, но не удалось обновить заказ: ${updateError.message}`,
+        },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json({
       success: true,
       paymentUrl: result.PaymentURL,
-      orderId,
+      orderId: tbankOrderId,
       paymentId: result.PaymentId ?? null,
     });
   } catch (error) {

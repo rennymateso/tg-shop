@@ -126,15 +126,7 @@ function formatPhone(value: string) {
   return result;
 }
 
-function buildOrderStatus(paymentMethod: "card" | "cash"): OrderStatus {
-  if (paymentMethod === "card") {
-    return "Оплачен";
-  }
-
-  return "Новый";
-}
-
-async function saveOrderToSupabase(params: {
+async function createOrderInSupabase(params: {
   customer: string;
   phone: string;
   total: number;
@@ -159,6 +151,10 @@ async function saveOrderToSupabase(params: {
     status: params.status,
     comment: params.comment,
     promo_code: params.promoCode,
+    tbank_order_id: null,
+    tbank_payment_id: null,
+    tbank_payment_status: null,
+    paid_at: null,
     updated_at: new Date().toISOString(),
   };
 
@@ -315,14 +311,14 @@ export default function CheckoutPageClient() {
       setIsPaying(true);
       setPaymentError("");
 
-      await saveOrderToSupabase({
+      await createOrderInSupabase({
         customer: name.trim(),
         phone,
         total: finalNewTotal,
         payment: "Наличными",
         delivery: "Самовывоз",
         address: 'г. Казань, Академика Глушко 16Г, ТЦ "АКАДЕМИК", 2 этаж',
-        status: buildOrderStatus("cash"),
+        status: "Новый",
         comment: promoCode.trim() ? `Промокод: ${promoCode.trim()}` : "",
         promoCode: promoCode.trim(),
         items,
@@ -350,7 +346,7 @@ export default function CheckoutPageClient() {
     try {
       setIsPaying(true);
 
-      await saveOrderToSupabase({
+      const localOrderId = await createOrderInSupabase({
         customer: name.trim(),
         phone,
         total: finalNewTotal,
@@ -360,17 +356,45 @@ export default function CheckoutPageClient() {
           deliveryMethod === "pickup"
             ? 'г. Казань, Академика Глушко 16Г, ТЦ "АКАДЕМИК", 2 этаж'
             : address.trim(),
-        status: buildOrderStatus("card"),
+        status: "Новый",
         comment: promoCode.trim() ? `Промокод: ${promoCode.trim()}` : "",
         promoCode: promoCode.trim(),
         items,
       });
 
-      localStorage.removeItem("cart");
-      router.push("/checkout?payment=success");
+      const response = await fetch("/api/payments/init", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          localOrderId,
+          name,
+          phone,
+          address,
+          deliveryMethod,
+          paymentMethod,
+          promoCode,
+          items,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result?.success || !result?.paymentUrl) {
+        const rawText = result?.raw
+          ? JSON.stringify(result.raw, null, 2)
+          : result?.details || result?.error || "Не удалось создать платеж";
+
+        setPaymentError(rawText);
+        setIsPaying(false);
+        return;
+      }
+
+      window.location.href = result.paymentUrl;
     } catch (error) {
       setPaymentError(
-        error instanceof Error ? error.message : "Не удалось сохранить заказ"
+        error instanceof Error ? error.message : "Ошибка при переходе к оплате"
       );
       setIsPaying(false);
     }
@@ -393,10 +417,11 @@ export default function CheckoutPageClient() {
 
       {paymentStatus === "success" && (
         <div className="mb-4 rounded-[20px] bg-white p-4 shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
-          <p className="text-sm font-medium text-black">Заказ успешно оформлен.</p>
+          <p className="text-sm font-medium text-black">Заказ создан.</p>
           <p className="mt-2 text-sm leading-6 text-gray-500">
-            Вам придет сообщение о статусе заказа. Также с вами свяжется менеджер для
-            подтверждения и уточнения деталей.
+            После подтверждения оплаты статус заказа автоматически станет
+            «Оплачен». Если это был самовывоз с наличными, статус останется
+            «Новый».
           </p>
         </div>
       )}
@@ -636,7 +661,7 @@ export default function CheckoutPageClient() {
                 disabled={!isFormValid || isPaying}
                 className="w-full rounded-2xl bg-black py-3.5 text-sm font-medium text-white disabled:opacity-60"
               >
-                {isPaying ? "Сохраняем..." : "Оформить заказ"}
+                {isPaying ? "Переход..." : "Перейти к оплате"}
               </button>
             ) : (
               <button
