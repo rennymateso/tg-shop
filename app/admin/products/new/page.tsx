@@ -198,28 +198,48 @@ export default function AdminNewProductPage() {
       setMessage("");
 
       const tempProductId = article.trim() || makeArticle(name) || createProductId();
-
       const pickedFiles = Array.from(files).slice(0, freeSlots);
       const uploadedUrls: string[] = [];
 
       for (const file of pickedFiles) {
+        console.log("START_UPLOAD", {
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          tempProductId,
+          color,
+        });
+
         const publicUrl = await uploadProductImage(file, tempProductId, color);
+
+        console.log("UPLOADED_URL", publicUrl);
+
+        if (!publicUrl) {
+          throw new Error("publicUrl пустой");
+        }
+
         uploadedUrls.push(publicUrl);
       }
 
-      setColorImages((prev) => ({
-        ...prev,
-        [color]: [...(prev[color] || []), ...uploadedUrls],
-      }));
+      console.log("ALL_UPLOADED_URLS", uploadedUrls);
+
+      setColorImages((prev) => {
+        const next = {
+          ...prev,
+          [color]: [...(prev[color] || []), ...uploadedUrls],
+        };
+        console.log("NEXT_COLOR_IMAGES", next);
+        return next;
+      });
 
       setActiveColor(color);
-
-      if (files.length > freeSlots) {
-        setMessage(`Для цвета ${color} добавили только первые 6 фото`);
-      }
+      setMessage(`Фото загружены успешно. Цвет: ${color}. Кол-во: ${uploadedUrls.length}`);
     } catch (error) {
+      console.error("UPLOAD_ERROR", error);
       setMessage(
-        error instanceof Error ? `Ошибка загрузки фото: ${error.message}` : "Ошибка загрузки фото"
+        error instanceof Error
+          ? `Ошибка загрузки фото: ${error.message}`
+          : "Ошибка загрузки фото"
       );
     } finally {
       setIsUploadingImages(false);
@@ -400,9 +420,7 @@ export default function AdminNewProductPage() {
                 <label className="mb-2 block text-sm text-gray-500">Бренд</label>
                 <select
                   value={brand}
-                  onChange={(e) =>
-                    setBrand(e.target.value as (typeof brandOptions)[number])
-                  }
+                  onChange={(e) => setBrand(e.target.value as (typeof brandOptions)[number])}
                   className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
                 >
                   {brandOptions.map((item) => (
