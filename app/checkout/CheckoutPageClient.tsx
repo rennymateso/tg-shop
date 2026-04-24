@@ -26,58 +26,18 @@ type OrderStatus =
 type PaymentMethod = "Картой" | "Наличными";
 type DeliveryMethod = "Доставка" | "Самовывоз";
 
-type SavedOrderItem = {
-  name: string;
-  size: string;
-  color: string;
-  quantity: number;
-  price: number;
-};
-
-type SavedOrder = {
-  id: string;
-  customer: string;
-  phone: string;
-  total: number;
-  payment: PaymentMethod;
-  delivery: DeliveryMethod;
-  address: string;
-  status: OrderStatus;
-  createdAt: string;
-  comment: string;
-  items: SavedOrderItem[];
-};
-
-type ProductBadge = "Новинка" | "Скидка" | "В наличии" | "Из-за рубежа";
-type ProductCategory = "Футболки" | "Поло" | "Джинсы" | "Брюки" | "Костюмы";
-type ProductBrand =
-  | "Lacoste"
-  | "Polo Ralph Lauren"
-  | "Tommy Hilfiger"
-  | "Calvin Klein"
-  | "GANT"
-  | "BOSS"
-  | "Emporio Armani"
-  | "Armani Exchange"
-  | "Beymen Club"
-  | "Loro Piana"
-  | "Brunello Cucinelli"
-  | "BORZ"
-  | "Massimo Carino"
-  | "Другие бренды";
-
 type Product = {
   id: string;
   name: string;
-  brand: ProductBrand;
+  brand: string;
   price: number;
   oldPrice: number | null;
-  badge: ProductBadge;
+  badge: string;
   image: string;
   images: string[];
   colorImages?: Record<string, string>;
   type: "top" | "bottom";
-  category: ProductCategory;
+  category: string;
   colors: string[];
   sizes: string[];
   description: string;
@@ -86,17 +46,17 @@ type Product = {
 type ProductRow = {
   id: string;
   name: string;
-  brand: ProductBrand;
-  category: ProductCategory;
+  brand: string;
+  category: string;
   price: number;
   old_price: number;
-  badge: ProductBadge;
+  badge: string | null;
   status: "Активен" | "Скрыт";
   description: string;
   article: string;
   sizes: string[] | null;
   colors: string[] | null;
-  image: string;
+  image: string | null;
   color_images: Record<string, string[]> | null;
   created_at: string;
   updated_at: string;
@@ -122,7 +82,7 @@ function mapRowToProduct(row: ProductRow): Product {
 
   const uniqueImages = Array.from(
     new Set([row.image, ...galleryFromDb].filter(Boolean))
-  );
+  ) as string[];
 
   return {
     id: row.id,
@@ -130,7 +90,7 @@ function mapRowToProduct(row: ProductRow): Product {
     brand: row.brand,
     price: row.price,
     oldPrice: row.old_price || null,
-    badge: row.badge,
+    badge: row.badge || "",
     image: row.image || uniqueImages[0] || "/products/product-1.jpg",
     images:
       uniqueImages.length > 0
@@ -174,10 +134,58 @@ function buildOrderStatus(paymentMethod: "card" | "cash"): OrderStatus {
   return "Новый";
 }
 
-function saveOrderToLocalStorage(order: SavedOrder) {
-  const currentOrders = JSON.parse(localStorage.getItem("orders") || "[]");
-  const safeOrders = Array.isArray(currentOrders) ? currentOrders : [];
-  localStorage.setItem("orders", JSON.stringify([order, ...safeOrders]));
+async function saveOrderToSupabase(params: {
+  customer: string;
+  phone: string;
+  total: number;
+  payment: PaymentMethod;
+  delivery: DeliveryMethod;
+  address: string;
+  status: OrderStatus;
+  comment: string;
+  promoCode: string;
+  items: CheckoutItem[];
+}) {
+  const orderId = `ORD-${Date.now()}`;
+
+  const orderPayload = {
+    id: orderId,
+    customer: params.customer,
+    phone: params.phone,
+    total: params.total,
+    payment: params.payment,
+    delivery: params.delivery,
+    address: params.address,
+    status: params.status,
+    comment: params.comment,
+    promo_code: params.promoCode,
+    updated_at: new Date().toISOString(),
+  };
+
+  const { error: orderError } = await supabase.from("orders").insert(orderPayload);
+
+  if (orderError) {
+    throw new Error(`Ошибка сохранения заказа: ${orderError.message}`);
+  }
+
+  const itemsPayload = params.items.map((item) => ({
+    order_id: orderId,
+    product_id: item.id,
+    name: item.name,
+    size: item.size,
+    color: item.color,
+    quantity: item.quantity,
+    price: item.price,
+  }));
+
+  const { error: itemsError } = await supabase.from("order_items").insert(itemsPayload);
+
+  if (itemsError) {
+    await supabase.from("orders").delete().eq("id", orderId);
+    throw new Error(`Ошибка сохранения товаров заказа: ${itemsError.message}`);
+  }
+
+  return orderId;
 }
 
 export default function CheckoutPageClient() {
@@ -292,34 +300,7 @@ export default function CheckoutPageClient() {
     setPhone(formatPhone(value));
   };
 
-  const createLocalOrder = (selectedPaymentMethod: "card" | "cash") => {
-    const order: SavedOrder = {
-      id: `ORD-${Date.now()}`,
-      customer: name.trim(),
-      phone,
-      total: finalNewTotal,
-      payment: selectedPaymentMethod === "card" ? "Картой" : "Наличными",
-      delivery: deliveryMethod === "pickup" ? "Самовывоз" : "Доставка",
-      address:
-        deliveryMethod === "pickup"
-          ? 'г. Казань, Академика Глушко 16Г, ТЦ "АКАДЕМИК", 2 этаж'
-          : address.trim(),
-      status: buildOrderStatus(selectedPaymentMethod),
-      createdAt: new Date().toLocaleString("ru-RU"),
-      comment: promoCode.trim() ? `Промокод: ${promoCode.trim()}` : "",
-      items: items.map((item) => ({
-        name: item.name,
-        size: item.size,
-        color: item.color,
-        quantity: item.quantity,
-        price: item.price,
-      })),
-    };
-
-    saveOrderToLocalStorage(order);
-  };
-
-  const handleCashOrder = () => {
+  const handleCashOrder = async () => {
     if (!isFormValid) {
       alert("Заполните все обязательные данные");
       return;
@@ -330,10 +311,32 @@ export default function CheckoutPageClient() {
       return;
     }
 
-    createLocalOrder("cash");
-    localStorage.removeItem("cart");
-    alert("Заказ успешно оформлен. С вами свяжется менеджер для подтверждения.");
-    router.push("/checkout?payment=success");
+    try {
+      setIsPaying(true);
+      setPaymentError("");
+
+      await saveOrderToSupabase({
+        customer: name.trim(),
+        phone,
+        total: finalNewTotal,
+        payment: "Наличными",
+        delivery: "Самовывоз",
+        address: 'г. Казань, Академика Глушко 16Г, ТЦ "АКАДЕМИК", 2 этаж',
+        status: buildOrderStatus("cash"),
+        comment: promoCode.trim() ? `Промокод: ${promoCode.trim()}` : "",
+        promoCode: promoCode.trim(),
+        items,
+      });
+
+      localStorage.removeItem("cart");
+      alert("Заказ успешно оформлен. С вами свяжется менеджер для подтверждения.");
+      router.push("/checkout?payment=success");
+    } catch (error) {
+      setPaymentError(
+        error instanceof Error ? error.message : "Не удалось сохранить заказ"
+      );
+      setIsPaying(false);
+    }
   };
 
   const handleCardPayment = async () => {
@@ -347,42 +350,28 @@ export default function CheckoutPageClient() {
     try {
       setIsPaying(true);
 
-      createLocalOrder("card");
-
-      const response = await fetch("/api/payments/init", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name,
-          phone,
-          address,
-          deliveryMethod,
-          paymentMethod,
-          promoCode,
-          items,
-        }),
+      await saveOrderToSupabase({
+        customer: name.trim(),
+        phone,
+        total: finalNewTotal,
+        payment: "Картой",
+        delivery: deliveryMethod === "pickup" ? "Самовывоз" : "Доставка",
+        address:
+          deliveryMethod === "pickup"
+            ? 'г. Казань, Академика Глушко 16Г, ТЦ "АКАДЕМИК", 2 этаж'
+            : address.trim(),
+        status: buildOrderStatus("card"),
+        comment: promoCode.trim() ? `Промокод: ${promoCode.trim()}` : "",
+        promoCode: promoCode.trim(),
+        items,
       });
 
-      const result = await response.json();
-
-      if (!response.ok || !result?.success || !result?.paymentUrl) {
-        const rawText = result?.raw
-          ? JSON.stringify(result.raw, null, 2)
-          : result?.details || result?.error || "Не удалось создать платеж";
-
-        setPaymentError(rawText);
-        throw new Error(result?.error || "Не удалось создать платеж");
-      }
-
-      window.location.href = result.paymentUrl;
+      localStorage.removeItem("cart");
+      router.push("/checkout?payment=success");
     } catch (error) {
-      if (!paymentError) {
-        setPaymentError(
-          error instanceof Error ? error.message : "Ошибка при переходе к оплате"
-        );
-      }
+      setPaymentError(
+        error instanceof Error ? error.message : "Не удалось сохранить заказ"
+      );
       setIsPaying(false);
     }
   };
@@ -439,7 +428,7 @@ export default function CheckoutPageClient() {
 
           {items.map((item, i) => {
             const product = getProductById(item.id);
-            const oldUnitPrice = product?.oldPrice ?? item.price;
+            const oldUnitPrice = productsMap[item.id]?.oldPrice ?? item.price;
             const lineOldTotal = oldUnitPrice * item.quantity;
             const lineNewTotal = item.price * item.quantity;
             const lineDiscountPercent = getDiscountPercent(lineOldTotal, lineNewTotal);
@@ -647,15 +636,15 @@ export default function CheckoutPageClient() {
                 disabled={!isFormValid || isPaying}
                 className="w-full rounded-2xl bg-black py-3.5 text-sm font-medium text-white disabled:opacity-60"
               >
-                {isPaying ? "Переход..." : "Перейти к оплате"}
+                {isPaying ? "Сохраняем..." : "Оформить заказ"}
               </button>
             ) : (
               <button
                 onClick={handleCashOrder}
-                disabled={!isFormValid || deliveryMethod !== "pickup"}
+                disabled={!isFormValid || deliveryMethod !== "pickup" || isPaying}
                 className="w-full rounded-2xl bg-black py-3.5 text-sm font-medium text-white disabled:opacity-60"
               >
-                Оформить заказ
+                {isPaying ? "Сохраняем..." : "Оформить заказ"}
               </button>
             )}
           </div>
