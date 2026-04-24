@@ -6,19 +6,24 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../../lib/supabase";
 
 type ProductStatus = "Активен" | "Скрыт";
-type BadgeType =
-  | "Без бейджа"
-  | "Новинка"
-  | "Скидка"
-  | "В наличии"
-  | "Из-за рубежа";
-
 type ProductCategory =
   | "Футболки"
   | "Поло"
   | "Джинсы"
   | "Брюки"
   | "Костюмы";
+
+type BrandRow = {
+  id: string;
+  name: string;
+  created_at: string;
+};
+
+type BadgeRow = {
+  id: string;
+  name: string;
+  created_at: string;
+};
 
 type AdminProduct = {
   id: string;
@@ -27,7 +32,7 @@ type AdminProduct = {
   category: ProductCategory;
   price: number;
   oldPrice: number;
-  badge: BadgeType;
+  badge: string;
   status: ProductStatus;
   description: string;
   article: string;
@@ -46,7 +51,7 @@ type ProductRow = {
   category: string;
   price: number;
   old_price: number;
-  badge: string;
+  badge: string | null;
   status: string;
   description: string;
   article: string;
@@ -57,14 +62,6 @@ type ProductRow = {
   created_at: string;
   updated_at: string;
 };
-
-const badgeOptions: BadgeType[] = [
-  "Без бейджа",
-  "Новинка",
-  "Скидка",
-  "В наличии",
-  "Из-за рубежа",
-];
 
 const statusOptions: ProductStatus[] = ["Активен", "Скрыт"];
 
@@ -84,7 +81,7 @@ function mapRowToProduct(row: ProductRow): AdminProduct {
     category: row.category as ProductCategory,
     price: row.price,
     oldPrice: row.old_price,
-    badge: row.badge as BadgeType,
+    badge: row.badge || "Без бейджа",
     status: row.status as ProductStatus,
     description: row.description || "",
     article: row.article || "",
@@ -97,15 +94,69 @@ function mapRowToProduct(row: ProductRow): AdminProduct {
   };
 }
 
+function generateArticleNumber() {
+  return `ART-${Math.floor(100000 + Math.random() * 900000)}`;
+}
+
 export default function AdminEditProductPage() {
   const params = useParams();
   const router = useRouter();
   const id = String(params.id || "");
 
   const [product, setProduct] = useState<AdminProduct | null>(null);
+  const [brands, setBrands] = useState<BrandRow[]>([]);
+  const [badges, setBadges] = useState<BadgeRow[]>([]);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
+  const [brandsLoading, setBrandsLoading] = useState(true);
+  const [badgesLoading, setBadgesLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const loadBrands = async () => {
+      setBrandsLoading(true);
+
+      const { data, error } = await supabase
+        .from("brands")
+        .select("*")
+        .order("name", { ascending: true });
+
+      if (error) {
+        setMessage(`Ошибка загрузки брендов: ${error.message}`);
+        setBrands([]);
+        setBrandsLoading(false);
+        return;
+      }
+
+      setBrands((data || []) as BrandRow[]);
+      setBrandsLoading(false);
+    };
+
+    loadBrands();
+  }, []);
+
+  useEffect(() => {
+    const loadBadges = async () => {
+      setBadgesLoading(true);
+
+      const { data, error } = await supabase
+        .from("badges")
+        .select("*")
+        .order("name", { ascending: true });
+
+      if (error) {
+        setMessage(`Ошибка загрузки бейджей: ${error.message}`);
+        setBadges([]);
+        setBadgesLoading(false);
+        return;
+      }
+
+      setBadges((data || []) as BadgeRow[]);
+      setBadgesLoading(false);
+    };
+
+    loadBadges();
+  }, []);
 
   useEffect(() => {
     const loadProduct = async () => {
@@ -146,6 +197,16 @@ export default function AdminEditProductPage() {
   const saveChanges = async () => {
     if (!product) return;
 
+    if (!product.name.trim()) {
+      setMessage("Введите название товара");
+      return;
+    }
+
+    if (!product.brand.trim()) {
+      setMessage("Выберите бренд товара");
+      return;
+    }
+
     try {
       setSaving(true);
       setMessage("");
@@ -160,10 +221,10 @@ export default function AdminEditProductPage() {
           category: product.category,
           price: product.price,
           old_price: product.oldPrice,
-          badge: product.badge,
+          badge: product.badge === "Без бейджа" ? null : product.badge,
           status: product.status,
           description: product.description,
-          article: product.article,
+          article: product.article.trim() || generateArticleNumber(),
           sizes: product.sizes,
           colors: product.colors,
           image: product.image,
@@ -253,7 +314,7 @@ export default function AdminEditProductPage() {
 
           <button
             onClick={saveChanges}
-            disabled={saving}
+            disabled={saving || brandsLoading || badgesLoading}
             className="rounded-2xl bg-black px-5 py-3 text-sm font-medium text-white disabled:opacity-60"
           >
             {saving ? "Сохраняем..." : "Сохранить"}
@@ -283,11 +344,34 @@ export default function AdminEditProductPage() {
 
             <div>
               <label className="mb-2 block text-sm text-gray-500">Бренд</label>
-              <input
+              <select
                 value={product.brand}
-                onChange={(e) => setProduct({ ...product, brand: e.target.value })}
-                className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-              />
+                onChange={(e) =>
+                  setProduct({
+                    ...product,
+                    brand: e.target.value,
+                  })
+                }
+                disabled={brandsLoading || brands.length === 0}
+                className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none disabled:opacity-60"
+              >
+                {brands.length === 0 ? (
+                  <option value="">
+                    {brandsLoading ? "Загрузка брендов..." : "Нет брендов"}
+                  </option>
+                ) : (
+                  <>
+                    {!brands.some((item) => item.name === product.brand) && (
+                      <option value={product.brand}>{product.brand}</option>
+                    )}
+                    {brands.map((item) => (
+                      <option key={item.id} value={item.name}>
+                        {item.name}
+                      </option>
+                    ))}
+                  </>
+                )}
+              </select>
             </div>
 
             <div>
@@ -340,13 +424,21 @@ export default function AdminEditProductPage() {
                 onChange={(e) =>
                   setProduct({
                     ...product,
-                    badge: e.target.value as BadgeType,
+                    badge: e.target.value,
                   })
                 }
-                className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
+                disabled={badgesLoading}
+                className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none disabled:opacity-60"
               >
-                {badgeOptions.map((item) => (
-                  <option key={item}>{item}</option>
+                <option value="Без бейджа">Без бейджа</option>
+                {!badges.some((item) => item.name === product.badge) &&
+                  product.badge !== "Без бейджа" && (
+                    <option value={product.badge}>{product.badge}</option>
+                  )}
+                {badges.map((item) => (
+                  <option key={item.id} value={item.name}>
+                    {item.name}
+                  </option>
                 ))}
               </select>
             </div>
@@ -367,6 +459,34 @@ export default function AdminEditProductPage() {
                   <option key={item}>{item}</option>
                 ))}
               </select>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm text-gray-500">Артикул</label>
+              <div className="flex gap-2">
+                <input
+                  value={product.article}
+                  onChange={(e) =>
+                    setProduct({
+                      ...product,
+                      article: e.target.value,
+                    })
+                  }
+                  className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() =>
+                    setProduct({
+                      ...product,
+                      article: generateArticleNumber(),
+                    })
+                  }
+                  className="shrink-0 rounded-2xl bg-black px-4 text-sm text-white"
+                >
+                  Новый
+                </button>
+              </div>
             </div>
 
             <div className="md:col-span-2">
@@ -423,15 +543,17 @@ export default function AdminEditProductPage() {
               </div>
 
               <div className="mt-3 flex flex-wrap gap-2">
-                <span
-                  className={`rounded-full px-2.5 py-1 text-xs ${
-                    product.badge === "Из-за рубежа"
-                      ? "bg-black text-white"
-                      : "bg-[#F5F5F5] text-gray-700"
-                  }`}
-                >
-                  {product.badge}
-                </span>
+                {product.badge !== "Без бейджа" && (
+                  <span
+                    className={`rounded-full px-2.5 py-1 text-xs ${
+                      product.badge.trim().toLowerCase() === "из-за рубежа"
+                        ? "bg-black text-white"
+                        : "bg-[#F5F5F5] text-gray-700"
+                    }`}
+                  >
+                    {product.badge}
+                  </span>
+                )}
 
                 <span
                   className={`rounded-full px-2.5 py-1 text-xs ${
