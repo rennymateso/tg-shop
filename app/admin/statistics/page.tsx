@@ -24,7 +24,18 @@ type OrderRow = {
 type OrderItemRow = {
   id: number;
   order_id: string;
+  product_id: string;
+  name: string;
+  size: string;
+  color: string;
+  quantity: number;
+  price: number;
   created_at: string;
+};
+
+type ProductBrandRow = {
+  id: string;
+  brand: string;
 };
 
 const rangeLabels: Record<RangeKey, string> = {
@@ -50,6 +61,7 @@ export default function AdminStatisticsPage() {
   const [range, setRange] = useState<RangeKey>("7d");
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [orderItems, setOrderItems] = useState<OrderItemRow[]>([]);
+  const [productBrands, setProductBrands] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
 
@@ -69,6 +81,7 @@ export default function AdminStatisticsPage() {
       setMessage(`Ошибка загрузки заказов: ${ordersError.message}`);
       setOrders([]);
       setOrderItems([]);
+      setProductBrands({});
       setLoading(false);
       return;
     }
@@ -78,6 +91,7 @@ export default function AdminStatisticsPage() {
 
     if (safeOrders.length === 0) {
       setOrderItems([]);
+      setProductBrands({});
       setLoading(false);
       return;
     }
@@ -86,17 +100,50 @@ export default function AdminStatisticsPage() {
 
     const { data: itemsData, error: itemsError } = await supabase
       .from("order_items")
-      .select("id,order_id,created_at")
+      .select("id,order_id,product_id,name,size,color,quantity,price,created_at")
       .in("order_id", orderIds);
 
     if (itemsError) {
       setMessage(`Ошибка загрузки товаров заказов: ${itemsError.message}`);
       setOrderItems([]);
+      setProductBrands({});
       setLoading(false);
       return;
     }
 
-    setOrderItems((itemsData || []) as OrderItemRow[]);
+    const safeItems = (itemsData || []) as OrderItemRow[];
+    setOrderItems(safeItems);
+
+    const productIds = Array.from(
+      new Set(
+        safeItems
+          .map((item) => item.product_id)
+          .filter((value) => typeof value === "string" && value.trim().length > 0)
+      )
+    );
+
+    if (productIds.length > 0) {
+      const { data: productsData, error: productsError } = await supabase
+        .from("products")
+        .select("id,brand")
+        .in("id", productIds);
+
+      if (productsError) {
+        setMessage(`Ошибка загрузки брендов товаров: ${productsError.message}`);
+        setProductBrands({});
+        setLoading(false);
+        return;
+      }
+
+      const brandsMap: Record<string, string> = {};
+      ((productsData || []) as ProductBrandRow[]).forEach((product) => {
+        brandsMap[product.id] = product.brand;
+      });
+      setProductBrands(brandsMap);
+    } else {
+      setProductBrands({});
+    }
+
     setLoading(false);
   };
 
@@ -121,6 +168,13 @@ export default function AdminStatisticsPage() {
           await loadStats(range);
         }
       )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "products" },
+        async () => {
+          await loadStats(range);
+        }
+      )
       .subscribe();
 
     return () => {
@@ -129,21 +183,16 @@ export default function AdminStatisticsPage() {
   }, [range]);
 
   const current = useMemo(() => {
-    const visits = orders.length;
-    const productViews = orderItems.length;
-    const favorites = 0;
-    const cartAdds = orderItems.length;
     const activeOrders = orders.filter((order) => order.status !== "Отменен");
     const paidOrders = orders.filter((order) => order.status === "Оплачен");
+    const cancelledOrders = orders.filter((order) => order.status === "Отменен");
     const revenue = activeOrders.reduce((sum, order) => sum + order.total, 0);
 
     return {
-      visits,
-      productViews,
-      favorites,
-      cartAdds,
       orders: activeOrders.length,
       paidOrders: paidOrders.length,
+      cancelledOrders: cancelledOrders.length,
+      itemsCount: orderItems.reduce((sum, item) => sum + item.quantity, 0),
       revenue,
     };
   }, [orders, orderItems]);
@@ -153,20 +202,20 @@ export default function AdminStatisticsPage() {
     return Math.round(current.revenue / current.paidOrders);
   }, [current]);
 
-  const cartConversion = useMemo(() => {
-    if (!current.visits) return 0;
-    return ((current.cartAdds / current.visits) * 100).toFixed(1);
+  const paidConversion = useMemo(() => {
+    if (!current.orders) return 0;
+    return ((current.paidOrders / current.orders) * 100).toFixed(1);
   }, [current]);
 
-  const orderConversion = useMemo(() => {
-    if (!current.visits) return 0;
-    return ((current.orders / current.visits) * 100).toFixed(1);
-  }, [current]);
+  const cancelRate = useMemo(() => {
+    if (!orders.length) return 0;
+    return ((current.cancelledOrders / orders.length) * 100).toFixed(1);
+  }, [orders.length, current.cancelledOrders]);
 
   const funnel = [
-    { label: "Оформленные заказы", value: current.orders },
-    { label: "Товаров в заказах", value: current.productViews },
-    { label: "Оплаченные заказы", value: current.paidOrders },
+    { label: "Все заказы", value: orders.length },
+    { label: "Не отменены", value: current.orders },
+    { label: "Оплачены", value: current.paidOrders },
   ];
 
   const stats = [
@@ -176,14 +225,14 @@ export default function AdminStatisticsPage() {
       note: rangeLabels[range],
     },
     {
-      title: "Товаров в заказах",
-      value: current.cartAdds.toLocaleString("ru-RU"),
-      note: `Соотношение ${cartConversion}%`,
+      title: "Товаров продано",
+      value: current.itemsCount.toLocaleString("ru-RU"),
+      note: rangeLabels[range],
     },
     {
       title: "Оплаченные заказы",
       value: current.paidOrders.toLocaleString("ru-RU"),
-      note: rangeLabels[range],
+      note: `Оплачено ${paidConversion}%`,
     },
     {
       title: "Выручка",
@@ -192,17 +241,99 @@ export default function AdminStatisticsPage() {
     },
     {
       title: "Отмененные",
-      value: orders
-        .filter((order) => order.status === "Отменен")
-        .length.toLocaleString("ru-RU"),
-      note: rangeLabels[range],
+      value: current.cancelledOrders.toLocaleString("ru-RU"),
+      note: `Доля ${cancelRate}%`,
     },
     {
-      title: "Конверсия в заказ",
-      value: `${orderConversion}%`,
-      note: "По текущим данным",
+      title: "Всего записей",
+      value: orders.length.toLocaleString("ru-RU"),
+      note: "С учетом отмененных",
     },
   ];
+
+  const topProducts = useMemo(() => {
+    const map = new Map<
+      string,
+      { name: string; quantity: number; revenue: number; orders: Set<string> }
+    >();
+
+    orderItems.forEach((item) => {
+      const key = item.product_id || item.name;
+      const currentValue = map.get(key) || {
+        name: item.name,
+        quantity: 0,
+        revenue: 0,
+        orders: new Set<string>(),
+      };
+
+      currentValue.quantity += item.quantity;
+      currentValue.revenue += item.price * item.quantity;
+      currentValue.orders.add(item.order_id);
+
+      map.set(key, currentValue);
+    });
+
+    return Array.from(map.values())
+      .map((item) => ({
+        name: item.name,
+        quantity: item.quantity,
+        revenue: item.revenue,
+        orders: item.orders.size,
+      }))
+      .sort((a, b) => b.quantity - a.quantity)
+      .slice(0, 5);
+  }, [orderItems]);
+
+  const topBrands = useMemo(() => {
+    const map = new Map<string, { quantity: number; revenue: number }>();
+
+    orderItems.forEach((item) => {
+      const brand = productBrands[item.product_id] || "Без бренда";
+      const currentValue = map.get(brand) || { quantity: 0, revenue: 0 };
+
+      currentValue.quantity += item.quantity;
+      currentValue.revenue += item.price * item.quantity;
+
+      map.set(brand, currentValue);
+    });
+
+    return Array.from(map.entries())
+      .map(([name, value]) => ({
+        name,
+        quantity: value.quantity,
+        revenue: value.revenue,
+      }))
+      .sort((a, b) => b.quantity - a.quantity)
+      .slice(0, 5);
+  }, [orderItems, productBrands]);
+
+  const topColors = useMemo(() => {
+    const map = new Map<string, number>();
+
+    orderItems.forEach((item) => {
+      const key = item.color || "Не указан";
+      map.set(key, (map.get(key) || 0) + item.quantity);
+    });
+
+    return Array.from(map.entries())
+      .map(([name, quantity]) => ({ name, quantity }))
+      .sort((a, b) => b.quantity - a.quantity)
+      .slice(0, 5);
+  }, [orderItems]);
+
+  const topSizes = useMemo(() => {
+    const map = new Map<string, number>();
+
+    orderItems.forEach((item) => {
+      const key = item.size || "Не указан";
+      map.set(key, (map.get(key) || 0) + item.quantity);
+    });
+
+    return Array.from(map.entries())
+      .map(([name, quantity]) => ({ name, quantity }))
+      .sort((a, b) => b.quantity - a.quantity)
+      .slice(0, 5);
+  }, [orderItems]);
 
   return (
     <>
@@ -254,7 +385,7 @@ export default function AdminStatisticsPage() {
             ))}
           </section>
 
-          <section className="grid grid-cols-1 gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+          <section className="mb-6 grid grid-cols-1 gap-6 xl:grid-cols-[1.1fr_0.9fr]">
             <div className="rounded-[28px] bg-white p-5 shadow-sm">
               <h2 className="text-lg font-medium text-black">Воронка заказов</h2>
               <p className="mt-1 text-sm text-gray-500">{rangeLabels[range]}</p>
@@ -292,21 +423,162 @@ export default function AdminStatisticsPage() {
 
               <div className="mt-4 space-y-3 text-sm text-gray-600">
                 <div className="rounded-2xl bg-[#F7F7F7] p-4">
-                  1. Сколько заказов было создано за выбранный период.
+                  1. Реальные заказы за выбранный период из базы.
                 </div>
                 <div className="rounded-2xl bg-[#F7F7F7] p-4">
-                  2. Сколько товаров вошло в эти заказы.
+                  2. Количество товаров во всех заказах.
                 </div>
                 <div className="rounded-2xl bg-[#F7F7F7] p-4">
-                  3. Сколько заказов оплачено.
+                  3. Оплаченные и отмененные заказы.
                 </div>
                 <div className="rounded-2xl bg-[#F7F7F7] p-4">
-                  4. Сколько заказов отменено.
+                  4. Реальную выручку и средний чек.
                 </div>
                 <div className="rounded-2xl bg-[#F7F7F7] p-4">
-                  5. Общую выручку и средний чек по реальным заказам из базы.
+                  5. Топ товаров, брендов, цветов и размеров.
                 </div>
               </div>
+            </div>
+          </section>
+
+          <section className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+            <div className="rounded-[28px] bg-white p-5 shadow-sm">
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-lg font-medium text-black">Топ товаров</h2>
+                <span className="text-sm text-gray-500">По количеству</span>
+              </div>
+
+              {topProducts.length === 0 ? (
+                <div className="rounded-[24px] bg-[#F7F7F7] p-6 text-center text-sm text-gray-500">
+                  Пока нет данных
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {topProducts.map((item, index) => (
+                    <div
+                      key={`${item.name}-${index}`}
+                      className="rounded-[22px] bg-[#F7F7F7] p-4"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-medium text-black">
+                            {index + 1}. {item.name}
+                          </p>
+                          <p className="mt-1 text-xs text-gray-500">
+                            Заказов: {item.orders}
+                          </p>
+                        </div>
+
+                        <div className="text-right">
+                          <p className="text-sm font-medium text-black">
+                            {item.quantity} шт.
+                          </p>
+                          <p className="mt-1 text-xs text-gray-500">
+                            {item.revenue.toLocaleString("ru-RU")} ₽
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-[28px] bg-white p-5 shadow-sm">
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-lg font-medium text-black">Топ брендов</h2>
+                <span className="text-sm text-gray-500">По продажам</span>
+              </div>
+
+              {topBrands.length === 0 ? (
+                <div className="rounded-[24px] bg-[#F7F7F7] p-6 text-center text-sm text-gray-500">
+                  Пока нет данных
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {topBrands.map((item, index) => (
+                    <div
+                      key={`${item.name}-${index}`}
+                      className="rounded-[22px] bg-[#F7F7F7] p-4"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-medium text-black">
+                            {index + 1}. {item.name}
+                          </p>
+                        </div>
+
+                        <div className="text-right">
+                          <p className="text-sm font-medium text-black">
+                            {item.quantity} шт.
+                          </p>
+                          <p className="mt-1 text-xs text-gray-500">
+                            {item.revenue.toLocaleString("ru-RU")} ₽
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-[28px] bg-white p-5 shadow-sm">
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-lg font-medium text-black">Популярные цвета</h2>
+                <span className="text-sm text-gray-500">По количеству</span>
+              </div>
+
+              {topColors.length === 0 ? (
+                <div className="rounded-[24px] bg-[#F7F7F7] p-6 text-center text-sm text-gray-500">
+                  Пока нет данных
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {topColors.map((item, index) => (
+                    <div
+                      key={`${item.name}-${index}`}
+                      className="rounded-[22px] bg-[#F7F7F7] p-4"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-sm font-medium text-black">
+                          {index + 1}. {item.name}
+                        </p>
+                        <p className="text-sm text-gray-600">{item.quantity} шт.</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-[28px] bg-white p-5 shadow-sm">
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-lg font-medium text-black">Популярные размеры</h2>
+                <span className="text-sm text-gray-500">По количеству</span>
+              </div>
+
+              {topSizes.length === 0 ? (
+                <div className="rounded-[24px] bg-[#F7F7F7] p-6 text-center text-sm text-gray-500">
+                  Пока нет данных
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {topSizes.map((item, index) => (
+                    <div
+                      key={`${item.name}-${index}`}
+                      className="rounded-[22px] bg-[#F7F7F7] p-4"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-sm font-medium text-black">
+                          {index + 1}. {item.name}
+                        </p>
+                        <p className="text-sm text-gray-600">{item.quantity} шт.</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </section>
         </>
