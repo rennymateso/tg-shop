@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { supabase } from "../../lib/supabase";
 
 type OrderStatus =
   | "Новый"
@@ -11,15 +12,34 @@ type OrderStatus =
   | "Доставлен"
   | "Отменен";
 
-type PaymentMethod = "Картой" | "Наличными" | "СБП";
+type PaymentMethod = "Картой" | "Наличными";
 type DeliveryMethod = "Доставка" | "Самовывоз";
 
 type OrderItem = {
+  id: number;
+  order_id: string;
+  product_id: string;
   name: string;
   size: string;
   color: string;
   quantity: number;
   price: number;
+  created_at: string;
+};
+
+type OrderRowDb = {
+  id: string;
+  customer: string;
+  phone: string;
+  total: number;
+  payment: PaymentMethod;
+  delivery: DeliveryMethod;
+  address: string;
+  status: OrderStatus;
+  comment: string;
+  promo_code: string;
+  created_at: string;
+  updated_at: string;
 };
 
 type OrderRow = {
@@ -35,101 +55,6 @@ type OrderRow = {
   comment: string;
   items: OrderItem[];
 };
-
-function getAutoOrderStatus(
-  payment: PaymentMethod,
-  delivery: DeliveryMethod
-): OrderStatus {
-  if (payment === "Картой" || payment === "СБП") {
-    return "Оплачен";
-  }
-
-  if (payment === "Наличными" && delivery === "Самовывоз") {
-    return "Новый";
-  }
-
-  return "Новый";
-}
-
-const initialOrders: OrderRow[] = [
-  {
-    id: "ORD-1001",
-    customer: "Илья Смирнов",
-    phone: "+7 (927) 123-45-67",
-    total: 7800,
-    payment: "Картой",
-    delivery: "Доставка",
-    address: "г. Казань, ул. Чистопольская, 20",
-    status: getAutoOrderStatus("Картой", "Доставка"),
-    createdAt: "Сегодня, 12:40",
-    comment: "Позвонить перед доставкой",
-    items: [
-      {
-        name: "Поло Premium",
-        size: "L",
-        color: "Черный",
-        quantity: 1,
-        price: 3500,
-      },
-      {
-        name: "Поло Classic",
-        size: "M",
-        color: "Белый",
-        quantity: 1,
-        price: 4300,
-      },
-    ],
-  },
-  {
-    id: "ORD-1002",
-    customer: "Руслан Ахметов",
-    phone: "+7 (987) 765-43-21",
-    total: 5200,
-    payment: "СБП",
-    delivery: "Самовывоз",
-    address: 'г. Казань, Академика Глушко 16Г, ТЦ "АКАДЕМИК", 2 этаж',
-    status: getAutoOrderStatus("СБП", "Самовывоз"),
-    createdAt: "Сегодня, 11:05",
-    comment: "",
-    items: [
-      {
-        name: "Поло Black",
-        size: "XL",
-        color: "Черный",
-        quantity: 1,
-        price: 5200,
-      },
-    ],
-  },
-  {
-    id: "ORD-1003",
-    customer: "Тимур Гайнутдинов",
-    phone: "+7 (903) 111-22-33",
-    total: 10400,
-    payment: "Наличными",
-    delivery: "Самовывоз",
-    address: 'г. Казань, Академика Глушко 16Г, ТЦ "АКАДЕМИК", 2 этаж',
-    status: getAutoOrderStatus("Наличными", "Самовывоз"),
-    createdAt: "Вчера, 18:22",
-    comment: "Оплата при получении",
-    items: [
-      {
-        name: "Поло White",
-        size: "M",
-        color: "Белый",
-        quantity: 2,
-        price: 2900,
-      },
-      {
-        name: "Поло Premium",
-        size: "XL",
-        color: "Серый",
-        quantity: 1,
-        price: 4600,
-      },
-    ],
-  },
-];
 
 const statusOptions: OrderStatus[] = [
   "Новый",
@@ -162,12 +87,115 @@ function statusClass(status: OrderStatus) {
   }
 }
 
+function formatOrderDate(value: string) {
+  try {
+    return new Date(value).toLocaleString("ru-RU");
+  } catch {
+    return value;
+  }
+}
+
 export default function AdminOrdersPage() {
-  const [orders, setOrders] = useState<OrderRow[]>(initialOrders);
+  const [orders, setOrders] = useState<OrderRow[]>([]);
   const [search, setSearch] = useState("");
-  const [selectedOrderId, setSelectedOrderId] = useState<string>(
-    initialOrders[0]?.id || ""
-  );
+  const [selectedOrderId, setSelectedOrderId] = useState<string>("");
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState("");
+
+  const loadOrders = async () => {
+    setLoading(true);
+    setMessage("");
+
+    const { data: ordersData, error: ordersError } = await supabase
+      .from("orders")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (ordersError) {
+      setMessage(`Ошибка загрузки заказов: ${ordersError.message}`);
+      setOrders([]);
+      setLoading(false);
+      return;
+    }
+
+    const safeOrders = ((ordersData || []) as OrderRowDb[]) || [];
+    const orderIds = safeOrders.map((order) => order.id);
+
+    let itemsMap: Record<string, OrderItem[]> = {};
+
+    if (orderIds.length > 0) {
+      const { data: itemsData, error: itemsError } = await supabase
+        .from("order_items")
+        .select("*")
+        .in("order_id", orderIds)
+        .order("created_at", { ascending: true });
+
+      if (itemsError) {
+        setMessage(`Ошибка загрузки товаров заказа: ${itemsError.message}`);
+      } else {
+        itemsMap = ((itemsData || []) as OrderItem[]).reduce<Record<string, OrderItem[]>>(
+          (acc, item) => {
+            if (!acc[item.order_id]) acc[item.order_id] = [];
+            acc[item.order_id].push(item);
+            return acc;
+          },
+          {}
+        );
+      }
+    }
+
+    const merged: OrderRow[] = safeOrders.map((order) => ({
+      id: order.id,
+      customer: order.customer,
+      phone: order.phone,
+      total: order.total,
+      payment: order.payment,
+      delivery: order.delivery,
+      address: order.address,
+      status: order.status,
+      createdAt: formatOrderDate(order.created_at),
+      comment: order.comment || "",
+      items: itemsMap[order.id] || [],
+    }));
+
+    setOrders(merged);
+
+    if (merged.length > 0) {
+      setSelectedOrderId((prev) =>
+        prev && merged.some((order) => order.id === prev) ? prev : merged[0].id
+      );
+    } else {
+      setSelectedOrderId("");
+    }
+
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    loadOrders();
+
+    const channel = supabase
+      .channel("admin-orders-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "orders" },
+        async () => {
+          await loadOrders();
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "order_items" },
+        async () => {
+          await loadOrders();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   const filteredOrders = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -190,10 +218,21 @@ export default function AdminOrdersPage() {
     filteredOrders[0] ||
     null;
 
-  const updateOrderStatus = (id: string, status: OrderStatus) => {
-    setOrders((prev) =>
-      prev.map((order) => (order.id === id ? { ...order, status } : order))
-    );
+  const updateOrderStatus = async (id: string, status: OrderStatus) => {
+    const { error } = await supabase
+      .from("orders")
+      .update({
+        status,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id);
+
+    if (error) {
+      setMessage(`Ошибка обновления статуса: ${error.message}`);
+      return;
+    }
+
+    await loadOrders();
   };
 
   const totalRevenue = useMemo(
@@ -238,6 +277,12 @@ export default function AdminOrdersPage() {
         </div>
       </div>
 
+      {message && (
+        <div className="mb-6 rounded-[24px] bg-white p-4 text-sm text-black shadow-sm">
+          {message}
+        </div>
+      )}
+
       <section className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <div className="rounded-[28px] bg-white p-5 shadow-sm">
           <p className="text-sm text-gray-500">Всего заказов</p>
@@ -273,68 +318,72 @@ export default function AdminOrdersPage() {
           <div className="mb-4 flex items-center justify-between">
             <div>
               <h2 className="text-lg font-medium text-black">Список заказов</h2>
-              <p className="text-sm text-gray-500">
-                Просмотр и изменение статусов
-              </p>
+              <p className="text-sm text-gray-500">Просмотр и изменение статусов</p>
             </div>
           </div>
 
-          <div className="space-y-4">
-            {filteredOrders.map((order) => (
-              <button
-                key={order.id}
-                type="button"
-                onClick={() => setSelectedOrderId(order.id)}
-                className={`w-full rounded-[24px] p-4 text-left transition ${
-                  selectedOrder?.id === order.id
-                    ? "bg-black text-white"
-                    : "bg-[#F7F7F7] text-black"
-                }`}
-              >
-                <div className="mb-3 flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-medium">{order.id}</p>
-                    <p
-                      className={`mt-1 text-xs ${
-                        selectedOrder?.id === order.id
-                          ? "text-white/70"
-                          : "text-gray-500"
-                      }`}
-                    >
-                      {order.customer} • {order.phone}
-                    </p>
-                  </div>
-
-                  <span
-                    className={`rounded-full px-2.5 py-1 text-xs ${
-                      selectedOrder?.id === order.id
-                        ? "bg-white text-black"
-                        : statusClass(order.status)
-                    }`}
-                  >
-                    {order.status}
-                  </span>
-                </div>
-
-                <div
-                  className={`flex items-center justify-between text-sm ${
+          {loading ? (
+            <div className="rounded-[24px] bg-[#F7F7F7] p-6 text-center text-sm text-gray-500">
+              Загрузка заказов...
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {filteredOrders.map((order) => (
+                <button
+                  key={order.id}
+                  type="button"
+                  onClick={() => setSelectedOrderId(order.id)}
+                  className={`w-full rounded-[24px] p-4 text-left transition ${
                     selectedOrder?.id === order.id
-                      ? "text-white/80"
-                      : "text-gray-600"
+                      ? "bg-black text-white"
+                      : "bg-[#F7F7F7] text-black"
                   }`}
                 >
-                  <span>{order.createdAt}</span>
-                  <span>{order.total.toLocaleString("ru-RU")} ₽</span>
-                </div>
-              </button>
-            ))}
+                  <div className="mb-3 flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-medium">{order.id}</p>
+                      <p
+                        className={`mt-1 text-xs ${
+                          selectedOrder?.id === order.id
+                            ? "text-white/70"
+                            : "text-gray-500"
+                        }`}
+                      >
+                        {order.customer} • {order.phone}
+                      </p>
+                    </div>
 
-            {filteredOrders.length === 0 && (
-              <div className="rounded-[24px] bg-[#F7F7F7] p-6 text-center text-sm text-gray-500">
-                Заказы не найдены
-              </div>
-            )}
-          </div>
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-xs ${
+                        selectedOrder?.id === order.id
+                          ? "bg-white text-black"
+                          : statusClass(order.status)
+                      }`}
+                    >
+                      {order.status}
+                    </span>
+                  </div>
+
+                  <div
+                    className={`flex items-center justify-between text-sm ${
+                      selectedOrder?.id === order.id
+                        ? "text-white/80"
+                        : "text-gray-600"
+                    }`}
+                  >
+                    <span>{order.createdAt}</span>
+                    <span>{order.total.toLocaleString("ru-RU")} ₽</span>
+                  </div>
+                </button>
+              ))}
+
+              {filteredOrders.length === 0 && (
+                <div className="rounded-[24px] bg-[#F7F7F7] p-6 text-center text-sm text-gray-500">
+                  Нет оформленных заказов
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="rounded-[28px] bg-white p-5 shadow-sm">
@@ -432,9 +481,7 @@ export default function AdminOrdersPage() {
 
               <div className="rounded-[24px] bg-[#F7F7F7] p-4">
                 <div className="mb-4 flex items-center justify-between">
-                  <h3 className="text-sm font-medium text-black">
-                    Состав заказа
-                  </h3>
+                  <h3 className="text-sm font-medium text-black">Состав заказа</h3>
                   <span className="text-sm text-gray-500">
                     {selectedOrder.items.length} поз.
                   </span>
