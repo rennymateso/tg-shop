@@ -69,6 +69,34 @@ function getDayKey(dateString: string) {
   return new Date(dateString).toISOString().slice(0, 10);
 }
 
+function getTodayKey() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function getYesterdayKey() {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return d.toISOString().slice(0, 10);
+}
+
+function formatDelta(value: number) {
+  if (!Number.isFinite(value)) return "0%";
+  const rounded = Math.round(value * 10) / 10;
+  return `${rounded > 0 ? "+" : ""}${rounded}%`;
+}
+
+function calcPercentChange(today: number, yesterday: number) {
+  if (yesterday === 0 && today === 0) return 0;
+  if (yesterday === 0 && today > 0) return 100;
+  return ((today - yesterday) / yesterday) * 100;
+}
+
+function deltaClass(value: number) {
+  if (value > 0) return "text-emerald-600";
+  if (value < 0) return "text-red-600";
+  return "text-gray-500";
+}
+
 export default function AdminStatisticsPage() {
   const [range, setRange] = useState<RangeKey>("7d");
   const [orders, setOrders] = useState<OrderRow[]>([]);
@@ -384,6 +412,41 @@ export default function AdminStatisticsPage() {
     return dailyStats.reduce((max, item) => Math.max(max, item.revenue), 0) || 1;
   }, [dailyStats]);
 
+  const todayVsYesterday = useMemo(() => {
+    const todayKey = getTodayKey();
+    const yesterdayKey = getYesterdayKey();
+
+    const todayOrders = orders.filter((order) => getDayKey(order.created_at) === todayKey);
+    const yesterdayOrders = orders.filter(
+      (order) => getDayKey(order.created_at) === yesterdayKey
+    );
+
+    const todayActive = todayOrders.filter((order) => order.status !== "Отменен");
+    const yesterdayActive = yesterdayOrders.filter(
+      (order) => order.status !== "Отменен"
+    );
+
+    const todayRevenue = todayActive.reduce((sum, order) => sum + order.total, 0);
+    const yesterdayRevenue = yesterdayActive.reduce((sum, order) => sum + order.total, 0);
+
+    const todayPaid = todayOrders.filter((order) => order.status === "Оплачен").length;
+    const yesterdayPaid = yesterdayOrders.filter(
+      (order) => order.status === "Оплачен"
+    ).length;
+
+    return {
+      todayOrders: todayActive.length,
+      yesterdayOrders: yesterdayActive.length,
+      todayRevenue,
+      yesterdayRevenue,
+      todayPaid,
+      yesterdayPaid,
+      ordersDelta: calcPercentChange(todayActive.length, yesterdayActive.length),
+      revenueDelta: calcPercentChange(todayRevenue, yesterdayRevenue),
+      paidDelta: calcPercentChange(todayPaid, yesterdayPaid),
+    };
+  }, [orders]);
+
   return (
     <>
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -434,6 +497,38 @@ export default function AdminStatisticsPage() {
             ))}
           </section>
 
+          <section className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="rounded-[28px] bg-white p-5 shadow-sm">
+              <p className="text-sm text-gray-500">Сегодня заказов</p>
+              <p className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-black">
+                {todayVsYesterday.todayOrders.toLocaleString("ru-RU")}
+              </p>
+              <p className={`mt-2 text-sm ${deltaClass(todayVsYesterday.ordersDelta)}`}>
+                к вчера: {formatDelta(todayVsYesterday.ordersDelta)}
+              </p>
+            </div>
+
+            <div className="rounded-[28px] bg-white p-5 shadow-sm">
+              <p className="text-sm text-gray-500">Сегодня выручка</p>
+              <p className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-black">
+                {todayVsYesterday.todayRevenue.toLocaleString("ru-RU")} ₽
+              </p>
+              <p className={`mt-2 text-sm ${deltaClass(todayVsYesterday.revenueDelta)}`}>
+                к вчера: {formatDelta(todayVsYesterday.revenueDelta)}
+              </p>
+            </div>
+
+            <div className="rounded-[28px] bg-white p-5 shadow-sm">
+              <p className="text-sm text-gray-500">Сегодня оплачено</p>
+              <p className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-black">
+                {todayVsYesterday.todayPaid.toLocaleString("ru-RU")}
+              </p>
+              <p className={`mt-2 text-sm ${deltaClass(todayVsYesterday.paidDelta)}`}>
+                к вчера: {formatDelta(todayVsYesterday.paidDelta)}
+              </p>
+            </div>
+          </section>
+
           <section className="mb-6 grid grid-cols-1 gap-6 xl:grid-cols-[1.1fr_0.9fr]">
             <div className="rounded-[28px] bg-white p-5 shadow-sm">
               <h2 className="text-lg font-medium text-black">Воронка заказов</h2>
@@ -478,7 +573,10 @@ export default function AdminStatisticsPage() {
               ) : (
                 <div className="mt-5 space-y-4">
                   {dailyStats.map((item) => {
-                    const width = Math.max((item.revenue / maxDailyRevenue) * 100, item.revenue > 0 ? 8 : 0);
+                    const width = Math.max(
+                      (item.revenue / maxDailyRevenue) * 100,
+                      item.revenue > 0 ? 8 : 0
+                    );
 
                     return (
                       <div key={item.date}>
