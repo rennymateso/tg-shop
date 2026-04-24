@@ -15,28 +15,17 @@ type ProductCategory =
 
 type ColorGalleryMap = Record<string, string[]>;
 
-type BadgeRow = {
+type BrandRow = {
   id: string;
   name: string;
   created_at: string;
 };
 
-const brandOptions = [
-  "Lacoste",
-  "Polo Ralph Lauren",
-  "Tommy Hilfiger",
-  "Calvin Klein",
-  "GANT",
-  "BOSS",
-  "Emporio Armani",
-  "Armani Exchange",
-  "Beymen Club",
-  "Loro Piana",
-  "Brunello Cucinelli",
-  "BORZ",
-  "Massimo Carino",
-  "Другие бренды",
-] as const;
+type BadgeRow = {
+  id: string;
+  name: string;
+  created_at: string;
+};
 
 const categoryOptions: ProductCategory[] = [
   "Футболки",
@@ -101,11 +90,14 @@ function createProductId() {
 export default function AdminNewProductPage() {
   const router = useRouter();
 
+  const [brands, setBrands] = useState<BrandRow[]>([]);
+  const [brandsLoading, setBrandsLoading] = useState(true);
+
   const [badges, setBadges] = useState<BadgeRow[]>([]);
   const [badgesLoading, setBadgesLoading] = useState(true);
 
   const [name, setName] = useState("");
-  const [brand, setBrand] = useState<(typeof brandOptions)[number]>("Lacoste");
+  const [brand, setBrand] = useState("");
   const [category, setCategory] = useState<ProductCategory>("Поло");
   const [price, setPrice] = useState("");
   const [oldPrice, setOldPrice] = useState("");
@@ -120,6 +112,37 @@ export default function AdminNewProductPage() {
   const [message, setMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingImages, setIsUploadingImages] = useState(false);
+
+  useEffect(() => {
+    const loadBrands = async () => {
+      setBrandsLoading(true);
+
+      const { data, error } = await supabase
+        .from("brands")
+        .select("*")
+        .order("name", { ascending: true });
+
+      if (error) {
+        setMessage(`Ошибка загрузки брендов: ${error.message}`);
+        setBrands([]);
+        setBrandsLoading(false);
+        return;
+      }
+
+      const safeBrands = (data || []) as BrandRow[];
+      setBrands(safeBrands);
+
+      if (safeBrands.length > 0) {
+        setBrand(safeBrands[0].name);
+      } else {
+        setBrand("");
+      }
+
+      setBrandsLoading(false);
+    };
+
+    loadBrands();
+  }, []);
 
   useEffect(() => {
     const loadBadges = async () => {
@@ -137,8 +160,7 @@ export default function AdminNewProductPage() {
         return;
       }
 
-      const safeBadges = (data || []) as BadgeRow[];
-      setBadges(safeBadges);
+      setBadges((data || []) as BadgeRow[]);
       setBadgesLoading(false);
     };
 
@@ -216,7 +238,6 @@ export default function AdminNewProductPage() {
       setMessage("");
 
       const tempProductId = article.trim() || makeArticle(name) || createProductId();
-
       const pickedFiles = Array.from(files).slice(0, freeSlots);
       const uploadedUrls: string[] = [];
 
@@ -283,6 +304,11 @@ export default function AdminNewProductPage() {
   const handleSave = async () => {
     if (!name.trim()) {
       setMessage("Введите название товара");
+      return;
+    }
+
+    if (!brand.trim()) {
+      setMessage("Сначала добавь бренд в разделе Бренды");
       return;
     }
 
@@ -355,7 +381,7 @@ export default function AdminNewProductPage() {
 
   const handleClear = () => {
     setName("");
-    setBrand("Lacoste");
+    setBrand(brands[0]?.name || "");
     setCategory("Поло");
     setPrice("");
     setOldPrice("");
@@ -418,14 +444,21 @@ export default function AdminNewProductPage() {
                 <label className="mb-2 block text-sm text-gray-500">Бренд</label>
                 <select
                   value={brand}
-                  onChange={(e) =>
-                    setBrand(e.target.value as (typeof brandOptions)[number])
-                  }
-                  className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
+                  onChange={(e) => setBrand(e.target.value)}
+                  disabled={brandsLoading || brands.length === 0}
+                  className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none disabled:opacity-60"
                 >
-                  {brandOptions.map((item) => (
-                    <option key={item}>{item}</option>
-                  ))}
+                  {brands.length === 0 ? (
+                    <option value="">
+                      {brandsLoading ? "Загрузка брендов..." : "Нет брендов"}
+                    </option>
+                  ) : (
+                    brands.map((item) => (
+                      <option key={item.id} value={item.name}>
+                        {item.name}
+                      </option>
+                    ))
+                  )}
                 </select>
               </div>
 
@@ -724,7 +757,7 @@ export default function AdminNewProductPage() {
 
               <button
                 onClick={handleSave}
-                disabled={isSaving || isUploadingImages || badgesLoading}
+                disabled={isSaving || isUploadingImages || brandsLoading || badgesLoading}
                 className="rounded-2xl bg-black px-5 py-3 text-sm font-medium text-white disabled:opacity-60"
               >
                 {isSaving ? "Сохраняем..." : "Сохранить товар"}
@@ -750,7 +783,7 @@ export default function AdminNewProductPage() {
 
               <div className="p-3">
                 <p className="text-[10px] uppercase tracking-[0.14em] text-gray-400">
-                  {brand}
+                  {brand || "Бренд"}
                 </p>
 
                 <h3 className="mt-2 text-[15px] font-medium text-black">
