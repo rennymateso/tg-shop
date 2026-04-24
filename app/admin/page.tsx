@@ -347,7 +347,8 @@ export default function AdminPage() {
 
     return dailyPoints
       .map((item, index) => {
-        const x = dailyPoints.length === 1 ? width / 2 : (index / (dailyPoints.length - 1)) * width;
+        const x =
+          dailyPoints.length === 1 ? width / 2 : (index / (dailyPoints.length - 1)) * width;
         const y = height - (item.revenue / maxRevenue) * height;
         return `${x},${Number.isFinite(y) ? y : height}`;
       })
@@ -402,6 +403,58 @@ export default function AdminPage() {
         </div>
       )}
 
+      <section className="mb-6 rounded-[28px] bg-white p-5 shadow-sm">
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-medium">Продажи за 7 дней</h3>
+            <p className="text-sm text-gray-500">Реальные данные по выручке</p>
+          </div>
+
+          <Link
+            href="/admin/statistics"
+            className="rounded-2xl bg-[#F5F5F5] px-4 py-2 text-sm text-gray-700"
+          >
+            Вся статистика
+          </Link>
+        </div>
+
+        {loading ? (
+          <div className="rounded-[24px] bg-[#F7F7F7] p-6 text-center text-sm text-gray-500">
+            Загрузка графика...
+          </div>
+        ) : (
+          <div className="rounded-[24px] bg-[#F7F7F7] p-4">
+            <svg
+              viewBox="0 0 100 40"
+              className="h-40 w-full overflow-visible"
+              preserveAspectRatio="none"
+            >
+              <polyline
+                fill="none"
+                stroke="black"
+                strokeWidth="2"
+                points={chartPoints}
+                vectorEffect="non-scaling-stroke"
+              />
+            </svg>
+
+            <div className="mt-3 grid grid-cols-7 gap-2">
+              {dailyPoints.map((item) => (
+                <div key={item.date} className="text-center">
+                  <p className="text-[11px] text-gray-400">{item.label}</p>
+                  <p className="mt-1 text-xs font-medium text-black">
+                    {item.revenue.toLocaleString("ru-RU")} ₽
+                  </p>
+                  <p className="mt-1 text-[11px] text-gray-500">
+                    {item.orders} зак.
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </section>
+
       <section className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((item) => (
           <div key={item.title} className="rounded-[28px] bg-white p-5 shadow-sm">
@@ -418,93 +471,37 @@ export default function AdminPage() {
       </section>
 
       <section className="grid grid-cols-1 gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-        <div className="space-y-6">
-          <div className="rounded-[28px] bg-white p-5 shadow-sm">
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-medium">Продажи за 7 дней</h3>
-                <p className="text-sm text-gray-500">Реальные данные по выручке</p>
-              </div>
+        <div className="rounded-[28px] bg-white p-5 shadow-sm">
+          <h3 className="text-lg font-medium">Быстрые действия</h3>
 
-              <Link
-                href="/admin/statistics"
-                className="rounded-2xl bg-[#F5F5F5] px-4 py-2 text-sm text-gray-700"
-              >
-                Вся статистика
-              </Link>
-            </div>
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Link
+              href="/admin/orders"
+              className="rounded-2xl bg-[#F7F7F7] p-4 text-sm text-gray-700"
+            >
+              Открыть все заказы
+            </Link>
 
-            {loading ? (
-              <div className="rounded-[24px] bg-[#F7F7F7] p-6 text-center text-sm text-gray-500">
-                Загрузка графика...
-              </div>
-            ) : (
-              <>
-                <div className="rounded-[24px] bg-[#F7F7F7] p-4">
-                  <svg
-                    viewBox="0 0 100 40"
-                    className="h-40 w-full overflow-visible"
-                    preserveAspectRatio="none"
-                  >
-                    <polyline
-                      fill="none"
-                      stroke="black"
-                      strokeWidth="2"
-                      points={chartPoints}
-                      vectorEffect="non-scaling-stroke"
-                    />
-                  </svg>
+            <Link
+              href="/admin/products"
+              className="rounded-2xl bg-[#F7F7F7] p-4 text-sm text-gray-700"
+            >
+              Открыть товары
+            </Link>
 
-                  <div className="mt-3 grid grid-cols-7 gap-2">
-                    {dailyPoints.map((item) => (
-                      <div key={item.date} className="text-center">
-                        <p className="text-[11px] text-gray-400">{item.label}</p>
-                        <p className="mt-1 text-xs font-medium text-black">
-                          {item.revenue.toLocaleString("ru-RU")} ₽
-                        </p>
-                        <p className="mt-1 text-[11px] text-gray-500">
-                          {item.orders} зак.
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
+            <Link
+              href="/admin/brands"
+              className="rounded-2xl bg-[#F7F7F7] p-4 text-sm text-gray-700"
+            >
+              Управлять брендами
+            </Link>
 
-          <div className="rounded-[28px] bg-white p-5 shadow-sm">
-            <h3 className="text-lg font-medium">Быстрые действия</h3>
-
-            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Link
-                href="/admin/orders"
-                className="rounded-2xl bg-[#F7F7F7] p-4 text-sm text-gray-700"
-              >
-                Открыть все заказы
-              </Link>
-
-              <Link
-                href="/admin/products"
-                className="rounded-2xl bg-[#F7F7F7] p-4 text-sm text-gray-700"
-              >
-                Открыть товары
-              </Link>
-
-              <Link
-                href="/admin/brands"
-                className="rounded-2xl bg-[#F7F7F7] p-4 text-sm text-gray-700"
-              >
-                Управлять брендами
-              </Link>
-
-              <Link
-                href="/admin/badges"
-                className="rounded-2xl bg-[#F7F7F7] p-4 text-sm text-gray-700"
-              >
-                Управлять бейджами
-              </Link>
-            </div>
+            <Link
+              href="/admin/badges"
+              className="rounded-2xl bg-[#F7F7F7] p-4 text-sm text-gray-700"
+            >
+              Управлять бейджами
+            </Link>
           </div>
         </div>
 
@@ -582,7 +579,7 @@ export default function AdminPage() {
                 1. Главная панель показывает реальные заказы и выручку.
               </div>
               <div className="rounded-2xl bg-[#F7F7F7] p-4">
-                2. Мини-график помогает быстро понять динамику продаж.
+                2. Мини-график теперь стоит выше и сразу виден.
               </div>
               <div className="rounded-2xl bg-[#F7F7F7] p-4">
                 3. Полная аналитика доступна в разделе статистики.
