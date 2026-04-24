@@ -13,20 +13,6 @@ type OrderStatus =
   | "Доставлен"
   | "Отменен";
 
-type ProductStatus = "Активен" | "Скрыт";
-
-type ProductRow = {
-  id: string;
-  name: string;
-  brand: string;
-  category: string;
-  price: number;
-  old_price: number;
-  badge: string | null;
-  status: ProductStatus;
-  created_at: string;
-};
-
 type OrderRowDb = {
   id: string;
   customer: string;
@@ -54,6 +40,11 @@ type OrderItemRow = {
   created_at: string;
 };
 
+type ProductRow = {
+  id: string;
+  status: "Активен" | "Скрыт";
+};
+
 type DashboardOrder = {
   id: string;
   customer: string;
@@ -62,6 +53,13 @@ type DashboardOrder = {
   items: number;
   status: OrderStatus;
   createdAt: string;
+};
+
+type DailyPoint = {
+  date: string;
+  label: string;
+  revenue: number;
+  orders: number;
 };
 
 function statusClass(status: OrderStatus) {
@@ -111,12 +109,22 @@ function calcPercentChange(current: number, previous: number) {
   return Math.round(((current - previous) / previous) * 100);
 }
 
+function getDayKey(dateString: string) {
+  return new Date(dateString).toISOString().slice(0, 10);
+}
+
+function getDayLabel(dateString: string) {
+  return new Date(dateString).toLocaleDateString("ru-RU", {
+    day: "2-digit",
+    month: "2-digit",
+  });
+}
+
 export default function AdminPage() {
-  const [search, setSearch] = useState("");
-  const [products, setProducts] = useState<ProductRow[]>([]);
   const [orders, setOrders] = useState<DashboardOrder[]>([]);
   const [allOrders, setAllOrders] = useState<OrderRowDb[]>([]);
   const [allOrderItems, setAllOrderItems] = useState<OrderItemRow[]>([]);
+  const [products, setProducts] = useState<ProductRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
 
@@ -126,8 +134,7 @@ export default function AdminPage() {
 
     const { data: productsData, error: productsError } = await supabase
       .from("products")
-      .select("id,name,brand,category,price,old_price,badge,status,created_at")
-      .order("created_at", { ascending: false });
+      .select("id,status");
 
     if (productsError) {
       setMessage(`Ошибка загрузки товаров: ${productsError.message}`);
@@ -187,7 +194,7 @@ export default function AdminPage() {
 
     setAllOrderItems(safeItems);
 
-    const dashboardOrders: DashboardOrder[] = safeOrders.slice(0, 5).map((order) => ({
+    const dashboardOrders: DashboardOrder[] = safeOrders.slice(0, 6).map((order) => ({
       id: order.id,
       customer: order.customer,
       phone: order.phone,
@@ -233,22 +240,6 @@ export default function AdminPage() {
       supabase.removeChannel(channel);
     };
   }, []);
-
-  const filteredProducts = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return products.slice(0, 6);
-
-    return products
-      .filter((item) => {
-        return (
-          item.name.toLowerCase().includes(q) ||
-          item.brand.toLowerCase().includes(q) ||
-          item.category.toLowerCase().includes(q) ||
-          item.id.toLowerCase().includes(q)
-        );
-      })
-      .slice(0, 6);
-  }, [products, search]);
 
   const stats = useMemo(() => {
     const todayStart = getTodayStartIso();
@@ -311,6 +302,58 @@ export default function AdminPage() {
     ];
   }, [allOrders, allOrderItems, products]);
 
+  const dailyPoints = useMemo<DailyPoint[]>(() => {
+    const start = new Date();
+    start.setDate(start.getDate() - 6);
+    start.setHours(0, 0, 0, 0);
+
+    const map = new Map<string, DailyPoint>();
+
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      const iso = d.toISOString();
+      const key = getDayKey(iso);
+      map.set(key, {
+        date: key,
+        label: getDayLabel(iso),
+        revenue: 0,
+        orders: 0,
+      });
+    }
+
+    allOrders.forEach((order) => {
+      const key = getDayKey(order.created_at);
+      const point = map.get(key);
+      if (!point) return;
+
+      point.orders += 1;
+      if (order.status !== "Отменен") {
+        point.revenue += order.total;
+      }
+    });
+
+    return Array.from(map.values());
+  }, [allOrders]);
+
+  const maxRevenue = useMemo(() => {
+    return dailyPoints.reduce((max, item) => Math.max(max, item.revenue), 0) || 1;
+  }, [dailyPoints]);
+
+  const chartPoints = useMemo(() => {
+    if (dailyPoints.length === 0) return "";
+    const width = 100;
+    const height = 36;
+
+    return dailyPoints
+      .map((item, index) => {
+        const x = dailyPoints.length === 1 ? width / 2 : (index / (dailyPoints.length - 1)) * width;
+        const y = height - (item.revenue / maxRevenue) * height;
+        return `${x},${Number.isFinite(y) ? y : height}`;
+      })
+      .join(" ");
+  }, [dailyPoints, maxRevenue]);
+
   const updateOrderStatus = async (id: string, status: OrderStatus) => {
     const { error } = await supabase
       .from("orders")
@@ -337,15 +380,12 @@ export default function AdminPage() {
         </div>
 
         <div className="flex flex-col gap-3 sm:flex-row">
-          <div className="flex items-center gap-2 rounded-2xl bg-white px-4 py-3 shadow-sm">
-            <span className="text-gray-400">⌕</span>
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Поиск товаров, брендов, заказов"
-              className="w-full bg-transparent text-sm outline-none placeholder:text-gray-400 sm:w-72"
-            />
-          </div>
+          <Link
+            href="/admin/statistics"
+            className="rounded-2xl bg-white px-5 py-3 text-center text-sm font-medium text-gray-700 shadow-sm"
+          >
+            Открыть статистику
+          </Link>
 
           <Link
             href="/admin/products/new"
@@ -377,88 +417,95 @@ export default function AdminPage() {
         ))}
       </section>
 
-      <section className="grid grid-cols-1 gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-        <div className="rounded-[28px] bg-white p-5 shadow-sm">
-          <div className="mb-4 flex items-center justify-between gap-4">
-            <div>
-              <h3 className="text-lg font-medium">Товары</h3>
-              <p className="text-sm text-gray-500">Быстрое управление каталогом</p>
+      <section className="grid grid-cols-1 gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+        <div className="space-y-6">
+          <div className="rounded-[28px] bg-white p-5 shadow-sm">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-medium">Продажи за 7 дней</h3>
+                <p className="text-sm text-gray-500">Реальные данные по выручке</p>
+              </div>
+
+              <Link
+                href="/admin/statistics"
+                className="rounded-2xl bg-[#F5F5F5] px-4 py-2 text-sm text-gray-700"
+              >
+                Вся статистика
+              </Link>
             </div>
-            <Link
-              href="/admin/products"
-              className="rounded-2xl bg-[#F5F5F5] px-4 py-2 text-sm text-gray-700"
-            >
-              Все товары
-            </Link>
+
+            {loading ? (
+              <div className="rounded-[24px] bg-[#F7F7F7] p-6 text-center text-sm text-gray-500">
+                Загрузка графика...
+              </div>
+            ) : (
+              <>
+                <div className="rounded-[24px] bg-[#F7F7F7] p-4">
+                  <svg
+                    viewBox="0 0 100 40"
+                    className="h-40 w-full overflow-visible"
+                    preserveAspectRatio="none"
+                  >
+                    <polyline
+                      fill="none"
+                      stroke="black"
+                      strokeWidth="2"
+                      points={chartPoints}
+                      vectorEffect="non-scaling-stroke"
+                    />
+                  </svg>
+
+                  <div className="mt-3 grid grid-cols-7 gap-2">
+                    {dailyPoints.map((item) => (
+                      <div key={item.date} className="text-center">
+                        <p className="text-[11px] text-gray-400">{item.label}</p>
+                        <p className="mt-1 text-xs font-medium text-black">
+                          {item.revenue.toLocaleString("ru-RU")} ₽
+                        </p>
+                        <p className="mt-1 text-[11px] text-gray-500">
+                          {item.orders} зак.
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
-          {loading ? (
-            <div className="rounded-[24px] bg-[#F7F7F7] p-6 text-center text-sm text-gray-500">
-              Загрузка товаров...
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-left">
-                <thead>
-                  <tr className="border-b border-black/5 text-xs uppercase tracking-[0.18em] text-gray-400">
-                    <th className="pb-3 pr-4 font-medium">Товар</th>
-                    <th className="pb-3 pr-4 font-medium">Бренд</th>
-                    <th className="pb-3 pr-4 font-medium">Цена</th>
-                    <th className="pb-3 pr-4 font-medium">Бейдж</th>
-                    <th className="pb-3 font-medium">Статус</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredProducts.map((item) => (
-                    <tr
-                      key={item.id}
-                      className="border-b border-black/5 last:border-b-0"
-                    >
-                      <td className="py-4 pr-4">
-                        <div>
-                          <p className="text-sm font-medium">{item.name}</p>
-                          <p className="mt-1 text-xs text-gray-400">
-                            {item.id} • {item.category}
-                          </p>
-                        </div>
-                      </td>
-                      <td className="py-4 pr-4 text-sm text-gray-600">{item.brand}</td>
-                      <td className="py-4 pr-4">
-                        <div className="flex flex-col">
-                          <span className="text-sm font-medium text-emerald-600">
-                            {item.price.toLocaleString("ru-RU")} ₽
-                          </span>
-                          <span className="text-xs text-gray-400 line-through">
-                            {item.old_price.toLocaleString("ru-RU")} ₽
-                          </span>
-                        </div>
-                      </td>
-                      <td className="py-4 pr-4">
-                        <span className="rounded-full bg-[#F5F5F5] px-2.5 py-1 text-xs text-gray-700">
-                          {item.badge || "Без бейджа"}
-                        </span>
-                      </td>
-                      <td className="py-4">
-                        <span
-                          className={`rounded-full px-2.5 py-1 text-xs ${
-                            item.status === "Активен"
-                              ? "bg-emerald-100 text-emerald-700"
-                              : "bg-gray-100 text-gray-500"
-                          }`}
-                        >
-                          {item.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          <div className="rounded-[28px] bg-white p-5 shadow-sm">
+            <h3 className="text-lg font-medium">Быстрые действия</h3>
 
-              {filteredProducts.length === 0 && (
-                <div className="pt-4 text-sm text-gray-500">Ничего не найдено</div>
-              )}
+            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Link
+                href="/admin/orders"
+                className="rounded-2xl bg-[#F7F7F7] p-4 text-sm text-gray-700"
+              >
+                Открыть все заказы
+              </Link>
+
+              <Link
+                href="/admin/products"
+                className="rounded-2xl bg-[#F7F7F7] p-4 text-sm text-gray-700"
+              >
+                Открыть товары
+              </Link>
+
+              <Link
+                href="/admin/brands"
+                className="rounded-2xl bg-[#F7F7F7] p-4 text-sm text-gray-700"
+              >
+                Управлять брендами
+              </Link>
+
+              <Link
+                href="/admin/badges"
+                className="rounded-2xl bg-[#F7F7F7] p-4 text-sm text-gray-700"
+              >
+                Управлять бейджами
+              </Link>
             </div>
-          )}
+          </div>
         </div>
 
         <div className="space-y-6">
@@ -532,13 +579,13 @@ export default function AdminPage() {
             <h3 className="text-lg font-medium">Что дальше</h3>
             <div className="mt-4 space-y-3 text-sm text-gray-600">
               <div className="rounded-2xl bg-[#F7F7F7] p-4">
-                1. Главная панель уже показывает реальные товары и реальные заказы.
+                1. Главная панель показывает реальные заказы и выручку.
               </div>
               <div className="rounded-2xl bg-[#F7F7F7] p-4">
-                2. Статусы заказов обновляются прямо отсюда и сохраняются в базе.
+                2. Мини-график помогает быстро понять динамику продаж.
               </div>
               <div className="rounded-2xl bg-[#F7F7F7] p-4">
-                3. Следующим шагом можно добавить графики и KPI по продажам.
+                3. Полная аналитика доступна в разделе статистики.
               </div>
             </div>
           </div>
