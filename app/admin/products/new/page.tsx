@@ -1,18 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../../lib/supabase";
 import { uploadProductImage } from "../../../lib/upload-product-image";
 
 type ProductStatus = "Активен" | "Скрыт";
-type BadgeType =
-  | "Без бейджа"
-  | "Новинка"
-  | "Скидка"
-  | "В наличии"
-  | "Из-за рубежа";
-
 type ProductCategory =
   | "Футболки"
   | "Поло"
@@ -21,6 +14,12 @@ type ProductCategory =
   | "Костюмы";
 
 type ColorGalleryMap = Record<string, string[]>;
+
+type BadgeRow = {
+  id: string;
+  name: string;
+  created_at: string;
+};
 
 const brandOptions = [
   "Lacoste",
@@ -45,14 +44,6 @@ const categoryOptions: ProductCategory[] = [
   "Джинсы",
   "Брюки",
   "Костюмы",
-];
-
-const badgeOptions: BadgeType[] = [
-  "Без бейджа",
-  "Новинка",
-  "Скидка",
-  "В наличии",
-  "Из-за рубежа",
 ];
 
 const statusOptions: ProductStatus[] = ["Активен", "Скрыт"];
@@ -110,12 +101,15 @@ function createProductId() {
 export default function AdminNewProductPage() {
   const router = useRouter();
 
+  const [badges, setBadges] = useState<BadgeRow[]>([]);
+  const [badgesLoading, setBadgesLoading] = useState(true);
+
   const [name, setName] = useState("");
   const [brand, setBrand] = useState<(typeof brandOptions)[number]>("Lacoste");
   const [category, setCategory] = useState<ProductCategory>("Поло");
   const [price, setPrice] = useState("");
   const [oldPrice, setOldPrice] = useState("");
-  const [badge, setBadge] = useState<BadgeType>("Без бейджа");
+  const [badge, setBadge] = useState("Без бейджа");
   const [status, setStatus] = useState<ProductStatus>("Активен");
   const [description, setDescription] = useState("");
   const [article, setArticle] = useState("");
@@ -126,6 +120,30 @@ export default function AdminNewProductPage() {
   const [message, setMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingImages, setIsUploadingImages] = useState(false);
+
+  useEffect(() => {
+    const loadBadges = async () => {
+      setBadgesLoading(true);
+
+      const { data, error } = await supabase
+        .from("badges")
+        .select("*")
+        .order("name", { ascending: true });
+
+      if (error) {
+        setMessage(`Ошибка загрузки бейджей: ${error.message}`);
+        setBadges([]);
+        setBadgesLoading(false);
+        return;
+      }
+
+      const safeBadges = (data || []) as BadgeRow[];
+      setBadges(safeBadges);
+      setBadgesLoading(false);
+    };
+
+    loadBadges();
+  }, []);
 
   const discountPercent = useMemo(() => {
     const p = Number(price);
@@ -198,48 +216,28 @@ export default function AdminNewProductPage() {
       setMessage("");
 
       const tempProductId = article.trim() || makeArticle(name) || createProductId();
+
       const pickedFiles = Array.from(files).slice(0, freeSlots);
       const uploadedUrls: string[] = [];
 
       for (const file of pickedFiles) {
-        console.log("START_UPLOAD", {
-          name: file.name,
-          size: file.size,
-          type: file.type,
-          tempProductId,
-          color,
-        });
-
         const publicUrl = await uploadProductImage(file, tempProductId, color);
-
-        console.log("UPLOADED_URL", publicUrl);
-
-        if (!publicUrl) {
-          throw new Error("publicUrl пустой");
-        }
-
         uploadedUrls.push(publicUrl);
       }
 
-      console.log("ALL_UPLOADED_URLS", uploadedUrls);
-
-      setColorImages((prev) => {
-        const next = {
-          ...prev,
-          [color]: [...(prev[color] || []), ...uploadedUrls],
-        };
-        console.log("NEXT_COLOR_IMAGES", next);
-        return next;
-      });
+      setColorImages((prev) => ({
+        ...prev,
+        [color]: [...(prev[color] || []), ...uploadedUrls],
+      }));
 
       setActiveColor(color);
-      setMessage(`Фото загружены успешно. Цвет: ${color}. Кол-во: ${uploadedUrls.length}`);
+
+      if (files.length > freeSlots) {
+        setMessage(`Для цвета ${color} добавили только первые 6 фото`);
+      }
     } catch (error) {
-      console.error("UPLOAD_ERROR", error);
       setMessage(
-        error instanceof Error
-          ? `Ошибка загрузки фото: ${error.message}`
-          : "Ошибка загрузки фото"
+        error instanceof Error ? `Ошибка загрузки фото: ${error.message}` : "Ошибка загрузки фото"
       );
     } finally {
       setIsUploadingImages(false);
@@ -327,7 +325,7 @@ export default function AdminNewProductPage() {
         category,
         price: Number(price),
         old_price: Number(oldPrice || price),
-        badge,
+        badge: badge === "Без бейджа" ? null : badge,
         status,
         description: description.trim(),
         article: finalArticle,
@@ -420,7 +418,9 @@ export default function AdminNewProductPage() {
                 <label className="mb-2 block text-sm text-gray-500">Бренд</label>
                 <select
                   value={brand}
-                  onChange={(e) => setBrand(e.target.value as (typeof brandOptions)[number])}
+                  onChange={(e) =>
+                    setBrand(e.target.value as (typeof brandOptions)[number])
+                  }
                   className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
                 >
                   {brandOptions.map((item) => (
@@ -466,11 +466,15 @@ export default function AdminNewProductPage() {
                 <label className="mb-2 block text-sm text-gray-500">Бейдж</label>
                 <select
                   value={badge}
-                  onChange={(e) => setBadge(e.target.value as BadgeType)}
-                  className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
+                  onChange={(e) => setBadge(e.target.value)}
+                  disabled={badgesLoading}
+                  className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none disabled:opacity-60"
                 >
-                  {badgeOptions.map((item) => (
-                    <option key={item}>{item}</option>
+                  <option value="Без бейджа">Без бейджа</option>
+                  {badges.map((item) => (
+                    <option key={item.id} value={item.name}>
+                      {item.name}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -720,7 +724,7 @@ export default function AdminNewProductPage() {
 
               <button
                 onClick={handleSave}
-                disabled={isSaving || isUploadingImages}
+                disabled={isSaving || isUploadingImages || badgesLoading}
                 className="rounded-2xl bg-black px-5 py-3 text-sm font-medium text-white disabled:opacity-60"
               >
                 {isSaving ? "Сохраняем..." : "Сохранить товар"}
