@@ -55,12 +55,22 @@ export default function ProductPageClient({
   const [favorites, setFavorites] = useState<string[]>([]);
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [isAddedToCart, setIsAddedToCart] = useState(false);
 
   const touchStartXRef = useRef<number | null>(null);
+  const addedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const data = JSON.parse(localStorage.getItem("favorites") || "[]");
     setFavorites(Array.isArray(data) ? data : []);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (addedTimeoutRef.current) {
+        clearTimeout(addedTimeoutRef.current);
+      }
+    };
   }, []);
 
   const galleryImages = useMemo(() => {
@@ -127,12 +137,14 @@ export default function ProductPageClient({
         ? prev.filter((item) => item !== value)
         : [...prev, value]
     );
+    setIsAddedToCart(false);
   };
 
   const selectColor = (value: string) => {
     setSelectedColor(value);
     setSelectedSizes([]);
     setActiveImageIndex(0);
+    setIsAddedToCart(false);
   };
 
   const nextImage = () => {
@@ -203,6 +215,16 @@ export default function ProductPageClient({
 
     localStorage.setItem("cart", JSON.stringify(updatedCart));
     window.dispatchEvent(new Event("cart-updated"));
+
+    setIsAddedToCart(true);
+
+    if (addedTimeoutRef.current) {
+      clearTimeout(addedTimeoutRef.current);
+    }
+
+    addedTimeoutRef.current = setTimeout(() => {
+      setIsAddedToCart(false);
+    }, 1800);
   };
 
   if (!product) {
@@ -496,13 +518,25 @@ export default function ProductPageClient({
               onClick={addToCart}
               disabled={!canOrder}
               className={`w-full rounded-2xl py-3.5 text-sm font-medium transition-all duration-200 ${
-                canOrder
-                  ? "bg-black text-white active:scale-[0.99]"
-                  : "bg-gray-200 text-gray-500"
+                !canOrder
+                  ? "bg-gray-200 text-gray-500"
+                  : isAddedToCart
+                  ? "bg-[#16A34A] text-white"
+                  : "bg-black text-white active:scale-[0.99]"
               }`}
             >
-              Добавить в корзину
+              {!canOrder
+                ? "Добавить в корзину"
+                : isAddedToCart
+                ? "Добавлено ✓"
+                : "Добавить в корзину"}
             </button>
+
+            {isAddedToCart && (
+              <p className="mt-2 text-center text-[12px] text-[#16A34A]">
+                Товар добавлен в корзину
+              </p>
+            )}
           </div>
         </div>
       </div>
