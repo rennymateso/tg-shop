@@ -718,18 +718,9 @@ export default function CheckoutPageClient() {
   };
 
   return (
-    <main className="min-h-screen bg-[#F5F5F5] px-4 pt-5 pb-32">
-      <div className="mb-5 flex items-center justify-between">
-        <button
-          onClick={() => router.back()}
-          className="rounded-full bg-white px-4 py-2 text-sm text-gray-600 shadow-[0_4px_16px_rgba(0,0,0,0.04)]"
-        >
-          ← Назад
-        </button>
-
+    <main className="min-h-screen bg-[#F5F5F5] px-4 pt-[76px] pb-32">
+      <div className="mb-5 flex items-center justify-center">
         <h1 className="text-[20px] font-medium">Оформление</h1>
-
-        <div className="w-[86px]" />
       </div>
 
       {paymentStatus === "success" && (

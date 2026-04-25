@@ -5,29 +5,67 @@ import { useRouter } from "next/navigation";
 import BottomNav from "../components/BottomNav";
 import { supabase } from "../lib/supabase";
 
+type CartItem = {
+  id: string;
+  name: string;
+  price: number;
+  size?: string;
+  color?: string;
+  quantity?: number;
+};
+
+type ProductBadge = "Новинка" | "Скидка" | "В наличии" | "Из-за рубежа";
+type ProductCategory = "Футболки" | "Поло" | "Джинсы" | "Брюки" | "Костюмы";
+type ProductBrand =
+  | "Lacoste"
+  | "Polo Ralph Lauren"
+  | "Tommy Hilfiger"
+  | "Calvin Klein"
+  | "GANT"
+  | "BOSS"
+  | "Emporio Armani"
+  | "Armani Exchange"
+  | "Beymen Club"
+  | "Loro Piana"
+  | "Brunello Cucinelli"
+  | "BORZ"
+  | "Massimo Carino"
+  | "Другие бренды";
+
 type Product = {
   id: string;
   name: string;
-  brand: string;
+  brand: ProductBrand;
   price: number;
   oldPrice: number | null;
-  badge: string;
+  badge: ProductBadge;
   image: string;
   images: string[];
-  category: "Футболки" | "Поло" | "Джинсы" | "Брюки" | "Костюмы";
+  colorImages?: Record<string, string>;
+  type: "top" | "bottom";
+  category: ProductCategory;
+  colors: string[];
+  sizes: string[];
+  description: string;
 };
 
 type ProductRow = {
   id: string;
   name: string;
-  brand: string;
-  category: "Футболки" | "Поло" | "Джинсы" | "Брюки" | "Костюмы";
+  brand: ProductBrand;
+  category: ProductCategory;
   price: number;
   old_price: number;
-  badge: string | null;
+  badge: ProductBadge;
   status: "Активен" | "Скрыт";
-  image: string | null;
+  description: string;
+  article: string;
+  sizes: string[] | null;
+  colors: string[] | null;
+  image: string;
   color_images: Record<string, string[]> | null;
+  created_at: string;
+  updated_at: string;
 };
 
 function getDiscountPercent(oldPrice: number | null, price: number) {
@@ -36,20 +74,26 @@ function getDiscountPercent(oldPrice: number | null, price: number) {
 }
 
 function mapRowToProduct(row: ProductRow): Product {
+  const normalizedColorImages: Record<string, string> = {};
+
+  if (row.color_images && typeof row.color_images === "object") {
+    Object.entries(row.color_images).forEach(([color, images]) => {
+      if (Array.isArray(images) && images.length > 0) {
+        normalizedColorImages[color] = images[0];
+      }
+    });
+  }
+
   const galleryFromDb =
     row.color_images && typeof row.color_images === "object"
       ? Object.values(row.color_images)
           .filter((value) => Array.isArray(value))
           .flat()
-          .filter((value) => typeof value === "string" && value.trim().length > 0)
       : [];
 
-  const fallbackImage =
-    (typeof row.image === "string" && row.image.trim()) ||
-    galleryFromDb[0] ||
-    "/products/product-1.jpg";
-
-  const uniqueImages = Array.from(new Set([fallbackImage, ...galleryFromDb]));
+  const uniqueImages = Array.from(
+    new Set([row.image, ...galleryFromDb].filter(Boolean))
+  );
 
   return {
     id: row.id,
@@ -57,233 +101,270 @@ function mapRowToProduct(row: ProductRow): Product {
     brand: row.brand,
     price: row.price,
     oldPrice: row.old_price || null,
-    badge: row.badge || "",
-    image: fallbackImage,
-    images: uniqueImages.length > 0 ? uniqueImages : ["/products/product-1.jpg"],
+    badge: row.badge,
+    image: row.image || uniqueImages[0] || "/products/product-1.jpg",
+    images:
+      uniqueImages.length > 0
+        ? uniqueImages
+        : [row.image || "/products/product-1.jpg"],
+    colorImages: normalizedColorImages,
+    type:
+      row.category === "Джинсы" || row.category === "Брюки"
+        ? "bottom"
+        : "top",
     category: row.category,
+    colors: Array.isArray(row.colors) ? row.colors : [],
+    sizes: Array.isArray(row.sizes) ? row.sizes : [],
+    description: row.description || "",
   };
 }
 
-export default function FavoritesPage() {
+export default function CartPageClient() {
   const router = useRouter();
-  const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [productsMap, setProductsMap] = useState<Record<string, Product>>({});
+  const [loadingProducts, setLoadingProducts] = useState(true);
 
   useEffect(() => {
-    const syncFavorites = () => {
-      try {
-        const saved = JSON.parse(localStorage.getItem("favorites") || "[]");
-        setFavoriteIds(Array.isArray(saved) ? saved : []);
-      } catch {
-        setFavoriteIds([]);
-      }
-    };
-
-    syncFavorites();
-
-    const handleStorage = () => syncFavorites();
-    const handleFocus = () => syncFavorites();
-    const handleFavoritesUpdated = () => syncFavorites();
-
-    window.addEventListener("storage", handleStorage);
-    window.addEventListener("focus", handleFocus);
-    window.addEventListener("favorites-updated", handleFavoritesUpdated);
-
-    return () => {
-      window.removeEventListener("storage", handleStorage);
-      window.removeEventListener("focus", handleFocus);
-      window.removeEventListener("favorites-updated", handleFavoritesUpdated);
-    };
+    const data = JSON.parse(localStorage.getItem("cart") || "[]");
+    setCart(data);
   }, []);
 
   useEffect(() => {
     const loadProducts = async () => {
-      setLoading(true);
+      setLoadingProducts(true);
 
-      const { data, error } = await supabase
-        .from("products")
-        .select("id,name,brand,category,price,old_price,badge,status,image,color_images")
-        .eq("status", "Активен")
-        .order("created_at", { ascending: false });
+      const { data, error } = await supabase.from("products").select("*");
 
       if (error) {
-        setProducts([]);
-        setLoading(false);
+        console.error("Ошибка загрузки товаров для корзины:", error.message);
+        setProductsMap({});
+        setLoadingProducts(false);
         return;
       }
 
       const mapped = ((data || []) as ProductRow[]).map(mapRowToProduct);
-      setProducts(mapped);
-      setLoading(false);
+      const nextMap: Record<string, Product> = {};
+
+      mapped.forEach((product) => {
+        nextMap[product.id] = product;
+      });
+
+      setProductsMap(nextMap);
+      setLoadingProducts(false);
     };
 
     loadProducts();
-
-    const channel = supabase
-      .channel("favorites-products-realtime")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "products" },
-        () => {
-          loadProducts();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, []);
 
-  const favoriteProducts = useMemo(() => {
-    if (favoriteIds.length === 0) return [];
-    return products.filter((p) => favoriteIds.includes(p.id));
-  }, [favoriteIds, products]);
+  const removeItem = (index: number) => {
+    const newCart = [...cart];
+    newCart.splice(index, 1);
+    setCart(newCart);
+    localStorage.setItem("cart", JSON.stringify(newCart));
+  };
 
-  const toggleFavorite = (id: string) => {
-    const updated = favoriteIds.includes(id)
-      ? favoriteIds.filter((item) => item !== id)
-      : [...favoriteIds, id];
+  const clearCart = () => {
+    setCart([]);
+    localStorage.removeItem("cart");
+  };
 
-    setFavoriteIds(updated);
-    localStorage.setItem("favorites", JSON.stringify(updated));
-    window.dispatchEvent(new Event("favorites-updated"));
+  const total = useMemo(
+    () =>
+      cart.reduce(
+        (sum, item) => sum + item.price * (item.quantity ? item.quantity : 1),
+        0
+      ),
+    [cart]
+  );
+
+  const totalOld = useMemo(
+    () =>
+      cart.reduce((sum, item) => {
+        const product = productsMap[item.id];
+        const quantity = item.quantity || 1;
+        const oldPrice = product?.oldPrice ?? item.price;
+        return sum + oldPrice * quantity;
+      }, 0),
+    [cart, productsMap]
+  );
+
+  const getProductById = (id: string) => {
+    return productsMap[id];
+  };
+
+  const goToCheckout = () => {
+    router.push("/checkout");
   };
 
   return (
-    <main className="min-h-screen bg-[#F5F5F5] px-3 pt-5 pb-32">
+    <main className="min-h-screen bg-[#F5F5F5] px-4 pt-5 pb-32">
       <div className="mb-5 flex items-center justify-between">
         <button
           onClick={() => router.back()}
-          className="rounded-full bg-white px-4 py-2 text-sm text-gray-600 shadow-[0_4px_16px_rgba(0,0,0,0.04)]"
+          className="rounded-full bg-white px-4 py-2 text-sm text-gray-600 shadow-[0_4px_16px_rgba(0,0,0,0.04)] transition-transform duration-200 active:scale-95"
         >
           ← Назад
         </button>
 
-        <h1 className="text-[20px] font-medium">Избранное</h1>
+        <h1 className="text-[20px] font-medium">Корзина</h1>
 
-        <div className="w-[86px]" />
+        <button onClick={clearCart} className="text-xs text-gray-400">
+          очистить
+        </button>
       </div>
 
-      {loading ? (
-        <div className="grid grid-cols-2 gap-3">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <div
-              key={`fav-skeleton-${index}`}
-              className="overflow-hidden rounded-[20px] bg-white shadow-[0_10px_28px_rgba(0,0,0,0.05)]"
-            >
-              <div className="aspect-[3/4] animate-pulse bg-[#EAEAEA]" />
-              <div className="p-3">
-                <div className="h-3 w-20 animate-pulse rounded bg-[#ECECEC]" />
-                <div className="mt-3 h-4 w-28 animate-pulse rounded bg-[#ECECEC]" />
-                <div className="mt-3 h-4 w-24 animate-pulse rounded bg-[#ECECEC]" />
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : favoriteProducts.length === 0 ? (
+      {cart.length === 0 && (
         <div className="rounded-[24px] bg-white p-7 text-center shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
-          <p className="text-[16px] font-medium text-black">Избранное пусто</p>
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#F3F3F3]">
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="black"
+              strokeWidth="1.6"
+            >
+              <path d="M6 6h15l-1.5 9h-12z" />
+              <path d="M6 6L5 3H2" />
+              <circle cx="9" cy="20" r="1" />
+              <circle cx="18" cy="20" r="1" />
+            </svg>
+          </div>
+
+          <p className="mt-4 text-[16px] font-medium text-black">
+            Корзина пустая
+          </p>
+
           <p className="mt-2 text-sm text-gray-400">
-            Добавьте товары, чтобы вернуться к ним позже
+            Добавьте товары из каталога
           </p>
 
           <button
             onClick={() => router.push("/")}
-            className="mt-5 rounded-2xl bg-black px-5 py-3 text-sm font-medium text-white"
+            className="mt-5 rounded-2xl bg-black px-5 py-3 text-sm font-medium text-white transition-transform duration-200 active:scale-[0.99]"
           >
             Перейти в каталог
           </button>
         </div>
-      ) : (
-        <div className="grid grid-cols-2 gap-3">
-          {favoriteProducts.map((p) => {
-            const discountPercent = getDiscountPercent(p.oldPrice, p.price);
+      )}
+
+      {cart.length > 0 && (
+        <div className="space-y-4">
+          {loadingProducts && (
+            <div className="rounded-[24px] bg-white p-4 text-sm text-gray-500 shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
+              Обновляем данные товаров...
+            </div>
+          )}
+
+          {cart.map((item, i) => {
+            const product = getProductById(item.id);
+            const quantity = item.quantity || 1;
+            const oldUnitPrice = product?.oldPrice ?? item.price;
+            const discountPercent = getDiscountPercent(product?.oldPrice ?? null, item.price);
 
             return (
               <div
-                key={p.id}
-                onClick={() => router.push(`/product?id=${p.id}`)}
-                className="cursor-pointer overflow-hidden rounded-[20px] bg-white shadow-[0_10px_28px_rgba(0,0,0,0.05)] transition-all duration-300 active:scale-[0.985]"
+                key={`${item.id}-${item.size}-${item.color}-${i}`}
+                className="rounded-[24px] bg-white p-4 shadow-[0_8px_28px_rgba(0,0,0,0.05)]"
               >
-                <div className="relative aspect-[3/4] overflow-hidden bg-[#EAEAEA]">
-                  <img
-                    src={p.image}
-                    alt={p.name}
-                    className="h-full w-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.src = "/products/product-1.jpg";
-                    }}
-                  />
-
-                  {p.badge.trim() && (
-                    <div
-                      className={`absolute left-3 top-3 rounded-full px-2.5 py-1 text-[10px] font-medium backdrop-blur shadow-sm ${
-                        p.badge.trim().toLowerCase() === "из-за рубежа"
-                          ? "bg-black text-white"
-                          : "bg-white/90 text-black"
-                      }`}
-                    >
-                      {p.badge}
-                    </div>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleFavorite(p.id);
-                    }}
-                    className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 backdrop-blur shadow-sm"
-                  >
-                    <svg
-                      width="18"
-                      height="18"
-                      viewBox="0 0 24 24"
-                      fill="black"
-                      stroke="black"
-                      strokeWidth="1.7"
-                    >
-                      <path d="M20.8 4.6c-1.8-1.8-4.7-1.8-6.5 0L12 6.9l-2.3-2.3c-1.8-1.8-4.7-1.8-6.5 0s-1.8 4.7 0 6.5L12 21l8.8-9.9c1.8-1.8 1.8-4.7 0-6.5z" />
-                    </svg>
-                  </button>
-                </div>
-
-                <div className="flex min-h-[150px] flex-col p-3">
-                  <div className="h-[20px] overflow-hidden text-[10px] text-gray-400">
-                    <span className="max-w-[110px] break-words uppercase tracking-[0.14em]">
-                      {p.brand}
-                    </span>
+                <div className="flex gap-4">
+                  <div className="aspect-[3/4] w-[88px] shrink-0 overflow-hidden rounded-[18px] bg-[#ECECEC]">
+                    <img
+                      src={product?.image || "/products/product-1.jpg"}
+                      alt={item.name}
+                      className="h-full w-full object-cover"
+                    />
                   </div>
 
-                  <h3 className="mt-1 min-h-[36px] text-[14px] font-medium leading-[1.2] text-black">
-                    {p.name}
-                  </h3>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="mb-1 text-[11px] uppercase tracking-[0.14em] text-gray-400">
+                          {product?.brand || "MONTREAUX"}
+                        </div>
 
-                  <div className="mt-auto flex items-center justify-between gap-2 pt-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      {p.oldPrice && (
-                        <span className="text-[12px] font-normal leading-none text-gray-400 line-through">
-                          {p.oldPrice} ₽
+                        <h2 className="text-[15px] font-medium leading-[1.3] text-black">
+                          {item.name}
+                        </h2>
+                      </div>
+
+                      <button
+                        onClick={() => removeItem(i)}
+                        className="whitespace-nowrap text-xs text-gray-400"
+                      >
+                        удалить
+                      </button>
+                    </div>
+
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {item.size && (
+                        <span className="rounded-full bg-[#F3F3F3] px-2.5 py-1 text-[11px] text-gray-600">
+                          Размер: {item.size}
                         </span>
                       )}
 
-                      <span className="text-[16px] font-semibold leading-none tracking-[-0.02em] text-[#16A34A]">
-                        {p.price} ₽
+                      {item.color && (
+                        <span className="rounded-full bg-[#F3F3F3] px-2.5 py-1 text-[11px] text-gray-600">
+                          Цвет: {item.color}
+                        </span>
+                      )}
+
+                      <span className="rounded-full bg-[#F3F3F3] px-2.5 py-1 text-[11px] text-gray-600">
+                        Кол-во: {quantity}
                       </span>
+                    </div>
 
-                      {discountPercent > 0 && (
-                        <span className="rounded-full bg-[#E8F7EE] px-1.5 py-0.5 text-[10px] font-medium text-[#16A34A]">
-                          -{discountPercent}%
+                    <div className="mt-4 flex items-center justify-between gap-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {oldUnitPrice > item.price && (
+                          <span className="text-[13px] text-gray-400 line-through">
+                            {oldUnitPrice * quantity} ₽
+                          </span>
+                        )}
+
+                        <span className="text-[16px] font-semibold tracking-[-0.02em] text-[#16A34A]">
+                          {item.price * quantity} ₽
                         </span>
-                      )}
+
+                        {discountPercent > 0 && (
+                          <span className="rounded-full bg-[#E8F7EE] px-1.5 py-0.5 text-[10px] font-medium text-[#16A34A]">
+                            -{discountPercent}%
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             );
           })}
+
+          <div className="rounded-[24px] border border-white bg-white p-4 shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
+            <div className="mb-3 flex items-center justify-between">
+              <span className="text-sm text-gray-500">Итого</span>
+
+              <div className="flex items-center gap-2">
+                {totalOld > total && (
+                  <span className="text-[13px] text-gray-400 line-through">
+                    {totalOld} ₽
+                  </span>
+                )}
+
+                <span className="text-[18px] font-semibold tracking-[-0.02em] text-[#16A34A]">
+                  {total} ₽
+                </span>
+              </div>
+            </div>
+
+            <button
+              onClick={goToCheckout}
+              className="w-full rounded-2xl bg-black py-3.5 text-sm font-medium text-white"
+            >
+              Оформить заказ
+            </button>
+          </div>
         </div>
       )}
 

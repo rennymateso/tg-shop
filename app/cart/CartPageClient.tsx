@@ -128,7 +128,7 @@ export default function CartPageClient() {
 
   useEffect(() => {
     const data = JSON.parse(localStorage.getItem("cart") || "[]");
-    setCart(data);
+    setCart(Array.isArray(data) ? data : []);
   }, []);
 
   useEffect(() => {
@@ -163,11 +163,13 @@ export default function CartPageClient() {
     newCart.splice(index, 1);
     setCart(newCart);
     localStorage.setItem("cart", JSON.stringify(newCart));
+    window.dispatchEvent(new Event("cart-updated"));
   };
 
   const clearCart = () => {
     setCart([]);
     localStorage.removeItem("cart");
+    window.dispatchEvent(new Event("cart-updated"));
   };
 
   const total = useMemo(
@@ -199,17 +201,10 @@ export default function CartPageClient() {
   };
 
   return (
-    <main className="min-h-screen bg-[#F5F5F5] px-4 pt-5 pb-32">
+    <main className="min-h-screen bg-[#F5F5F5] px-4 pt-[76px] pb-32">
       <div className="mb-5 flex items-center justify-between">
-        <button
-          onClick={() => router.back()}
-          className="rounded-full bg-white px-4 py-2 text-sm text-gray-600 shadow-[0_4px_16px_rgba(0,0,0,0.04)] transition-transform duration-200 active:scale-95"
-        >
-          ← Назад
-        </button>
-
+        <div className="w-[70px]" />
         <h1 className="text-[20px] font-medium">Корзина</h1>
-
         <button onClick={clearCart} className="text-xs text-gray-400">
           очистить
         </button>
@@ -262,7 +257,10 @@ export default function CartPageClient() {
             const product = getProductById(item.id);
             const quantity = item.quantity || 1;
             const oldUnitPrice = product?.oldPrice ?? item.price;
-            const discountPercent = getDiscountPercent(product?.oldPrice ?? null, item.price);
+            const discountPercent = getDiscountPercent(
+              product?.oldPrice ?? null,
+              item.price
+            );
 
             return (
               <div
