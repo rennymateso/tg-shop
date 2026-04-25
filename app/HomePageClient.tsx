@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect, useMemo, useRef } from "react";
 import BottomNav from "./components/BottomNav";
 import AppSplash from "./components/AppSplash";
+import { getTelegramWebApp } from "./lib/telegram-mini-app";
 
 const categories = ["Все", "Футболки", "Поло", "Джинсы", "Брюки", "Костюмы"] as const;
 const sortOptions = ["По умолчанию", "Сначала дешевле", "Сначала дороже"] as const;
@@ -85,6 +86,12 @@ export default function HomePageClient({
   const touchStartMapRef = useRef<Record<string, number | null>>({});
 
   useEffect(() => {
+    const webApp = getTelegramWebApp();
+    webApp?.ready();
+    webApp?.expand();
+  }, []);
+
+  useEffect(() => {
     const data = JSON.parse(localStorage.getItem("favorites") || "[]");
     setFavorites(Array.isArray(data) ? data : []);
   }, []);
@@ -135,6 +142,7 @@ export default function HomePageClient({
 
     setFavorites(updated);
     localStorage.setItem("favorites", JSON.stringify(updated));
+    window.dispatchEvent(new Event("favorites-updated"));
   };
 
   const resetPage = () => {
@@ -247,7 +255,7 @@ export default function HomePageClient({
     <>
       {showSplash && <AppSplash />}
 
-      <main className="min-h-screen bg-[#F5F5F5] px-3 pt-4 pb-32">
+      <main className="min-h-screen bg-[#F5F5F5] px-3 pt-[76px] pb-32">
         <div className="text-center">
           <p className="text-[11px] uppercase tracking-[0.28em] text-gray-400">
             Menswear

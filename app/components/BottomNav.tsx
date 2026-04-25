@@ -2,6 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import {
+  syncTelegramCustomer,
+  type CustomerProfile,
+} from "../lib/customer-profile";
+import { getTelegramWebApp } from "../lib/telegram-mini-app";
 
 type CartItem = {
   id: string;
@@ -34,11 +39,29 @@ function getFavoritesCount() {
   }
 }
 
+function getCachedCustomer() {
+  try {
+    const raw = localStorage.getItem("customer_profile_cache") || "null";
+    const parsed = JSON.parse(raw) as CustomerProfile | null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function setCachedCustomer(customer: CustomerProfile | null) {
+  if (!customer) return;
+  localStorage.setItem("customer_profile_cache", JSON.stringify(customer));
+  window.dispatchEvent(new Event("customer-profile-updated"));
+}
+
 export default function BottomNav() {
   const router = useRouter();
   const pathname = usePathname();
+
   const [cartCount, setCartCount] = useState(0);
   const [favoritesCount, setFavoritesCount] = useState(0);
+  const [customer, setCustomer] = useState<CustomerProfile | null>(null);
 
   useEffect(() => {
     const syncCounts = () => {
@@ -71,6 +94,39 @@ export default function BottomNav() {
     };
   }, [pathname]);
 
+  useEffect(() => {
+    const loadCustomer = async () => {
+      const cached = getCachedCustomer();
+      if (cached) {
+        setCustomer(cached);
+      }
+
+      const webApp = getTelegramWebApp();
+      if (!webApp?.initData) return;
+
+      const profile = await syncTelegramCustomer();
+      if (profile) {
+        setCustomer(profile);
+        setCachedCustomer(profile);
+      }
+    };
+
+    loadCustomer();
+
+    const handleProfileUpdated = () => {
+      const cached = getCachedCustomer();
+      setCustomer(cached);
+    };
+
+    window.addEventListener("customer-profile-updated", handleProfileUpdated);
+    window.addEventListener("focus", handleProfileUpdated);
+
+    return () => {
+      window.removeEventListener("customer-profile-updated", handleProfileUpdated);
+      window.removeEventListener("focus", handleProfileUpdated);
+    };
+  }, []);
+
   const cartBadge = useMemo(() => {
     if (cartCount <= 0) return "";
     if (cartCount > 99) return "99+";
@@ -85,6 +141,9 @@ export default function BottomNav() {
 
   const activeClass = (path: string) =>
     pathname === path ? "text-blue-500" : "text-gray-400";
+
+  const profileInitial =
+    customer?.first_name?.trim()?.charAt(0)?.toUpperCase() || "P";
 
   return (
     <div className="fixed bottom-4 left-4 right-4 z-50 flex justify-between rounded-[34px] border border-gray-100 bg-white px-4 py-3 shadow-2xl">
@@ -134,8 +193,18 @@ export default function BottomNav() {
         onClick={() => router.push("/profile")}
         className={`flex flex-1 flex-col items-center gap-1 ${activeClass("/profile")}`}
       >
-        <div className="flex h-7 w-7 items-center justify-center rounded-full border border-current text-sm">
-          P
+        <div className="h-7 w-7 overflow-hidden rounded-full border border-current bg-[#F5F5F5]">
+          {customer?.photo_url ? (
+            <img
+              src={customer.photo_url}
+              alt="Профиль"
+              className="h-full w-full rounded-full object-cover"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-sm">
+              {profileInitial}
+            </div>
+          )}
         </div>
         <span className="text-[13px]">Профиль</span>
       </button>
