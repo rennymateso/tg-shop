@@ -1,64 +1,26 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useMemo, useRef, useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import BottomNav from "../components/BottomNav";
-import { supabase } from "../lib/supabase";
 
-type ProductBadge = "Новинка" | "Скидка" | "В наличии" | "Из-за рубежа";
-type ProductCategory = "Футболки" | "Поло" | "Джинсы" | "Брюки" | "Костюмы";
-type ProductBrand =
-  | "Lacoste"
-  | "Polo Ralph Lauren"
-  | "Tommy Hilfiger"
-  | "Calvin Klein"
-  | "GANT"
-  | "BOSS"
-  | "Emporio Armani"
-  | "Armani Exchange"
-  | "Beymen Club"
-  | "Loro Piana"
-  | "Brunello Cucinelli"
-  | "BORZ"
-  | "Massimo Carino"
-  | "Другие бренды";
-
-type Product = {
+export type Product = {
   id: string;
   name: string;
-  brand: ProductBrand;
+  brand: string;
   price: number;
   oldPrice: number | null;
-  badge: ProductBadge;
+  badge: string;
   image: string;
   images: string[];
   colorImages?: Record<string, string>;
   galleryByColor?: Record<string, string[]>;
   defaultColor: string;
   type: "top" | "bottom";
-  category: ProductCategory;
+  category: "Футболки" | "Поло" | "Джинсы" | "Брюки" | "Костюмы";
   colors: string[];
   sizes: string[];
   description: string;
-};
-
-type ProductRow = {
-  id: string;
-  name: string;
-  brand: ProductBrand;
-  category: ProductCategory;
-  price: number;
-  old_price: number;
-  badge: ProductBadge;
-  status: "Активен" | "Скрыт";
-  description: string;
-  article: string;
-  sizes: string[] | null;
-  colors: string[] | null;
-  image: string;
-  color_images: Record<string, string[]> | null;
-  created_at: string;
-  updated_at: string;
 };
 
 type CartItem = {
@@ -75,114 +37,30 @@ function getDiscountPercent(oldPrice: number | null, price: number) {
   return Math.round(((oldPrice - price) / oldPrice) * 100);
 }
 
-function mapRowToProduct(row: ProductRow): Product {
-  const galleryByColor: Record<string, string[]> = {};
-  const normalizedColorImages: Record<string, string> = {};
-
-  if (row.color_images && typeof row.color_images === "object") {
-    Object.entries(row.color_images).forEach(([color, images]) => {
-      const safeImages = Array.isArray(images) ? images.filter(Boolean) : [];
-      if (safeImages.length > 0) {
-        galleryByColor[color] = safeImages;
-        normalizedColorImages[color] = safeImages[0];
-      }
-    });
-  }
-
-  const defaultColor =
-    (Array.isArray(row.colors) && row.colors[0]) ||
-    Object.keys(galleryByColor)[0] ||
-    "Черный";
-
-  const defaultImages = galleryByColor[defaultColor] || [];
-  const fallbackImage = row.image || defaultImages[0] || "/products/product-1.jpg";
-
-  return {
-    id: row.id,
-    name: row.name,
-    brand: row.brand,
-    price: row.price,
-    oldPrice: row.old_price || null,
-    badge: row.badge,
-    image: fallbackImage,
-    images: defaultImages.length ? defaultImages : [fallbackImage],
-    colorImages: normalizedColorImages,
-    galleryByColor,
-    defaultColor,
-    type:
-      row.category === "Джинсы" || row.category === "Брюки"
-        ? "bottom"
-        : "top",
-    category: row.category,
-    colors: Array.isArray(row.colors) ? row.colors : [],
-    sizes: Array.isArray(row.sizes) ? row.sizes : [],
-    description: row.description || "",
-  };
-}
-
-export default function ProductPageClient() {
+export default function ProductPageClient({
+  initialProduct,
+  initialError,
+}: {
+  initialProduct: Product | null;
+  initialError: string;
+}) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const id = searchParams.get("id");
 
-  const [product, setProduct] = useState<Product | null>(null);
-  const [loading, setLoading] = useState(true);
-
+  const [product] = useState<Product | null>(initialProduct);
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
-  const [selectedColor, setSelectedColor] = useState("");
+  const [selectedColor, setSelectedColor] = useState(
+    initialProduct?.defaultColor || ""
+  );
   const [favorites, setFavorites] = useState<string[]>([]);
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const [errorText, setErrorText] = useState("");
 
   const touchStartXRef = useRef<number | null>(null);
 
   useEffect(() => {
     const data = JSON.parse(localStorage.getItem("favorites") || "[]");
-    setFavorites(data);
+    setFavorites(Array.isArray(data) ? data : []);
   }, []);
-
-  useEffect(() => {
-    const loadProduct = async () => {
-      if (!id) {
-        setProduct(null);
-        setLoading(false);
-        setErrorText("Не передан id товара");
-        return;
-      }
-
-      setLoading(true);
-      setErrorText("");
-
-      const { data, error } = await supabase
-        .from("products")
-        .select("*")
-        .eq("id", id)
-        .maybeSingle();
-
-      if (error) {
-        setProduct(null);
-        setLoading(false);
-        setErrorText(error.message);
-        return;
-      }
-
-      if (!data) {
-        setProduct(null);
-        setLoading(false);
-        setErrorText(`Товар с id ${id} не найден`);
-        return;
-      }
-
-      const mapped = mapRowToProduct(data as ProductRow);
-      setProduct(mapped);
-      setSelectedColor(mapped.defaultColor);
-      setActiveImageIndex(0);
-      setLoading(false);
-    };
-
-    loadProduct();
-  }, [id]);
 
   const galleryImages = useMemo(() => {
     if (!product) return [];
@@ -280,12 +158,12 @@ export default function ProductPageClient() {
   };
 
   const addToCart = () => {
-    if (!product || !id || !canOrder) return;
+    if (!product || !canOrder) return;
 
     const existingCart: CartItem[] = JSON.parse(localStorage.getItem("cart") || "[]");
 
     const newItems: CartItem[] = selectedSizes.map((size) => ({
-      id,
+      id: product.id,
       name: product.name,
       price: product.price,
       size,
@@ -314,17 +192,6 @@ export default function ProductPageClient() {
     router.push("/cart");
   };
 
-  if (loading) {
-    return (
-      <main className="min-h-screen bg-[#F5F5F5] px-4 pt-5 pb-32">
-        <div className="rounded-[24px] bg-white p-5 shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
-          <p className="text-sm text-gray-500">Загрузка товара...</p>
-        </div>
-        <BottomNav />
-      </main>
-    );
-  }
-
   if (!product) {
     return (
       <main className="min-h-screen bg-[#F5F5F5] px-4 pt-5 pb-32">
@@ -337,8 +204,8 @@ export default function ProductPageClient() {
 
         <div className="rounded-[24px] bg-white p-5 shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
           <p className="text-sm text-gray-500">Товар не найден</p>
-          {errorText && (
-            <p className="mt-2 break-words text-xs text-gray-400">{errorText}</p>
+          {initialError && (
+            <p className="mt-2 break-words text-xs text-gray-400">{initialError}</p>
           )}
         </div>
 
@@ -386,9 +253,12 @@ export default function ProductPageClient() {
           onTouchEnd={onTouchEnd}
         >
           <img
-            src={activeImage || product.image}
+            src={activeImage || product.image || "/products/product-1.jpg"}
             alt={product.name}
             className="h-full w-full object-cover"
+            onError={(e) => {
+              e.currentTarget.src = "/products/product-1.jpg";
+            }}
           />
 
           {product.badge && (
@@ -549,6 +419,9 @@ export default function ProductPageClient() {
                   src={img}
                   alt={`${product.name} ${index + 1}`}
                   className="h-16 w-12 object-cover"
+                  onError={(e) => {
+                    e.currentTarget.src = "/products/product-1.jpg";
+                  }}
                 />
               </button>
             ))}
