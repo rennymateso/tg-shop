@@ -126,6 +126,7 @@ export default function ProductPageClient({
 
   const selectColor = (value: string) => {
     setSelectedColor(value);
+    setSelectedSizes([]);
     setActiveImageIndex(0);
   };
 
@@ -190,6 +191,7 @@ export default function ProductPageClient({
     });
 
     localStorage.setItem("cart", JSON.stringify(updatedCart));
+    window.dispatchEvent(new Event("cart-updated"));
     router.push("/cart");
   };
 
