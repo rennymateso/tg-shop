@@ -35,8 +35,6 @@ type CustomerAddress = {
   street: string | null;
   house: string | null;
   apartment: string | null;
-  entrance: string | null;
-  floor: string | null;
   comment: string | null;
   is_default: boolean;
 };
@@ -86,8 +84,6 @@ type CheckoutDraft = {
   street: string;
   house: string;
   apartment: string;
-  entrance: string;
-  floor: string;
   deliveryComment: string;
   promoCode: string;
   selectedAddressId: string;
@@ -162,8 +158,6 @@ function buildDeliveryAddress(params: {
   street: string;
   house: string;
   apartment: string;
-  entrance: string;
-  floor: string;
   deliveryComment: string;
 }) {
   const parts: string[] = [
@@ -173,8 +167,6 @@ function buildDeliveryAddress(params: {
   ];
 
   if (params.apartment.trim()) parts.push(`кв. ${params.apartment.trim()}`);
-  if (params.entrance.trim()) parts.push(`подъезд ${params.entrance.trim()}`);
-  if (params.floor.trim()) parts.push(`этаж ${params.floor.trim()}`);
   if (params.deliveryComment.trim()) {
     parts.push(`комментарий: ${params.deliveryComment.trim()}`);
   }
@@ -295,8 +287,6 @@ export default function CheckoutPageClient() {
   const [street, setStreet] = useState("");
   const [house, setHouse] = useState("");
   const [apartment, setApartment] = useState("");
-  const [entrance, setEntrance] = useState("");
-  const [floor, setFloor] = useState("");
   const [deliveryComment, setDeliveryComment] = useState("");
 
   const [promoCode, setPromoCode] = useState("");
@@ -330,8 +320,6 @@ export default function CheckoutPageClient() {
         setStreet(defaultAddress.street || "");
         setHouse(defaultAddress.house || "");
         setApartment(defaultAddress.apartment || "");
-        setEntrance(defaultAddress.entrance || "");
-        setFloor(defaultAddress.floor || "");
         setDeliveryComment(defaultAddress.comment || "");
       }
     } else {
@@ -361,8 +349,6 @@ export default function CheckoutPageClient() {
         setStreet(savedDraft.street || "");
         setHouse(savedDraft.house || "");
         setApartment(savedDraft.apartment || "");
-        setEntrance(savedDraft.entrance || "");
-        setFloor(savedDraft.floor || "");
         setDeliveryComment(savedDraft.deliveryComment || "");
         setPromoCode(savedDraft.promoCode || "");
         setSelectedAddressId(savedDraft.selectedAddressId || "");
@@ -433,8 +419,6 @@ export default function CheckoutPageClient() {
       street,
       house,
       apartment,
-      entrance,
-      floor,
       deliveryComment,
       promoCode,
       selectedAddressId,
@@ -450,8 +434,6 @@ export default function CheckoutPageClient() {
     street,
     house,
     apartment,
-    entrance,
-    floor,
     deliveryComment,
     promoCode,
     selectedAddressId,
@@ -543,8 +525,6 @@ export default function CheckoutPageClient() {
     setStreet(address.street || "");
     setHouse(address.house || "");
     setApartment(address.apartment || "");
-    setEntrance(address.entrance || "");
-    setFloor(address.floor || "");
     setDeliveryComment(address.comment || "");
   };
 
@@ -554,8 +534,6 @@ export default function CheckoutPageClient() {
     setStreet("");
     setHouse("");
     setApartment("");
-    setEntrance("");
-    setFloor("");
     setDeliveryComment("");
   };
 
@@ -567,8 +545,6 @@ export default function CheckoutPageClient() {
     street,
     house,
     apartment,
-    entrance,
-    floor,
     deliveryComment,
   });
 
@@ -951,17 +927,17 @@ export default function CheckoutPageClient() {
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <input
-                    placeholder="Город *"
-                    value={city}
-                    onChange={(e) => {
-                      setSelectedAddressId("");
-                      setCity(e.target.value);
-                    }}
-                    className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-                  />
+                <input
+                  placeholder="Город *"
+                  value={city}
+                  onChange={(e) => {
+                    setSelectedAddressId("");
+                    setCity(e.target.value);
+                  }}
+                  className="mb-3 w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
+                />
 
+                <div className="grid grid-cols-[1fr_88px_110px] gap-2">
                   <input
                     placeholder="Улица *"
                     value={street}
@@ -983,7 +959,7 @@ export default function CheckoutPageClient() {
                   />
 
                   <input
-                    placeholder="Квартира"
+                    placeholder="Кв."
                     value={apartment}
                     onChange={(e) => {
                       setSelectedAddressId("");
@@ -991,30 +967,10 @@ export default function CheckoutPageClient() {
                     }}
                     className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
                   />
-
-                  <input
-                    placeholder="Подъезд"
-                    value={entrance}
-                    onChange={(e) => {
-                      setSelectedAddressId("");
-                      setEntrance(e.target.value);
-                    }}
-                    className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-                  />
-
-                  <input
-                    placeholder="Этаж"
-                    value={floor}
-                    onChange={(e) => {
-                      setSelectedAddressId("");
-                      setFloor(e.target.value);
-                    }}
-                    className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-                  />
                 </div>
 
                 <textarea
-                  placeholder="Комментарий для доставки"
+                  placeholder="Комментарий (подъезд, этаж, код домофона и другое)"
                   value={deliveryComment}
                   onChange={(e) => {
                     setSelectedAddressId("");

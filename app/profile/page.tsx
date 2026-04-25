@@ -8,39 +8,14 @@ import {
   type CustomerProfile,
 } from "../lib/customer-profile";
 import {
-  getTelegramInitData,
   getTelegramWebApp,
   requestTelegramContact,
 } from "../lib/telegram-mini-app";
-
-type CustomerAddress = {
-  id: string;
-  label: string;
-  city: string | null;
-  street: string | null;
-  house: string | null;
-  apartment: string | null;
-  entrance: string | null;
-  floor: string | null;
-  comment: string | null;
-  is_default: boolean;
-};
 
 function setCachedCustomer(customer: CustomerProfile | null) {
   if (!customer) return;
   localStorage.setItem("customer_profile_cache", JSON.stringify(customer));
   window.dispatchEvent(new Event("customer-profile-updated"));
-}
-
-function formatAddress(address: CustomerAddress) {
-  const parts = [
-    address.city ? `г. ${address.city}` : "",
-    address.street ? `ул. ${address.street}` : "",
-    address.house ? `д. ${address.house}` : "",
-    address.apartment ? `кв. ${address.apartment}` : "",
-  ].filter(Boolean);
-
-  return parts.join(", ");
 }
 
 export default function ProfilePage() {
@@ -49,44 +24,6 @@ export default function ProfilePage() {
   const [loadingCustomer, setLoadingCustomer] = useState(true);
   const [isRequestingPhone, setIsRequestingPhone] = useState(false);
   const [phoneRequestMessage, setPhoneRequestMessage] = useState("");
-
-  const [addresses, setAddresses] = useState<CustomerAddress[]>([]);
-  const [loadingAddresses, setLoadingAddresses] = useState(true);
-  const [savingAddress, setSavingAddress] = useState(false);
-
-  const [label, setLabel] = useState("Дом");
-  const [city, setCity] = useState("");
-  const [street, setStreet] = useState("");
-  const [house, setHouse] = useState("");
-  const [apartment, setApartment] = useState("");
-  const [entrance, setEntrance] = useState("");
-  const [floor, setFloor] = useState("");
-  const [comment, setComment] = useState("");
-
-  const initData = getTelegramInitData();
-
-  const loadAddresses = async () => {
-    if (!initData) {
-      setAddresses([]);
-      setLoadingAddresses(false);
-      return;
-    }
-
-    setLoadingAddresses(true);
-
-    const response = await fetch(
-      `/api/customer/addresses?initData=${encodeURIComponent(initData)}`
-    );
-    const result = await response.json();
-
-    if (response.ok && result?.success && Array.isArray(result.addresses)) {
-      setAddresses(result.addresses);
-    } else {
-      setAddresses([]);
-    }
-
-    setLoadingAddresses(false);
-  };
 
   useEffect(() => {
     const init = async () => {
@@ -98,8 +35,6 @@ export default function ProfilePage() {
       setCustomer(profile);
       setCachedCustomer(profile);
       setLoadingCustomer(false);
-
-      await loadAddresses();
     };
 
     init();
@@ -114,6 +49,11 @@ export default function ProfilePage() {
   }, [customer]);
 
   const menuItems = [
+    {
+      title: "Мои адреса",
+      description: "Сохранённые адреса доставки",
+      onClick: () => router.push("/profile/addresses"),
+    },
     {
       title: "Избранное",
       description: "Сохраненные товары",
@@ -191,99 +131,6 @@ export default function ProfilePage() {
     }
   };
 
-  const handleSaveAddress = async () => {
-    if (!city.trim() || !street.trim() || !house.trim()) {
-      alert("Заполните город, улицу и дом");
-      return;
-    }
-
-    setSavingAddress(true);
-
-    const response = await fetch("/api/customer/addresses", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        initData,
-        label,
-        city,
-        street,
-        house,
-        apartment,
-        entrance,
-        floor,
-        comment,
-        is_default: addresses.length === 0,
-      }),
-    });
-
-    const result = await response.json();
-
-    if (!response.ok || !result?.success) {
-      alert(result?.error || "Не удалось сохранить адрес");
-      setSavingAddress(false);
-      return;
-    }
-
-    setLabel("Дом");
-    setCity("");
-    setStreet("");
-    setHouse("");
-    setApartment("");
-    setEntrance("");
-    setFloor("");
-    setComment("");
-
-    await loadAddresses();
-    setSavingAddress(false);
-  };
-
-  const handleMakeDefault = async (addressId: string) => {
-    const response = await fetch("/api/customer/addresses", {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        initData,
-        addressId,
-        is_default: true,
-      }),
-    });
-
-    const result = await response.json();
-
-    if (!response.ok || !result?.success) {
-      alert(result?.error || "Не удалось обновить адрес");
-      return;
-    }
-
-    await loadAddresses();
-  };
-
-  const handleDeleteAddress = async (addressId: string) => {
-    const response = await fetch("/api/customer/addresses", {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        initData,
-        addressId,
-      }),
-    });
-
-    const result = await response.json();
-
-    if (!response.ok || !result?.success) {
-      alert(result?.error || "Не удалось удалить адрес");
-      return;
-    }
-
-    await loadAddresses();
-  };
-
   return (
     <main className="min-h-screen bg-[#F5F5F5] px-4 pt-[76px] pb-32">
       <div className="mb-5 flex items-center justify-center">
@@ -343,137 +190,6 @@ export default function ProfilePage() {
             ) : null}
           </div>
         )}
-      </div>
-
-      <div className="mb-4 rounded-[24px] bg-white p-5 shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
-        <h2 className="text-[18px] font-medium text-black">Мои адреса</h2>
-
-        <div className="mt-4 space-y-3">
-          {loadingAddresses ? (
-            <p className="text-sm text-gray-400">Загрузка адресов...</p>
-          ) : addresses.length === 0 ? (
-            <p className="text-sm text-gray-400">Адресов пока нет</p>
-          ) : (
-            addresses.map((address) => (
-              <div
-                key={address.id}
-                className="rounded-[20px] bg-[#F7F7F7] p-4"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium text-black">
-                        {address.label}
-                      </p>
-                      {address.is_default && (
-                        <span className="rounded-full bg-black px-2 py-0.5 text-[10px] text-white">
-                          Основной
-                        </span>
-                      )}
-                    </div>
-
-                    <p className="mt-2 text-sm text-gray-600">
-                      {formatAddress(address)}
-                    </p>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteAddress(address.id)}
-                    className="text-xs text-gray-400"
-                  >
-                    удалить
-                  </button>
-                </div>
-
-                {!address.is_default && (
-                  <button
-                    type="button"
-                    onClick={() => handleMakeDefault(address.id)}
-                    className="mt-3 text-sm text-black underline underline-offset-2"
-                  >
-                    Сделать основным
-                  </button>
-                )}
-              </div>
-            ))
-          )}
-        </div>
-
-        <div className="mt-5 border-t border-black/5 pt-5">
-          <h3 className="text-[15px] font-medium text-black">Добавить адрес</h3>
-
-          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <select
-              value={label}
-              onChange={(e) => setLabel(e.target.value)}
-              className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-            >
-              <option>Дом</option>
-              <option>Работа</option>
-              <option>Другой адрес</option>
-            </select>
-
-            <input
-              placeholder="Город *"
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-              className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-            />
-
-            <input
-              placeholder="Улица *"
-              value={street}
-              onChange={(e) => setStreet(e.target.value)}
-              className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-            />
-
-            <input
-              placeholder="Дом *"
-              value={house}
-              onChange={(e) => setHouse(e.target.value)}
-              className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-            />
-
-            <input
-              placeholder="Квартира"
-              value={apartment}
-              onChange={(e) => setApartment(e.target.value)}
-              className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-            />
-
-            <input
-              placeholder="Подъезд"
-              value={entrance}
-              onChange={(e) => setEntrance(e.target.value)}
-              className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-            />
-
-            <input
-              placeholder="Этаж"
-              value={floor}
-              onChange={(e) => setFloor(e.target.value)}
-              className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-            />
-          </div>
-
-          <textarea
-            placeholder="Комментарий"
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-            rows={3}
-            className="mt-3 w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-          />
-
-          <button
-            type="button"
-            onClick={handleSaveAddress}
-            disabled={savingAddress}
-            className="mt-3 w-full rounded-2xl bg-black py-3 text-sm font-medium text-white disabled:opacity-60"
-          >
-            {savingAddress ? "Сохраняем..." : "Сохранить адрес"}
-          </button>
-        </div>
       </div>
 
       <div className="space-y-3">
