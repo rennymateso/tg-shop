@@ -1,10 +1,34 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import BottomNav from "../components/BottomNav";
+import { syncTelegramCustomer, type CustomerProfile } from "../lib/customer-profile";
+import { getTelegramWebApp } from "../lib/telegram-mini-app";
 
 export default function ProfilePage() {
   const router = useRouter();
+  const [customer, setCustomer] = useState<CustomerProfile | null>(null);
+  const [loadingCustomer, setLoadingCustomer] = useState(true);
+
+  useEffect(() => {
+    const init = async () => {
+      const webApp = getTelegramWebApp();
+      webApp?.ready();
+      webApp?.expand();
+
+      const profile = await syncTelegramCustomer();
+      setCustomer(profile);
+      setLoadingCustomer(false);
+    };
+
+    init();
+  }, []);
+
+  const fullName = useMemo(() => {
+    if (!customer) return "Профиль клиента";
+    return [customer.first_name, customer.last_name].filter(Boolean).join(" ") || "Профиль клиента";
+  }, [customer]);
 
   const menuItems = [
     {
@@ -45,11 +69,45 @@ export default function ProfilePage() {
       </div>
 
       <div className="mb-4 rounded-[24px] bg-white p-5 shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
-        <p className="text-[18px] font-medium text-black">MONTREAUX</p>
-        <p className="mt-2 text-sm leading-6 text-gray-500">
-          Личный кабинет покупателя. Здесь можно перейти в избранное, корзину,
-          посмотреть условия доставки и оплаты, ознакомиться с правилами
-          возврата и обмена, а также открыть раздел поддержки.
+        <div className="flex items-center gap-4">
+          <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-[#F5F5F5]">
+            {customer?.photo_url ? (
+              <img
+                src={customer.photo_url}
+                alt={fullName}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <span className="text-lg text-gray-500">
+                {fullName.charAt(0).toUpperCase()}
+              </span>
+            )}
+          </div>
+
+          <div className="min-w-0">
+            <p className="text-[18px] font-medium text-black">
+              {loadingCustomer ? "Загружаем профиль..." : fullName}
+            </p>
+
+            {customer?.telegram_username ? (
+              <p className="mt-1 text-sm text-gray-500">
+                @{customer.telegram_username}
+              </p>
+            ) : null}
+
+            {customer?.phone ? (
+              <p className="mt-1 text-sm text-gray-500">{customer.phone}</p>
+            ) : (
+              <p className="mt-1 text-sm text-gray-400">
+                Телефон можно ввести при оформлении заказа — потом он будет подставляться автоматически.
+              </p>
+            )}
+          </div>
+        </div>
+
+        <p className="mt-4 text-sm leading-6 text-gray-500">
+          Профиль привязан к Telegram Mini App. Имя подставляется автоматически, а телефон
+          сохраняется после первого оформления заказа.
         </p>
       </div>
 

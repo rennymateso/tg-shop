@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import BottomNav from "../components/BottomNav";
 import { supabase } from "../lib/supabase";
+import { syncTelegramCustomer } from "../lib/customer-profile";
 
 type CheckoutItem = {
   id: string;
@@ -156,18 +157,9 @@ function buildDeliveryAddress(params: {
     `д. ${params.house.trim()}`,
   ];
 
-  if (params.apartment.trim()) {
-    parts.push(`кв. ${params.apartment.trim()}`);
-  }
-
-  if (params.entrance.trim()) {
-    parts.push(`подъезд ${params.entrance.trim()}`);
-  }
-
-  if (params.floor.trim()) {
-    parts.push(`этаж ${params.floor.trim()}`);
-  }
-
+  if (params.apartment.trim()) parts.push(`кв. ${params.apartment.trim()}`);
+  if (params.entrance.trim()) parts.push(`подъезд ${params.entrance.trim()}`);
+  if (params.floor.trim()) parts.push(`этаж ${params.floor.trim()}`);
   if (params.deliveryComment.trim()) {
     parts.push(`комментарий: ${params.deliveryComment.trim()}`);
   }
@@ -308,8 +300,28 @@ export default function CheckoutPageClient() {
         setPromoCode(savedDraft.promoCode || "");
       }
     } catch {
-      // ignore malformed local data
+      //
     }
+  }, []);
+
+  useEffect(() => {
+    const syncCustomer = async () => {
+      const customer = await syncTelegramCustomer();
+
+      if (!customer) return;
+
+      const nextName =
+        [customer.first_name, customer.last_name].filter(Boolean).join(" ").trim();
+
+      setName((prev) => (prev.trim() ? prev : nextName));
+      setPhone((prev) => {
+        const currentDigits = prev.replace(/\D/g, "").replace(/^7/, "");
+        if (currentDigits.length === 10) return prev;
+        return customer.phone || prev;
+      });
+    };
+
+    syncCustomer();
   }, []);
 
   useEffect(() => {
@@ -471,6 +483,12 @@ export default function CheckoutPageClient() {
     .filter(Boolean)
     .join(" | ");
 
+  const persistCustomerPhone = async () => {
+    if (isPhoneValid) {
+      await syncTelegramCustomer(phone);
+    }
+  };
+
   const handleCashOrder = async () => {
     if (!isFormValid) {
       alert("Заполните все обязательные данные");
@@ -485,6 +503,8 @@ export default function CheckoutPageClient() {
     try {
       setIsPaying(true);
       setPaymentError("");
+
+      await persistCustomerPhone();
 
       await createOrderInSupabase({
         customer: name.trim(),
@@ -523,6 +543,7 @@ export default function CheckoutPageClient() {
 
     try {
       setIsPaying(true);
+      await persistCustomerPhone();
 
       const finalAddress =
         deliveryMethod === "pickup" ? pickupAddress : deliveryAddress;
