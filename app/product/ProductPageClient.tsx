@@ -20,6 +20,7 @@ export type Product = {
   category: "Футболки" | "Поло" | "Джинсы" | "Брюки" | "Костюмы";
   colors: string[];
   sizes: string[];
+  composition: string[];
   description: string;
 };
 
@@ -261,18 +262,6 @@ export default function ProductPageClient({
             }}
           />
 
-          {product.badge && (
-            <div
-              className={`absolute left-4 top-4 rounded-full px-3 py-1 text-[10px] font-medium backdrop-blur shadow-sm ${
-                product.badge === "Из-за рубежа"
-                  ? "bg-black text-white"
-                  : "bg-white/90 text-black"
-              }`}
-            >
-              {product.badge}
-            </div>
-          )}
-
           {galleryImages.length > 1 && (
             <>
               <button
@@ -323,22 +312,36 @@ export default function ProductPageClient({
             </div>
           </div>
 
-          <div className="mb-3 flex items-center gap-2">
-            {product.oldPrice && (
-              <span className="text-[14px] font-normal leading-none text-gray-400 line-through">
-                {product.oldPrice} ₽
-              </span>
-            )}
+          <div className="mb-3 flex items-start justify-between gap-3">
+            <div className="flex items-center gap-2">
+              {product.oldPrice && (
+                <span className="text-[14px] font-normal leading-none text-gray-400 line-through">
+                  {product.oldPrice} ₽
+                </span>
+              )}
 
-            <span className="text-[21px] font-semibold leading-none tracking-[-0.02em] text-[#16A34A]">
-              {product.price} ₽
-            </span>
-
-            {discountPercent > 0 && (
-              <span className="rounded-full bg-[#E8F7EE] px-1.5 py-0.5 text-[10px] font-medium text-[#16A34A]">
-                -{discountPercent}%
+              <span className="text-[21px] font-semibold leading-none tracking-[-0.02em] text-[#16A34A]">
+                {product.price} ₽
               </span>
-            )}
+
+              {discountPercent > 0 && (
+                <span className="rounded-full bg-[#E8F7EE] px-1.5 py-0.5 text-[10px] font-medium text-[#16A34A]">
+                  -{discountPercent}%
+                </span>
+              )}
+            </div>
+
+            {product.badge ? (
+              <div
+                className={`shrink-0 rounded-full px-3 py-1 text-[10px] font-medium ${
+                  product.badge === "Из-за рубежа"
+                    ? "bg-black text-white"
+                    : "bg-[#F5F5F5] text-black"
+                }`}
+              >
+                {product.badge}
+              </div>
+            ) : null}
           </div>
 
           <div className="mt-5">
@@ -375,26 +378,45 @@ export default function ProductPageClient({
 
           <div className="mt-5">
             <p className="mb-2 text-sm text-gray-500">Цвет</p>
-            <div className="flex flex-wrap gap-2">
+            <div className="grid grid-cols-4 gap-2">
               {product.colors.map((c) => {
-                const swatch = colorMap[c] || "#E5E7EB";
+                const preview =
+                  product.galleryByColor?.[c]?.[0] ||
+                  product.colorImages?.[c] ||
+                  product.image ||
+                  "/products/product-1.jpg";
+
                 const isSelected = selectedColor === c;
-                const isWhite = c === "Белый";
 
                 return (
                   <button
                     key={c}
                     onClick={() => selectColor(c)}
-                    aria-label={c}
-                    title={c}
-                    className={`flex h-9 w-9 items-center justify-center rounded-lg border transition-all duration-200 active:scale-95 ${
+                    className={`overflow-hidden rounded-2xl border bg-white text-left transition-all duration-200 active:scale-95 ${
                       isSelected ? "border-black ring-2 ring-black/10" : "border-gray-200"
                     }`}
                   >
-                    <span
-                      className={`block h-5 w-5 rounded-md ${isWhite ? "border border-gray-300" : ""}`}
-                      style={{ backgroundColor: swatch }}
-                    />
+                    <div className="aspect-[3/4] w-full overflow-hidden bg-[#ECECEC]">
+                      <img
+                        src={preview}
+                        alt={c}
+                        className="h-full w-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = "/products/product-1.jpg";
+                        }}
+                      />
+                    </div>
+                    <div className="px-2 py-2">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`block h-3 w-3 rounded-full ${
+                            c === "Белый" ? "border border-gray-300" : ""
+                          }`}
+                          style={{ backgroundColor: colorMap[c] || "#E5E7EB" }}
+                        />
+                        <span className="text-[11px] text-black">{c}</span>
+                      </div>
+                    </div>
                   </button>
                 );
               })}
@@ -405,27 +427,21 @@ export default function ProductPageClient({
             </div>
           </div>
 
-          <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
-            {galleryImages.map((img, index) => (
-              <button
-                key={`${img}-${index}`}
-                type="button"
-                onClick={() => setActiveImageIndex(index)}
-                className={`shrink-0 overflow-hidden rounded-xl border ${
-                  index === activeImageIndex ? "border-black" : "border-gray-200"
-                }`}
-              >
-                <img
-                  src={img}
-                  alt={`${product.name} ${index + 1}`}
-                  className="h-16 w-12 object-cover"
-                  onError={(e) => {
-                    e.currentTarget.src = "/products/product-1.jpg";
-                  }}
-                />
-              </button>
-            ))}
-          </div>
+          {product.composition.length > 0 && (
+            <div className="mt-5">
+              <p className="mb-2 text-sm text-gray-500">Состав</p>
+              <div className="flex flex-wrap gap-2">
+                {product.composition.map((item) => (
+                  <span
+                    key={item}
+                    className="rounded-full bg-[#F5F5F5] px-3 py-1.5 text-[12px] text-gray-700"
+                  >
+                    {item}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="mt-5">
             <h1 className="text-[24px] font-medium leading-tight text-black">

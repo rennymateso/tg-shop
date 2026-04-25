@@ -6,6 +6,13 @@ import { supabase } from "../../../lib/supabase";
 import { uploadProductImage } from "../../../lib/upload-product-image";
 
 type ProductStatus = "Активен" | "Скрыт";
+type BadgeType =
+  | "Без бейджа"
+  | "Новинка"
+  | "Скидка"
+  | "В наличии"
+  | "Из-за рубежа";
+
 type ProductCategory =
   | "Футболки"
   | "Поло"
@@ -21,12 +28,6 @@ type BrandRow = {
   created_at: string;
 };
 
-type BadgeRow = {
-  id: string;
-  name: string;
-  created_at: string;
-};
-
 const categoryOptions: ProductCategory[] = [
   "Футболки",
   "Поло",
@@ -34,6 +35,27 @@ const categoryOptions: ProductCategory[] = [
   "Брюки",
   "Костюмы",
 ];
+
+const badgeOptions: BadgeType[] = [
+  "Без бейджа",
+  "Новинка",
+  "Скидка",
+  "В наличии",
+  "Из-за рубежа",
+];
+
+const compositionOptions = [
+  "Хлопок",
+  "Вискоза",
+  "Лен",
+  "Шерсть",
+  "Полиэстер",
+  "Эластан",
+  "Кашемир",
+  "Шёлк",
+  "Акрил",
+  "Нейлон",
+] as const;
 
 const statusOptions: ProductStatus[] = ["Активен", "Скрыт"];
 
@@ -93,20 +115,18 @@ export default function AdminNewProductPage() {
   const [brands, setBrands] = useState<BrandRow[]>([]);
   const [brandsLoading, setBrandsLoading] = useState(true);
 
-  const [badges, setBadges] = useState<BadgeRow[]>([]);
-  const [badgesLoading, setBadgesLoading] = useState(true);
-
   const [name, setName] = useState("");
   const [brand, setBrand] = useState("");
   const [category, setCategory] = useState<ProductCategory>("Поло");
   const [price, setPrice] = useState("");
   const [oldPrice, setOldPrice] = useState("");
-  const [badge, setBadge] = useState("Без бейджа");
+  const [badge, setBadge] = useState<BadgeType>("Без бейджа");
   const [status, setStatus] = useState<ProductStatus>("Активен");
   const [description, setDescription] = useState("");
   const [article, setArticle] = useState("");
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
+  const [selectedComposition, setSelectedComposition] = useState<string[]>([]);
   const [activeColor, setActiveColor] = useState<string>("");
   const [colorImages, setColorImages] = useState<ColorGalleryMap>({});
   const [message, setMessage] = useState("");
@@ -134,37 +154,12 @@ export default function AdminNewProductPage() {
 
       if (safeBrands.length > 0) {
         setBrand(safeBrands[0].name);
-      } else {
-        setBrand("");
       }
 
       setBrandsLoading(false);
     };
 
     loadBrands();
-  }, []);
-
-  useEffect(() => {
-    const loadBadges = async () => {
-      setBadgesLoading(true);
-
-      const { data, error } = await supabase
-        .from("badges")
-        .select("*")
-        .order("name", { ascending: true });
-
-      if (error) {
-        setMessage(`Ошибка загрузки бейджей: ${error.message}`);
-        setBadges([]);
-        setBadgesLoading(false);
-        return;
-      }
-
-      setBadges((data || []) as BadgeRow[]);
-      setBadgesLoading(false);
-    };
-
-    loadBadges();
   }, []);
 
   const discountPercent = useMemo(() => {
@@ -218,6 +213,14 @@ export default function AdminNewProductPage() {
     });
   };
 
+  const toggleComposition = (value: string) => {
+    setSelectedComposition((prev) =>
+      prev.includes(value)
+        ? prev.filter((item) => item !== value)
+        : [...prev, value]
+    );
+  };
+
   const fillArticle = () => {
     setArticle(makeArticle(name));
   };
@@ -238,6 +241,7 @@ export default function AdminNewProductPage() {
       setMessage("");
 
       const tempProductId = article.trim() || makeArticle(name) || createProductId();
+
       const pickedFiles = Array.from(files).slice(0, freeSlots);
       const uploadedUrls: string[] = [];
 
@@ -308,7 +312,7 @@ export default function AdminNewProductPage() {
     }
 
     if (!brand.trim()) {
-      setMessage("Сначала добавь бренд в разделе Бренды");
+      setMessage("Выберите бренд");
       return;
     }
 
@@ -324,6 +328,11 @@ export default function AdminNewProductPage() {
 
     if (selectedColors.length === 0) {
       setMessage("Выберите хотя бы один цвет");
+      return;
+    }
+
+    if (selectedComposition.length === 0) {
+      setMessage("Выберите хотя бы один состав");
       return;
     }
 
@@ -347,7 +356,7 @@ export default function AdminNewProductPage() {
       const { error } = await supabase.from("products").insert({
         id: finalId,
         name: name.trim(),
-        brand,
+        brand: brand.trim(),
         category,
         price: Number(price),
         old_price: Number(oldPrice || price),
@@ -357,6 +366,7 @@ export default function AdminNewProductPage() {
         article: finalArticle,
         sizes: selectedSizes,
         colors: selectedColors,
+        composition: selectedComposition,
         image: previewImage || "",
         color_images: colorImages,
         created_at: now,
@@ -391,6 +401,7 @@ export default function AdminNewProductPage() {
     setArticle("");
     setSelectedSizes([]);
     setSelectedColors([]);
+    setSelectedComposition([]);
     setActiveColor("");
     setColorImages({});
     setMessage("Форма очищена.");
@@ -499,15 +510,11 @@ export default function AdminNewProductPage() {
                 <label className="mb-2 block text-sm text-gray-500">Бейдж</label>
                 <select
                   value={badge}
-                  onChange={(e) => setBadge(e.target.value)}
-                  disabled={badgesLoading}
-                  className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none disabled:opacity-60"
+                  onChange={(e) => setBadge(e.target.value as BadgeType)}
+                  className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
                 >
-                  <option value="Без бейджа">Без бейджа</option>
-                  {badges.map((item) => (
-                    <option key={item.id} value={item.name}>
-                      {item.name}
-                    </option>
+                  {badgeOptions.map((item) => (
+                    <option key={item}>{item}</option>
                   ))}
                 </select>
               </div>
@@ -572,6 +579,27 @@ export default function AdminNewProductPage() {
                     }`}
                   >
                     {size}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="rounded-[28px] bg-white p-5 shadow-sm">
+            <h2 className="text-lg font-medium text-black">Состав</h2>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {compositionOptions.map((item) => {
+                const active = selectedComposition.includes(item);
+                return (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => toggleComposition(item)}
+                    className={`rounded-2xl px-4 py-2 text-sm transition ${
+                      active ? "bg-black text-white" : "bg-[#F5F5F5] text-gray-700"
+                    }`}
+                  >
+                    {item}
                   </button>
                 );
               })}
@@ -757,7 +785,7 @@ export default function AdminNewProductPage() {
 
               <button
                 onClick={handleSave}
-                disabled={isSaving || isUploadingImages || brandsLoading || badgesLoading}
+                disabled={isSaving || isUploadingImages || brandsLoading}
                 className="rounded-2xl bg-black px-5 py-3 text-sm font-medium text-white disabled:opacity-60"
               >
                 {isSaving ? "Сохраняем..." : "Сохранить товар"}
@@ -790,25 +818,25 @@ export default function AdminNewProductPage() {
                   {name || "Название товара"}
                 </h3>
 
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  {oldPrice && (
-                    <span className="text-xs text-gray-400 line-through">
-                      {oldPrice} ₽
+                <div className="mt-2 flex items-start justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {oldPrice && (
+                      <span className="text-xs text-gray-400 line-through">
+                        {oldPrice} ₽
+                      </span>
+                    )}
+
+                    <span className="text-[16px] font-semibold text-[#16A34A]">
+                      {price || "0"} ₽
                     </span>
-                  )}
 
-                  <span className="text-[16px] font-semibold text-[#16A34A]">
-                    {price || "0"} ₽
-                  </span>
+                    {discountPercent > 0 && (
+                      <span className="rounded-full bg-[#E8F7EE] px-2 py-0.5 text-[10px] text-[#16A34A]">
+                        -{discountPercent}%
+                      </span>
+                    )}
+                  </div>
 
-                  {discountPercent > 0 && (
-                    <span className="rounded-full bg-[#E8F7EE] px-2 py-0.5 text-[10px] text-[#16A34A]">
-                      -{discountPercent}%
-                    </span>
-                  )}
-                </div>
-
-                <div className="mt-3 flex flex-wrap gap-2">
                   {badge !== "Без бейджа" && (
                     <span
                       className={`rounded-full px-2 py-1 text-[10px] ${
@@ -820,7 +848,22 @@ export default function AdminNewProductPage() {
                       {badge}
                     </span>
                   )}
+                </div>
 
+                {selectedComposition.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {selectedComposition.map((item) => (
+                      <span
+                        key={item}
+                        className="rounded-full bg-[#F5F5F5] px-2 py-1 text-[10px] text-gray-700"
+                      >
+                        {item}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                <div className="mt-3 flex flex-wrap gap-2">
                   <span
                     className={`rounded-full px-2 py-1 text-[10px] ${
                       status === "Активен"
@@ -836,6 +879,7 @@ export default function AdminNewProductPage() {
                   <p>Артикул: {article || "ART-NEW"}</p>
                   <p>Размеров: {selectedSizes.length}</p>
                   <p>Цветов: {selectedColors.length}</p>
+                  <p>Состав: {selectedComposition.length}</p>
                   <p>Фото: {totalImagesCount}</p>
                 </div>
               </div>

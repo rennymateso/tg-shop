@@ -14,6 +14,7 @@ type ProductRow = {
   article: string;
   sizes: string[] | null;
   colors: string[] | null;
+  composition: string[] | null;
   image: string | null;
   color_images: Record<string, string[]> | null;
   created_at: string;
@@ -67,6 +68,7 @@ function mapRowToProduct(row: ProductRow): Product {
     category: row.category,
     colors: safeColors,
     sizes: Array.isArray(row.sizes) ? row.sizes : [],
+    composition: Array.isArray(row.composition) ? row.composition : [],
     description: row.description || "",
   };
 }
@@ -80,7 +82,12 @@ export default async function ProductPage({
   const id = String(params?.id || "").trim();
 
   if (!id) {
-    return <ProductPageClient initialProduct={null} initialError="Не передан id товара" />;
+    return (
+      <ProductPageClient
+        initialProduct={null}
+        initialError="Не передан id товара"
+      />
+    );
   }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -94,7 +101,12 @@ export default async function ProductPage({
     .maybeSingle();
 
   if (error) {
-    return <ProductPageClient initialProduct={null} initialError={error.message} />;
+    return (
+      <ProductPageClient
+        initialProduct={null}
+        initialError={error.message}
+      />
+    );
   }
 
   if (!data) {
