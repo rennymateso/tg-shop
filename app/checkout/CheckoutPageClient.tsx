@@ -62,6 +62,21 @@ type ProductRow = {
   updated_at: string;
 };
 
+type CheckoutDraft = {
+  name: string;
+  phone: string;
+  deliveryMethod: "delivery" | "pickup";
+  paymentMethod: "card" | "cash";
+  city: string;
+  street: string;
+  house: string;
+  apartment: string;
+  entrance: string;
+  floor: string;
+  deliveryComment: string;
+  promoCode: string;
+};
+
 function mapRowToProduct(row: ProductRow): Product {
   const normalizedColorImages: Record<string, string> = {};
 
@@ -124,6 +139,62 @@ function formatPhone(value: string) {
   if (digits.length > 8) result += `-${digits.slice(8, 10)}`;
 
   return result;
+}
+
+function buildDeliveryAddress(params: {
+  city: string;
+  street: string;
+  house: string;
+  apartment: string;
+  entrance: string;
+  floor: string;
+  deliveryComment: string;
+}) {
+  const parts: string[] = [
+    `г. ${params.city.trim()}`,
+    `ул. ${params.street.trim()}`,
+    `д. ${params.house.trim()}`,
+  ];
+
+  if (params.apartment.trim()) {
+    parts.push(`кв. ${params.apartment.trim()}`);
+  }
+
+  if (params.entrance.trim()) {
+    parts.push(`подъезд ${params.entrance.trim()}`);
+  }
+
+  if (params.floor.trim()) {
+    parts.push(`этаж ${params.floor.trim()}`);
+  }
+
+  if (params.deliveryComment.trim()) {
+    parts.push(`комментарий: ${params.deliveryComment.trim()}`);
+  }
+
+  return parts.join(", ");
+}
+
+function getValidationMessage(params: {
+  name: string;
+  isPhoneValid: boolean;
+  itemsCount: number;
+  deliveryMethod: "delivery" | "pickup";
+  city: string;
+  street: string;
+  house: string;
+}) {
+  if (params.itemsCount === 0) return "Корзина пуста";
+  if (!params.name.trim()) return "Введите имя";
+  if (!params.isPhoneValid) return "Введите корректный телефон";
+
+  if (params.deliveryMethod === "delivery") {
+    if (!params.city.trim()) return "Введите город";
+    if (!params.street.trim()) return "Введите улицу";
+    if (!params.house.trim()) return "Введите дом";
+  }
+
+  return "";
 }
 
 async function createOrderInSupabase(params: {
@@ -196,7 +267,15 @@ export default function CheckoutPageClient() {
   const [phone, setPhone] = useState("+7");
   const [deliveryMethod, setDeliveryMethod] = useState<"delivery" | "pickup">("delivery");
   const [paymentMethod, setPaymentMethod] = useState<"card" | "cash">("card");
-  const [address, setAddress] = useState("");
+
+  const [city, setCity] = useState("");
+  const [street, setStreet] = useState("");
+  const [house, setHouse] = useState("");
+  const [apartment, setApartment] = useState("");
+  const [entrance, setEntrance] = useState("");
+  const [floor, setFloor] = useState("");
+  const [deliveryComment, setDeliveryComment] = useState("");
+
   const [promoCode, setPromoCode] = useState("");
   const [isPaying, setIsPaying] = useState(false);
   const [paymentError, setPaymentError] = useState("");
@@ -207,6 +286,29 @@ export default function CheckoutPageClient() {
     const cart = JSON.parse(localStorage.getItem("cart") || "[]");
     if (Array.isArray(cart)) {
       setItems(cart);
+    }
+
+    try {
+      const savedDraft = JSON.parse(
+        localStorage.getItem("checkout_draft") || "null"
+      ) as CheckoutDraft | null;
+
+      if (savedDraft) {
+        setName(savedDraft.name || "");
+        setPhone(savedDraft.phone || "+7");
+        setDeliveryMethod(savedDraft.deliveryMethod || "delivery");
+        setPaymentMethod(savedDraft.paymentMethod || "card");
+        setCity(savedDraft.city || "");
+        setStreet(savedDraft.street || "");
+        setHouse(savedDraft.house || "");
+        setApartment(savedDraft.apartment || "");
+        setEntrance(savedDraft.entrance || "");
+        setFloor(savedDraft.floor || "");
+        setDeliveryComment(savedDraft.deliveryComment || "");
+        setPromoCode(savedDraft.promoCode || "");
+      }
+    } catch {
+      // ignore malformed local data
     }
   }, []);
 
@@ -238,8 +340,41 @@ export default function CheckoutPageClient() {
   }, []);
 
   useEffect(() => {
+    const draft: CheckoutDraft = {
+      name,
+      phone,
+      deliveryMethod,
+      paymentMethod,
+      city,
+      street,
+      house,
+      apartment,
+      entrance,
+      floor,
+      deliveryComment,
+      promoCode,
+    };
+
+    localStorage.setItem("checkout_draft", JSON.stringify(draft));
+  }, [
+    name,
+    phone,
+    deliveryMethod,
+    paymentMethod,
+    city,
+    street,
+    house,
+    apartment,
+    entrance,
+    floor,
+    deliveryComment,
+    promoCode,
+  ]);
+
+  useEffect(() => {
     if (paymentStatus === "success") {
       localStorage.removeItem("cart");
+      window.dispatchEvent(new Event("cart-updated"));
       setItems([]);
     }
   }, [paymentStatus]);
@@ -256,6 +391,7 @@ export default function CheckoutPageClient() {
     updated[index] = { ...updated[index], quantity: safeQty };
     setItems(updated);
     localStorage.setItem("cart", JSON.stringify(updated));
+    window.dispatchEvent(new Event("cart-updated"));
   };
 
   const removeItem = (index: number) => {
@@ -263,6 +399,7 @@ export default function CheckoutPageClient() {
     updated.splice(index, 1);
     setItems(updated);
     localStorage.setItem("cart", JSON.stringify(updated));
+    window.dispatchEvent(new Event("cart-updated"));
   };
 
   const totals = useMemo(() => {
@@ -271,7 +408,10 @@ export default function CheckoutPageClient() {
       return sum + oldUnitPrice * item.quantity;
     }, 0);
 
-    const newItemsTotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const newItemsTotal = items.reduce(
+      (sum, item) => sum + item.price * item.quantity,
+      0
+    );
 
     return { oldItemsTotal, newItemsTotal };
   }, [items, productsMap]);
@@ -284,17 +424,52 @@ export default function CheckoutPageClient() {
   const phoneDigitsCount = phone.replace(/\D/g, "").replace(/^7/, "").length;
   const isPhoneValid = phoneDigitsCount === 10;
 
+  const isDeliveryAddressValid =
+    city.trim().length > 0 &&
+    street.trim().length > 0 &&
+    house.trim().length > 0;
+
   const isFormValid =
-    name.trim() &&
+    name.trim().length > 0 &&
     isPhoneValid &&
     items.length > 0 &&
-    (deliveryMethod === "pickup" || address.trim());
+    (deliveryMethod === "pickup" || isDeliveryAddressValid);
+
+  const validationMessage = getValidationMessage({
+    name,
+    isPhoneValid,
+    itemsCount: items.length,
+    deliveryMethod,
+    city,
+    street,
+    house,
+  });
 
   const getProductById = (id: string) => productsMap[id];
 
   const handlePhoneChange = (value: string) => {
     setPhone(formatPhone(value));
   };
+
+  const pickupAddress =
+    'г. Казань, Академика Глушко 16Г, ТЦ "АКАДЕМИК", 2 этаж';
+
+  const deliveryAddress = buildDeliveryAddress({
+    city,
+    street,
+    house,
+    apartment,
+    entrance,
+    floor,
+    deliveryComment,
+  });
+
+  const orderComment = [
+    promoCode.trim() ? `Промокод: ${promoCode.trim()}` : "",
+    deliveryComment.trim() ? `Комментарий: ${deliveryComment.trim()}` : "",
+  ]
+    .filter(Boolean)
+    .join(" | ");
 
   const handleCashOrder = async () => {
     if (!isFormValid) {
@@ -317,14 +492,17 @@ export default function CheckoutPageClient() {
         total: finalNewTotal,
         payment: "Наличными",
         delivery: "Самовывоз",
-        address: 'г. Казань, Академика Глушко 16Г, ТЦ "АКАДЕМИК", 2 этаж',
+        address: pickupAddress,
         status: "Новый",
-        comment: promoCode.trim() ? `Промокод: ${promoCode.trim()}` : "",
+        comment: orderComment,
         promoCode: promoCode.trim(),
         items,
       });
 
       localStorage.removeItem("cart");
+      localStorage.removeItem("checkout_draft");
+      window.dispatchEvent(new Event("cart-updated"));
+
       alert("Заказ успешно оформлен. С вами свяжется менеджер для подтверждения.");
       router.push("/checkout?payment=success");
     } catch (error) {
@@ -346,18 +524,18 @@ export default function CheckoutPageClient() {
     try {
       setIsPaying(true);
 
+      const finalAddress =
+        deliveryMethod === "pickup" ? pickupAddress : deliveryAddress;
+
       const localOrderId = await createOrderInSupabase({
         customer: name.trim(),
         phone,
         total: finalNewTotal,
         payment: "Картой",
         delivery: deliveryMethod === "pickup" ? "Самовывоз" : "Доставка",
-        address:
-          deliveryMethod === "pickup"
-            ? 'г. Казань, Академика Глушко 16Г, ТЦ "АКАДЕМИК", 2 этаж'
-            : address.trim(),
+        address: finalAddress,
         status: "Новый",
-        comment: promoCode.trim() ? `Промокод: ${promoCode.trim()}` : "",
+        comment: orderComment,
         promoCode: promoCode.trim(),
         items,
       });
@@ -371,7 +549,7 @@ export default function CheckoutPageClient() {
           localOrderId,
           name,
           phone,
-          address,
+          address: finalAddress,
           deliveryMethod,
           paymentMethod,
           promoCode,
@@ -434,7 +612,9 @@ export default function CheckoutPageClient() {
 
       {items.length === 0 ? (
         <div className="rounded-[24px] bg-white p-7 text-center shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
-          <p className="text-[16px] font-medium text-black">Нет товаров для оформления</p>
+          <p className="text-[16px] font-medium text-black">
+            Нет товаров для оформления
+          </p>
 
           <button
             onClick={() => router.push("/")}
@@ -456,7 +636,10 @@ export default function CheckoutPageClient() {
             const oldUnitPrice = productsMap[item.id]?.oldPrice ?? item.price;
             const lineOldTotal = oldUnitPrice * item.quantity;
             const lineNewTotal = item.price * item.quantity;
-            const lineDiscountPercent = getDiscountPercent(lineOldTotal, lineNewTotal);
+            const lineDiscountPercent = getDiscountPercent(
+              lineOldTotal,
+              lineNewTotal
+            );
 
             return (
               <div
@@ -544,17 +727,19 @@ export default function CheckoutPageClient() {
           })}
 
           <div className="rounded-[24px] bg-white p-4 shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
-            <h2 className="mb-4 text-[18px] font-medium text-black">Данные клиента</h2>
+            <h2 className="mb-4 text-[18px] font-medium text-black">
+              Данные клиента
+            </h2>
 
             <input
-              placeholder="Ваше имя"
+              placeholder="Ваше имя *"
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="mb-3 w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
             />
 
             <input
-              placeholder="+7 (___) ___-__-__"
+              placeholder="+7 (___) ___-__-__ *"
               value={phone}
               onChange={(e) => handlePhoneChange(e.target.value)}
               className="mb-4 w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
@@ -565,7 +750,9 @@ export default function CheckoutPageClient() {
               <button
                 onClick={() => setDeliveryMethod("delivery")}
                 className={`rounded-2xl py-3 text-sm ${
-                  deliveryMethod === "delivery" ? "bg-black text-white" : "bg-gray-100 text-black"
+                  deliveryMethod === "delivery"
+                    ? "bg-black text-white"
+                    : "bg-gray-100 text-black"
                 }`}
               >
                 Доставка
@@ -574,7 +761,9 @@ export default function CheckoutPageClient() {
               <button
                 onClick={() => setDeliveryMethod("pickup")}
                 className={`rounded-2xl py-3 text-sm ${
-                  deliveryMethod === "pickup" ? "bg-black text-white" : "bg-gray-100 text-black"
+                  deliveryMethod === "pickup"
+                    ? "bg-black text-white"
+                    : "bg-gray-100 text-black"
                 }`}
               >
                 Самовывоз
@@ -582,25 +771,73 @@ export default function CheckoutPageClient() {
             </div>
 
             {deliveryMethod === "delivery" ? (
-              <input
-                placeholder="Адрес доставки"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                className="mb-4 w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-              />
+              <>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <input
+                    placeholder="Город *"
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
+                  />
+
+                  <input
+                    placeholder="Улица *"
+                    value={street}
+                    onChange={(e) => setStreet(e.target.value)}
+                    className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
+                  />
+
+                  <input
+                    placeholder="Дом *"
+                    value={house}
+                    onChange={(e) => setHouse(e.target.value)}
+                    className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
+                  />
+
+                  <input
+                    placeholder="Квартира"
+                    value={apartment}
+                    onChange={(e) => setApartment(e.target.value)}
+                    className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
+                  />
+
+                  <input
+                    placeholder="Подъезд"
+                    value={entrance}
+                    onChange={(e) => setEntrance(e.target.value)}
+                    className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
+                  />
+
+                  <input
+                    placeholder="Этаж"
+                    value={floor}
+                    onChange={(e) => setFloor(e.target.value)}
+                    className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
+                  />
+                </div>
+
+                <textarea
+                  placeholder="Комментарий для доставки"
+                  value={deliveryComment}
+                  onChange={(e) => setDeliveryComment(e.target.value)}
+                  rows={3}
+                  className="mt-3 w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
+                />
+              </>
             ) : (
               <div className="mb-4 rounded-2xl bg-[#F5F5F5] p-3.5 text-sm leading-6 text-gray-600">
-                Самовывоз по адресу: г. Казань, Академика Глушко 16Г, ТЦ "АКАДЕМИК", 2 этаж.
-                Подробнее уточняйте у менеджера.
+                Самовывоз по адресу: {pickupAddress}. Подробнее уточняйте у менеджера.
               </div>
             )}
 
-            <p className="mb-2 text-sm text-gray-500">Способ оплаты</p>
+            <p className="mb-2 mt-4 text-sm text-gray-500">Способ оплаты</p>
             <div className="mb-3 grid grid-cols-2 gap-2">
               <button
                 onClick={() => setPaymentMethod("card")}
                 className={`rounded-2xl py-3 text-sm ${
-                  paymentMethod === "card" ? "bg-black text-white" : "bg-gray-100 text-black"
+                  paymentMethod === "card"
+                    ? "bg-black text-white"
+                    : "bg-gray-100 text-black"
                 }`}
               >
                 Картой
@@ -613,7 +850,9 @@ export default function CheckoutPageClient() {
                 }}
                 disabled={deliveryMethod !== "pickup"}
                 className={`rounded-2xl py-3 text-sm ${
-                  paymentMethod === "cash" ? "bg-black text-white" : "bg-gray-100 text-black"
+                  paymentMethod === "cash"
+                    ? "bg-black text-white"
+                    : "bg-gray-100 text-black"
                 } disabled:cursor-not-allowed disabled:opacity-50`}
               >
                 Наличными
@@ -636,7 +875,9 @@ export default function CheckoutPageClient() {
             <div className="mb-4 rounded-2xl bg-[#F7F7F7] px-4 py-3 text-sm">
               <div className="mb-2 flex items-center justify-between">
                 <span className="text-gray-500">До скидки</span>
-                <span className="text-gray-400 line-through">{finalOldTotal} ₽</span>
+                <span className="text-gray-400 line-through">
+                  {finalOldTotal} ₽
+                </span>
               </div>
 
               <div className="mb-2 flex items-center justify-between">
@@ -654,6 +895,10 @@ export default function CheckoutPageClient() {
                 <span className="text-black">{deliveryPrice} ₽</span>
               </div>
             </div>
+
+            {!!validationMessage && (
+              <p className="mb-3 text-sm text-[#B45309]">{validationMessage}</p>
+            )}
 
             {paymentMethod === "card" ? (
               <button
