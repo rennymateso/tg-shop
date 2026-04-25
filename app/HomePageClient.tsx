@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useMemo, useRef } from "react";
 import BottomNav from "./components/BottomNav";
+import AppSplash from "./components/AppSplash";
 
 const categories = ["Все", "Футболки", "Поло", "Джинсы", "Брюки", "Костюмы"] as const;
 const sortOptions = ["По умолчанию", "Сначала дешевле", "Сначала дороже"] as const;
@@ -72,6 +73,7 @@ export default function HomePageClient({
   const [selectedBadge, setSelectedBadge] = useState("Все");
   const [search, setSearch] = useState("");
   const [activeBanner] = useState(0);
+  const [showSplash, setShowSplash] = useState(true);
 
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [showBrandMenu, setShowBrandMenu] = useState(false);
@@ -85,6 +87,22 @@ export default function HomePageClient({
   useEffect(() => {
     const data = JSON.parse(localStorage.getItem("favorites") || "[]");
     setFavorites(Array.isArray(data) ? data : []);
+  }, []);
+
+  useEffect(() => {
+    const splashShown = sessionStorage.getItem("montreaux_splash_shown");
+
+    if (splashShown === "1") {
+      setShowSplash(false);
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setShowSplash(false);
+      sessionStorage.setItem("montreaux_splash_shown", "1");
+    }, 700);
+
+    return () => window.clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -222,354 +240,358 @@ export default function HomePageClient({
   ]);
 
   return (
-    <main className="min-h-screen bg-[#F5F5F5] px-3 pt-4 pb-32">
-      <div className="text-center">
-        <p className="text-[11px] uppercase tracking-[0.28em] text-gray-400">
-          Menswear
-        </p>
+    <>
+      {showSplash && <AppSplash />}
 
-        <button
-          type="button"
-          onClick={resetPage}
-          className="mt-2 text-[30px] font-light tracking-[0.35em] text-black"
-        >
-          MONTREAUX
-        </button>
-      </div>
+      <main className="min-h-screen bg-[#F5F5F5] px-3 pt-4 pb-32">
+        <div className="text-center">
+          <p className="text-[11px] uppercase tracking-[0.28em] text-gray-400">
+            Menswear
+          </p>
 
-      <div className="mt-4">
-        <div className="rounded-[22px] bg-white px-4 py-3 shadow-[0_8px_24px_rgba(0,0,0,0.04)]">
-          <div className="flex items-center gap-3">
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="#9CA3AF"
-              strokeWidth="1.8"
-              className="shrink-0"
-            >
-              <circle cx="11" cy="11" r="7" />
-              <path d="M20 20L17 17" />
-            </svg>
+          <button
+            type="button"
+            onClick={resetPage}
+            className="mt-2 text-[30px] font-light tracking-[0.35em] text-black"
+          >
+            MONTREAUX
+          </button>
+        </div>
 
-            <input
-              placeholder="Поиск товаров..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-transparent text-sm outline-none placeholder:text-gray-400"
-            />
+        <div className="mt-4">
+          <div className="rounded-[22px] bg-white px-4 py-3 shadow-[0_8px_24px_rgba(0,0,0,0.04)]">
+            <div className="flex items-center gap-3">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#9CA3AF"
+                strokeWidth="1.8"
+                className="shrink-0"
+              >
+                <circle cx="11" cy="11" r="7" />
+                <path d="M20 20L17 17" />
+              </svg>
+
+              <input
+                placeholder="Поиск товаров..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full bg-transparent text-sm outline-none placeholder:text-gray-400"
+              />
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="mt-4 overflow-hidden rounded-[24px] bg-white shadow-[0_10px_28px_rgba(0,0,0,0.05)]">
-        <button
-          type="button"
-          onClick={() => router.push(banners[activeBanner].link)}
-          className="relative block w-full"
-        >
-          <img
-            src={banners[activeBanner].image}
-            alt={banners[activeBanner].alt}
-            className="block h-[150px] w-full object-cover"
-          />
-        </button>
-      </div>
-
-      <div className="mt-5 overflow-x-auto">
-        <div className="flex min-w-max gap-2">
-          {categories.map((category) => (
-            <button
-              key={category}
-              onClick={() => setSelectedCategory(category)}
-              className={`rounded-full border px-2.5 py-1.5 text-[11px] transition-all duration-200 active:scale-95 ${
-                selectedCategory === category
-                  ? "border-black bg-black text-white"
-                  : "border-gray-200 bg-white text-gray-600"
-              }`}
-            >
-              {category}
-            </button>
-          ))}
+        <div className="mt-4 overflow-hidden rounded-[24px] bg-white shadow-[0_10px_28px_rgba(0,0,0,0.05)]">
+          <button
+            type="button"
+            onClick={() => router.push(banners[activeBanner].link)}
+            className="relative block w-full"
+          >
+            <img
+              src={banners[activeBanner].image}
+              alt={banners[activeBanner].alt}
+              className="block h-[150px] w-full object-cover"
+            />
+          </button>
         </div>
-      </div>
 
-      <div className="relative z-30 mt-3">
-        <div className="flex items-start gap-2">
-          <div className="relative shrink-0" ref={brandMenuWrapRef}>
-            <button
-              type="button"
-              onClick={() => setShowBrandMenu((prev) => !prev)}
-              className={`max-w-[170px] truncate rounded-full border px-3 py-2 text-[11px] shadow-[0_4px_14px_rgba(0,0,0,0.04)] transition-all ${
-                showBrandMenu
-                  ? "border-black bg-black text-white"
-                  : "border-gray-200 bg-white text-gray-700"
-              }`}
-            >
-              {selectedBrand}
-            </button>
+        <div className="mt-5 overflow-x-auto">
+          <div className="flex min-w-max gap-2">
+            {categories.map((category) => (
+              <button
+                key={category}
+                onClick={() => setSelectedCategory(category)}
+                className={`rounded-full border px-2.5 py-1.5 text-[11px] transition-all duration-200 active:scale-95 ${
+                  selectedCategory === category
+                    ? "border-black bg-black text-white"
+                    : "border-gray-200 bg-white text-gray-600"
+                }`}
+              >
+                {category}
+              </button>
+            ))}
+          </div>
+        </div>
 
-            {showBrandMenu && (
-              <div className="absolute left-0 top-12 z-50 max-h-72 w-56 overflow-y-auto rounded-2xl border border-gray-100 bg-white p-1.5 shadow-[0_16px_40px_rgba(0,0,0,0.14)]">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedBrand("Все бренды");
-                    setShowBrandMenu(false);
-                  }}
-                  className={`w-full rounded-xl px-3 py-2 text-left text-[12px] ${
-                    selectedBrand === "Все бренды"
-                      ? "bg-black text-white"
-                      : "text-gray-700 hover:bg-gray-50"
-                  }`}
-                >
-                  Все бренды
-                </button>
+        <div className="relative z-30 mt-3">
+          <div className="flex items-start gap-2">
+            <div className="relative shrink-0" ref={brandMenuWrapRef}>
+              <button
+                type="button"
+                onClick={() => setShowBrandMenu((prev) => !prev)}
+                className={`max-w-[170px] truncate rounded-full border px-3 py-2 text-[11px] shadow-[0_4px_14px_rgba(0,0,0,0.04)] transition-all ${
+                  showBrandMenu
+                    ? "border-black bg-black text-white"
+                    : "border-gray-200 bg-white text-gray-700"
+                }`}
+              >
+                {selectedBrand}
+              </button>
 
-                {initialBrands.map((brand) => (
+              {showBrandMenu && (
+                <div className="absolute left-0 top-12 z-50 max-h-72 w-56 overflow-y-auto rounded-2xl border border-gray-100 bg-white p-1.5 shadow-[0_16px_40px_rgba(0,0,0,0.14)]">
                   <button
-                    key={brand.id}
                     type="button"
                     onClick={() => {
-                      setSelectedBrand(brand.name);
+                      setSelectedBrand("Все бренды");
                       setShowBrandMenu(false);
                     }}
                     className={`w-full rounded-xl px-3 py-2 text-left text-[12px] ${
-                      selectedBrand === brand.name
+                      selectedBrand === "Все бренды"
                         ? "bg-black text-white"
                         : "text-gray-700 hover:bg-gray-50"
                     }`}
                   >
-                    {brand.name}
+                    Все бренды
+                  </button>
+
+                  {initialBrands.map((brand) => (
+                    <button
+                      key={brand.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedBrand(brand.name);
+                        setShowBrandMenu(false);
+                      }}
+                      className={`w-full rounded-xl px-3 py-2 text-left text-[12px] ${
+                        selectedBrand === brand.name
+                          ? "bg-black text-white"
+                          : "text-gray-700 hover:bg-gray-50"
+                      }`}
+                    >
+                      {brand.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="min-w-0 flex-1 overflow-x-auto">
+              <div className="flex min-w-max gap-2 pb-1">
+                <button
+                  type="button"
+                  onClick={() => setSelectedBadge("Все")}
+                  className={`shrink-0 rounded-full border px-3 py-2 text-[11px] transition-all duration-200 ${
+                    selectedBadge === "Все"
+                      ? "border-black bg-black text-white"
+                      : "border-gray-200 bg-white text-gray-700"
+                  }`}
+                >
+                  Все
+                </button>
+
+                {initialBadges.map((badge) => (
+                  <button
+                    key={badge.id}
+                    type="button"
+                    onClick={() =>
+                      setSelectedBadge((prev) =>
+                        prev === badge.name ? "Все" : badge.name
+                      )
+                    }
+                    className={`shrink-0 rounded-full border px-3 py-2 text-[11px] transition-all duration-200 ${
+                      selectedBadge === badge.name
+                        ? "border-black bg-black text-white"
+                        : "border-gray-200 bg-white text-gray-700"
+                    }`}
+                  >
+                    {badge.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mb-4 mt-7 flex items-center justify-between">
+          <h2 className="text-[17px] font-medium text-black">Подборка</h2>
+
+          <div className="relative shrink-0" ref={sortMenuRef}>
+            <button
+              type="button"
+              onClick={() => setShowSortMenu((prev) => !prev)}
+              className="text-[12px] text-gray-400"
+            >
+              {selectedSort}
+            </button>
+
+            {showSortMenu && (
+              <div className="absolute right-0 top-6 z-30 w-40 rounded-2xl border border-gray-100 bg-white p-1.5 shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
+                {sortOptions.map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => {
+                      setSelectedSort(option);
+                      setShowSortMenu(false);
+                    }}
+                    className={`w-full rounded-xl px-3 py-2 text-left text-[12px] ${
+                      selectedSort === option
+                        ? "bg-black text-white"
+                        : "text-gray-700 hover:bg-gray-50"
+                    }`}
+                  >
+                    {option}
                   </button>
                 ))}
               </div>
             )}
           </div>
+        </div>
 
-          <div className="min-w-0 flex-1 overflow-x-auto">
-            <div className="flex min-w-max gap-2 pb-1">
-              <button
-                type="button"
-                onClick={() => setSelectedBadge("Все")}
-                className={`shrink-0 rounded-full border px-3 py-2 text-[11px] transition-all duration-200 ${
-                  selectedBadge === "Все"
-                    ? "border-black bg-black text-white"
-                    : "border-gray-200 bg-white text-gray-700"
-                }`}
-              >
-                Все
-              </button>
-
-              {initialBadges.map((badge) => (
-                <button
-                  key={badge.id}
-                  type="button"
-                  onClick={() =>
-                    setSelectedBadge((prev) =>
-                      prev === badge.name ? "Все" : badge.name
-                    )
-                  }
-                  className={`shrink-0 rounded-full border px-3 py-2 text-[11px] transition-all duration-200 ${
-                    selectedBadge === badge.name
-                      ? "border-black bg-black text-white"
-                      : "border-gray-200 bg-white text-gray-700"
-                  }`}
-                >
-                  {badge.name}
-                </button>
-              ))}
-            </div>
+        {filteredProducts.length === 0 ? (
+          <div className="rounded-[24px] bg-white p-7 text-center shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
+            <p className="text-[16px] font-medium text-black">Ничего не найдено</p>
+            <p className="mt-2 text-sm text-gray-400">
+              Попробуйте изменить фильтры
+            </p>
           </div>
-        </div>
-      </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3">
+            {filteredProducts.map((p) => {
+              const discountPercent = getDiscountPercent(p.oldPrice, p.price);
+              const imageCount = p.images?.length || 1;
+              const currentImageIndex = cardImageIndexes[p.id] || 0;
+              const currentImage =
+                p.images[currentImageIndex] || p.image || "/products/product-1.jpg";
 
-      <div className="mb-4 mt-7 flex items-center justify-between">
-        <h2 className="text-[17px] font-medium text-black">Подборка</h2>
-
-        <div className="relative shrink-0" ref={sortMenuRef}>
-          <button
-            type="button"
-            onClick={() => setShowSortMenu((prev) => !prev)}
-            className="text-[12px] text-gray-400"
-          >
-            {selectedSort}
-          </button>
-
-          {showSortMenu && (
-            <div className="absolute right-0 top-6 z-30 w-40 rounded-2xl border border-gray-100 bg-white p-1.5 shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
-              {sortOptions.map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  onClick={() => {
-                    setSelectedSort(option);
-                    setShowSortMenu(false);
-                  }}
-                  className={`w-full rounded-xl px-3 py-2 text-left text-[12px] ${
-                    selectedSort === option
-                      ? "bg-black text-white"
-                      : "text-gray-700 hover:bg-gray-50"
-                  }`}
-                >
-                  {option}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {filteredProducts.length === 0 ? (
-        <div className="rounded-[24px] bg-white p-7 text-center shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
-          <p className="text-[16px] font-medium text-black">Ничего не найдено</p>
-          <p className="mt-2 text-sm text-gray-400">
-            Попробуйте изменить фильтры
-          </p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 gap-3">
-          {filteredProducts.map((p) => {
-            const discountPercent = getDiscountPercent(p.oldPrice, p.price);
-            const imageCount = p.images?.length || 1;
-            const currentImageIndex = cardImageIndexes[p.id] || 0;
-            const currentImage =
-              p.images[currentImageIndex] || p.image || "/products/product-1.jpg";
-
-            return (
-              <div
-                key={p.id}
-                onClick={() => router.push(`/product?id=${p.id}`)}
-                className="group cursor-pointer overflow-hidden rounded-[20px] bg-white shadow-[0_10px_28px_rgba(0,0,0,0.05)] transition-all duration-300 active:scale-[0.985]"
-              >
+              return (
                 <div
-                  className="relative aspect-[3/4] overflow-hidden bg-[#EAEAEA]"
-                  onTouchStart={(e) =>
-                    handleCardTouchStart(p.id, e.touches[0]?.clientX ?? 0)
-                  }
-                  onTouchEnd={(e) =>
-                    handleCardTouchEnd(
-                      p.id,
-                      e.changedTouches[0]?.clientX ?? 0,
-                      imageCount
-                    )
-                  }
+                  key={p.id}
+                  onClick={() => router.push(`/product?id=${p.id}`)}
+                  className="group cursor-pointer overflow-hidden rounded-[20px] bg-white shadow-[0_10px_28px_rgba(0,0,0,0.05)] transition-all duration-300 active:scale-[0.985]"
                 >
-                  <img
-                    src={currentImage}
-                    alt={p.name}
-                    className="h-full w-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.src = "/products/product-1.jpg";
-                    }}
-                  />
-
-                  {p.badge.trim() && (
-                    <div
-                      className={`absolute left-3 top-3 rounded-full px-2.5 py-1 text-[10px] font-medium backdrop-blur shadow-sm ${
-                        p.badge.trim().toLowerCase() === "из-за рубежа"
-                          ? "bg-black text-white"
-                          : "bg-white/90 text-black"
-                      }`}
-                    >
-                      {p.badge}
-                    </div>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleFavorite(p.id);
-                    }}
-                    className="absolute right-3 top-3 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 backdrop-blur shadow-sm transition-transform duration-200 active:scale-90"
+                  <div
+                    className="relative aspect-[3/4] overflow-hidden bg-[#EAEAEA]"
+                    onTouchStart={(e) =>
+                      handleCardTouchStart(p.id, e.touches[0]?.clientX ?? 0)
+                    }
+                    onTouchEnd={(e) =>
+                      handleCardTouchEnd(
+                        p.id,
+                        e.changedTouches[0]?.clientX ?? 0,
+                        imageCount
+                      )
+                    }
                   >
-                    <svg
-                      width="18"
-                      height="18"
-                      viewBox="0 0 24 24"
-                      fill={favorites.includes(p.id) ? "black" : "none"}
-                      stroke="black"
-                      strokeWidth="1.7"
-                    >
-                      <path d="M20.8 4.6c-1.8-1.8-4.7-1.8-6.5 0L12 6.9l-2.3-2.3c-1.8-1.8-4.7-1.8-6.5 0s-1.8 4.7 0 6.5L12 21l8.8-9.9c1.8-1.8 1.8-4.7 0-6.5z" />
-                    </svg>
-                  </button>
+                    <img
+                      src={currentImage}
+                      alt={p.name}
+                      className="h-full w-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.src = "/products/product-1.jpg";
+                      }}
+                    />
 
-                  <div className="pointer-events-none absolute bottom-3 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1.5">
-                    {Array.from({ length: imageCount }).map((_, index) => (
-                      <span
-                        key={`${p.id}-dot-${index}`}
-                        className={`block rounded-full ${
-                          index === currentImageIndex
-                            ? "h-1.5 w-4 bg-white"
-                            : "h-1.5 w-1.5 bg-white/45"
+                    {p.badge.trim() && (
+                      <div
+                        className={`absolute left-3 top-3 rounded-full px-2.5 py-1 text-[10px] font-medium backdrop-blur shadow-sm ${
+                          p.badge.trim().toLowerCase() === "из-за рубежа"
+                            ? "bg-black text-white"
+                            : "bg-white/90 text-black"
                         }`}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex min-h-[150px] flex-col p-3">
-                  <div className="h-[20px] overflow-hidden text-[10px] text-gray-400">
-                    <span className="max-w-[110px] break-words uppercase tracking-[0.14em]">
-                      {p.brand}
-                    </span>
-                  </div>
-
-                  <h3 className="mt-1 min-h-[36px] text-[14px] font-medium leading-[1.2] text-black">
-                    {p.name}
-                  </h3>
-
-                  <div className="mt-auto flex items-center justify-between gap-2 pt-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-[12px] font-normal leading-none text-gray-400 line-through">
-                        {p.oldPrice} ₽
-                      </span>
-
-                      <span className="text-[16px] font-semibold leading-none tracking-[-0.02em] text-[#16A34A]">
-                        {p.price} ₽
-                      </span>
-
-                      {discountPercent > 0 && (
-                        <span className="rounded-full bg-[#E8F7EE] px-1.5 py-0.5 text-[10px] font-medium text-[#16A34A]">
-                          -{discountPercent}%
-                        </span>
-                      )}
-                    </div>
+                      >
+                        {p.badge}
+                      </div>
+                    )}
 
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        router.push(`/product?id=${p.id}`);
+                        toggleFavorite(p.id);
                       }}
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#F5F5F5] transition-transform duration-200 active:scale-90"
+                      className="absolute right-3 top-3 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 backdrop-blur shadow-sm transition-transform duration-200 active:scale-90"
                     >
                       <svg
-                        width="17"
-                        height="17"
+                        width="18"
+                        height="18"
                         viewBox="0 0 24 24"
-                        fill="none"
+                        fill={favorites.includes(p.id) ? "black" : "none"}
                         stroke="black"
                         strokeWidth="1.7"
                       >
-                        <path d="M6 6h15l-1.5 9h-12z" />
-                        <path d="M6 6L5 3H2" />
-                        <circle cx="9" cy="20" r="1" />
-                        <circle cx="18" cy="20" r="1" />
+                        <path d="M20.8 4.6c-1.8-1.8-4.7-1.8-6.5 0L12 6.9l-2.3-2.3c-1.8-1.8-4.7-1.8-6.5 0s-1.8 4.7 0 6.5L12 21l8.8-9.9c1.8-1.8 1.8-4.7 0-6.5z" />
                       </svg>
                     </button>
+
+                    <div className="pointer-events-none absolute bottom-3 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1.5">
+                      {Array.from({ length: imageCount }).map((_, index) => (
+                        <span
+                          key={`${p.id}-dot-${index}`}
+                          className={`block rounded-full ${
+                            index === currentImageIndex
+                              ? "h-1.5 w-4 bg-white"
+                              : "h-1.5 w-1.5 bg-white/45"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex min-h-[150px] flex-col p-3">
+                    <div className="h-[20px] overflow-hidden text-[10px] text-gray-400">
+                      <span className="max-w-[110px] break-words uppercase tracking-[0.14em]">
+                        {p.brand}
+                      </span>
+                    </div>
+
+                    <h3 className="mt-1 min-h-[36px] text-[14px] font-medium leading-[1.2] text-black">
+                      {p.name}
+                    </h3>
+
+                    <div className="mt-auto flex items-center justify-between gap-2 pt-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-[12px] font-normal leading-none text-gray-400 line-through">
+                          {p.oldPrice} ₽
+                        </span>
+
+                        <span className="text-[16px] font-semibold leading-none tracking-[-0.02em] text-[#16A34A]">
+                          {p.price} ₽
+                        </span>
+
+                        {discountPercent > 0 && (
+                          <span className="rounded-full bg-[#E8F7EE] px-1.5 py-0.5 text-[10px] font-medium text-[#16A34A]">
+                            -{discountPercent}%
+                          </span>
+                        )}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          router.push(`/product?id=${p.id}`);
+                        }}
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#F5F5F5] transition-transform duration-200 active:scale-90"
+                      >
+                        <svg
+                          width="17"
+                          height="17"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="black"
+                          strokeWidth="1.7"
+                        >
+                          <path d="M6 6h15l-1.5 9h-12z" />
+                          <path d="M6 6L5 3H2" />
+                          <circle cx="9" cy="20" r="1" />
+                          <circle cx="18" cy="20" r="1" />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+              );
+            })}
+          </div>
+        )}
 
-      <BottomNav />
-    </main>
+        <BottomNav />
+      </main>
+    </>
   );
 }
