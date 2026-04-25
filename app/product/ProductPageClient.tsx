@@ -517,18 +517,18 @@ export default function ProductPageClient({
             <button
               onClick={addToCart}
               disabled={!canOrder}
-              className={`w-full rounded-2xl py-3.5 text-sm font-medium transition-all duration-200 ${
+              className={`w-full rounded-2xl py-3.5 text-sm font-medium transition-all duration-300 ${
                 !canOrder
                   ? "bg-gray-200 text-gray-500"
                   : isAddedToCart
-                  ? "bg-[#16A34A] text-white"
-                  : "bg-black text-white active:scale-[0.99]"
+                  ? "scale-[0.985] bg-[#16A34A] text-white shadow-[0_10px_24px_rgba(22,163,74,0.22)]"
+                  : "bg-black text-white shadow-none active:scale-[0.99]"
               }`}
             >
               {!canOrder
                 ? "Добавить в корзину"
                 : isAddedToCart
-                ? "Добавлено ✓"
+                ? "Добавлено"
                 : "Добавить в корзину"}
             </button>
 
