@@ -148,6 +148,10 @@ export default function HomePageClient({
     router.push("/");
   };
 
+  const prefetchProduct = (productId: string) => {
+    router.prefetch(`/product?id=${productId}`);
+  };
+
   const nextCardImage = (productId: string, totalImages: number) => {
     if (totalImages <= 1) return;
 
@@ -462,6 +466,8 @@ export default function HomePageClient({
                 <div
                   key={p.id}
                   onClick={() => router.push(`/product?id=${p.id}`)}
+                  onMouseEnter={() => prefetchProduct(p.id)}
+                  onTouchStart={() => prefetchProduct(p.id)}
                   className="group cursor-pointer overflow-hidden rounded-[20px] bg-white shadow-[0_10px_28px_rgba(0,0,0,0.05)] transition-all duration-300 active:scale-[0.985]"
                 >
                   <div
@@ -562,6 +568,8 @@ export default function HomePageClient({
 
                       <button
                         type="button"
+                        onMouseEnter={() => prefetchProduct(p.id)}
+                        onTouchStart={() => prefetchProduct(p.id)}
                         onClick={(e) => {
                           e.stopPropagation();
                           router.push(`/product?id=${p.id}`);
