@@ -23,34 +23,50 @@ function getCartCount() {
   }
 }
 
+function getFavoritesCount() {
+  try {
+    const raw = localStorage.getItem("favorites") || "[]";
+    const favorites = JSON.parse(raw) as string[];
+    if (!Array.isArray(favorites)) return 0;
+    return favorites.length;
+  } catch {
+    return 0;
+  }
+}
+
 export default function BottomNav() {
   const router = useRouter();
   const pathname = usePathname();
   const [cartCount, setCartCount] = useState(0);
+  const [favoritesCount, setFavoritesCount] = useState(0);
 
   useEffect(() => {
-    const syncCartCount = () => {
+    const syncCounts = () => {
       setCartCount(getCartCount());
+      setFavoritesCount(getFavoritesCount());
     };
 
-    syncCartCount();
+    syncCounts();
 
-    const handleStorage = () => syncCartCount();
-    const handleFocus = () => syncCartCount();
-    const handleCartUpdated = () => syncCartCount();
+    const handleStorage = () => syncCounts();
+    const handleFocus = () => syncCounts();
+    const handleCartUpdated = () => syncCounts();
+    const handleFavoritesUpdated = () => syncCounts();
     const handleVisibility = () => {
-      if (!document.hidden) syncCartCount();
+      if (!document.hidden) syncCounts();
     };
 
     window.addEventListener("storage", handleStorage);
     window.addEventListener("focus", handleFocus);
     window.addEventListener("cart-updated", handleCartUpdated);
+    window.addEventListener("favorites-updated", handleFavoritesUpdated);
     document.addEventListener("visibilitychange", handleVisibility);
 
     return () => {
       window.removeEventListener("storage", handleStorage);
       window.removeEventListener("focus", handleFocus);
       window.removeEventListener("cart-updated", handleCartUpdated);
+      window.removeEventListener("favorites-updated", handleFavoritesUpdated);
       document.removeEventListener("visibilitychange", handleVisibility);
     };
   }, [pathname]);
@@ -60,6 +76,12 @@ export default function BottomNav() {
     if (cartCount > 99) return "99+";
     return String(cartCount);
   }, [cartCount]);
+
+  const favoritesBadge = useMemo(() => {
+    if (favoritesCount <= 0) return "";
+    if (favoritesCount > 99) return "99+";
+    return String(favoritesCount);
+  }, [favoritesCount]);
 
   const activeClass = (path: string) =>
     pathname === path ? "text-blue-500" : "text-gray-400";
@@ -78,8 +100,14 @@ export default function BottomNav() {
 
       <button
         onClick={() => router.push("/favorites")}
-        className={`flex flex-1 flex-col items-center gap-1 ${activeClass("/favorites")}`}
+        className={`relative flex flex-1 flex-col items-center gap-1 ${activeClass("/favorites")}`}
       >
+        {favoritesBadge && (
+          <span className="absolute right-[calc(50%-24px)] top-0 min-w-[18px] rounded-full bg-black px-1.5 py-[1px] text-center text-[10px] font-medium leading-[16px] text-white">
+            {favoritesBadge}
+          </span>
+        )}
+
         <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
           <path d="M12 21l-1.4-1.3C5.4 15 2 11.9 2 8.1 2 5 4.4 3 7.4 3c1.7 0 3.4.8 4.6 2.1C13.2 3.8 14.9 3 16.6 3 19.6 3 22 5 22 8.1c0 3.8-3.4 6.9-8.6 11.6z" />
         </svg>

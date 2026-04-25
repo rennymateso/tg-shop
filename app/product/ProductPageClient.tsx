@@ -81,6 +81,7 @@ export default function ProductPageClient({
 
     setFavorites(updated);
     localStorage.setItem("favorites", JSON.stringify(updated));
+    window.dispatchEvent(new Event("favorites-updated"));
   };
 
   const topSizes = [
@@ -116,11 +117,15 @@ export default function ProductPageClient({
   const article = product ? `ART-${product.id}` : "";
   const description = product?.description || "";
   const canOrder = selectedSizes.length > 0 && !!selectedColor;
-  const discountPercent = product ? getDiscountPercent(product.oldPrice, product.price) : 0;
+  const discountPercent = product
+    ? getDiscountPercent(product.oldPrice, product.price)
+    : 0;
 
   const toggleSize = (value: string) => {
     setSelectedSizes((prev) =>
-      prev.includes(value) ? prev.filter((item) => item !== value) : [...prev, value]
+      prev.includes(value)
+        ? prev.filter((item) => item !== value)
+        : [...prev, value]
     );
   };
 
@@ -132,12 +137,16 @@ export default function ProductPageClient({
 
   const nextImage = () => {
     if (galleryImages.length <= 1) return;
-    setActiveImageIndex((prev) => (prev >= galleryImages.length - 1 ? 0 : prev + 1));
+    setActiveImageIndex((prev) =>
+      prev >= galleryImages.length - 1 ? 0 : prev + 1
+    );
   };
 
   const prevImage = () => {
     if (galleryImages.length <= 1) return;
-    setActiveImageIndex((prev) => (prev <= 0 ? galleryImages.length - 1 : prev - 1));
+    setActiveImageIndex((prev) =>
+      prev <= 0 ? galleryImages.length - 1 : prev - 1
+    );
   };
 
   const onTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
@@ -162,7 +171,9 @@ export default function ProductPageClient({
   const addToCart = () => {
     if (!product || !canOrder) return;
 
-    const existingCart: CartItem[] = JSON.parse(localStorage.getItem("cart") || "[]");
+    const existingCart: CartItem[] = JSON.parse(
+      localStorage.getItem("cart") || "[]"
+    );
 
     const newItems: CartItem[] = selectedSizes.map((size) => ({
       id: product.id,
@@ -192,7 +203,6 @@ export default function ProductPageClient({
 
     localStorage.setItem("cart", JSON.stringify(updatedCart));
     window.dispatchEvent(new Event("cart-updated"));
-    router.push("/cart");
   };
 
   if (!product) {
@@ -208,7 +218,9 @@ export default function ProductPageClient({
         <div className="rounded-[24px] bg-white p-5 shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
           <p className="text-sm text-gray-500">Товар не найден</p>
           {initialError && (
-            <p className="mt-2 break-words text-xs text-gray-400">{initialError}</p>
+            <p className="mt-2 break-words text-xs text-gray-400">
+              {initialError}
+            </p>
           )}
         </div>
 
@@ -362,7 +374,9 @@ export default function ProductPageClient({
                   <div className="text-[11px] font-medium">{s.label}</div>
                   <div
                     className={`mt-0.5 text-[9px] ${
-                      selectedSizes.includes(s.label) ? "text-white/70" : "text-gray-400"
+                      selectedSizes.includes(s.label)
+                        ? "text-white/70"
+                        : "text-gray-400"
                     }`}
                   >
                     {s.sub}
@@ -395,7 +409,9 @@ export default function ProductPageClient({
                     key={c}
                     onClick={() => selectColor(c)}
                     className={`overflow-hidden rounded-2xl border bg-white text-left transition-all duration-200 active:scale-95 ${
-                      isSelected ? "border-black ring-2 ring-black/10" : "border-gray-200"
+                      isSelected
+                        ? "border-black ring-2 ring-black/10"
+                        : "border-gray-200"
                     }`}
                   >
                     <div className="aspect-[3/4] w-full overflow-hidden bg-[#ECECEC]">
@@ -480,7 +496,9 @@ export default function ProductPageClient({
               onClick={addToCart}
               disabled={!canOrder}
               className={`w-full rounded-2xl py-3.5 text-sm font-medium transition-all duration-200 ${
-                canOrder ? "bg-black text-white active:scale-[0.99]" : "bg-gray-200 text-gray-500"
+                canOrder
+                  ? "bg-black text-white active:scale-[0.99]"
+                  : "bg-gray-200 text-gray-500"
               }`}
             >
               Добавить в корзину
