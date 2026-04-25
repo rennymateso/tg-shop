@@ -23,6 +23,7 @@ type TelegramMessage = {
     id: number;
     type?: string;
   };
+  text?: string;
 };
 
 type TelegramUpdate = {
@@ -37,6 +38,7 @@ export async function POST(req: NextRequest) {
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (!secret || !supabaseUrl || !serviceRoleKey) {
+      console.error("WEBHOOK ERROR: missing env vars");
       return NextResponse.json(
         { ok: false, error: "Missing server environment variables" },
         { status: 500 }
@@ -45,6 +47,9 @@ export async function POST(req: NextRequest) {
 
     const headerSecret = req.headers.get("x-telegram-bot-api-secret-token");
     if (headerSecret !== secret) {
+      console.error("WEBHOOK ERROR: invalid secret", {
+        received: headerSecret,
+      });
       return NextResponse.json(
         { ok: false, error: "Invalid webhook secret" },
         { status: 401 }
@@ -54,7 +59,18 @@ export async function POST(req: NextRequest) {
     const update = (await req.json()) as TelegramUpdate;
     const message = update.message;
 
-    if (!message?.contact?.phone_number) {
+    console.log("WEBHOOK UPDATE:", JSON.stringify(update, null, 2));
+
+    if (!message) {
+      console.log("WEBHOOK INFO: no message in update");
+      return NextResponse.json({ ok: true });
+    }
+
+    if (!message.contact?.phone_number) {
+      console.log("WEBHOOK INFO: message received but no contact phone", {
+        text: message.text || null,
+        fromId: message.from?.id || null,
+      });
       return NextResponse.json({ ok: true });
     }
 
@@ -66,10 +82,22 @@ export async function POST(req: NextRequest) {
         : null;
 
     if (!telegramUserId) {
+      console.log("WEBHOOK INFO: no telegram user id", {
+        contactUserId: message.contact.user_id || null,
+        fromId: message.from?.id || null,
+      });
       return NextResponse.json({ ok: true });
     }
 
     const phone = message.contact.phone_number.trim();
+
+    console.log("WEBHOOK CONTACT RECEIVED:", {
+      telegramUserId,
+      phone,
+      username: message.from?.username || null,
+      firstName: message.from?.first_name || null,
+      lastName: message.from?.last_name || null,
+    });
 
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
@@ -91,14 +119,32 @@ export async function POST(req: NextRequest) {
       });
 
     if (upsertError) {
+      console.error("WEBHOOK SUPABASE UPSERT ERROR:", upsertError);
       return NextResponse.json(
         { ok: false, error: upsertError.message },
         { status: 500 }
       );
     }
 
+    const { data: customer, error: selectError } = await supabase
+      .from("customers")
+      .select("telegram_user_id, first_name, telegram_username, phone, updated_at")
+      .eq("telegram_user_id", telegramUserId)
+      .single();
+
+    if (selectError) {
+      console.error("WEBHOOK SUPABASE SELECT ERROR:", selectError);
+      return NextResponse.json(
+        { ok: false, error: selectError.message },
+        { status: 500 }
+      );
+    }
+
+    console.log("WEBHOOK CUSTOMER SAVED:", customer);
+
     return NextResponse.json({ ok: true });
   } catch (error) {
+    console.error("WEBHOOK FATAL ERROR:", error);
     return NextResponse.json(
       {
         ok: false,
