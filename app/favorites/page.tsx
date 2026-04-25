@@ -3,26 +3,143 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import BottomNav from "../components/BottomNav";
-import { products } from "../data/products";
+import { supabase } from "../lib/supabase";
+
+type Product = {
+  id: string;
+  name: string;
+  brand: string;
+  price: number;
+  oldPrice: number | null;
+  badge: string;
+  image: string;
+  images: string[];
+  category: "Футболки" | "Поло" | "Джинсы" | "Брюки" | "Костюмы";
+};
+
+type ProductRow = {
+  id: string;
+  name: string;
+  brand: string;
+  category: "Футболки" | "Поло" | "Джинсы" | "Брюки" | "Костюмы";
+  price: number;
+  old_price: number;
+  badge: string | null;
+  status: "Активен" | "Скрыт";
+  image: string | null;
+  color_images: Record<string, string[]> | null;
+};
 
 function getDiscountPercent(oldPrice: number | null, price: number) {
   if (!oldPrice || oldPrice <= price) return 0;
   return Math.round(((oldPrice - price) / oldPrice) * 100);
 }
 
+function mapRowToProduct(row: ProductRow): Product {
+  const galleryFromDb =
+    row.color_images && typeof row.color_images === "object"
+      ? Object.values(row.color_images)
+          .filter((value) => Array.isArray(value))
+          .flat()
+          .filter((value) => typeof value === "string" && value.trim().length > 0)
+      : [];
+
+  const fallbackImage =
+    (typeof row.image === "string" && row.image.trim()) ||
+    galleryFromDb[0] ||
+    "/products/product-1.jpg";
+
+  const uniqueImages = Array.from(new Set([fallbackImage, ...galleryFromDb]));
+
+  return {
+    id: row.id,
+    name: row.name,
+    brand: row.brand,
+    price: row.price,
+    oldPrice: row.old_price || null,
+    badge: row.badge || "",
+    image: fallbackImage,
+    images: uniqueImages.length > 0 ? uniqueImages : ["/products/product-1.jpg"],
+    category: row.category,
+  };
+}
+
 export default function FavoritesPage() {
   const router = useRouter();
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const saved = JSON.parse(localStorage.getItem("favorites") || "[]");
-    setFavoriteIds(saved);
+    const syncFavorites = () => {
+      try {
+        const saved = JSON.parse(localStorage.getItem("favorites") || "[]");
+        setFavoriteIds(Array.isArray(saved) ? saved : []);
+      } catch {
+        setFavoriteIds([]);
+      }
+    };
+
+    syncFavorites();
+
+    const handleStorage = () => syncFavorites();
+    const handleFocus = () => syncFavorites();
+    const handleFavoritesUpdated = () => syncFavorites();
+
+    window.addEventListener("storage", handleStorage);
+    window.addEventListener("focus", handleFocus);
+    window.addEventListener("favorites-updated", handleFavoritesUpdated);
+
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener("focus", handleFocus);
+      window.removeEventListener("favorites-updated", handleFavoritesUpdated);
+    };
   }, []);
 
-  const favoriteProducts = useMemo(
-    () => products.filter((p) => favoriteIds.includes(p.id)),
-    [favoriteIds]
-  );
+  useEffect(() => {
+    const loadProducts = async () => {
+      setLoading(true);
+
+      const { data, error } = await supabase
+        .from("products")
+        .select("id,name,brand,category,price,old_price,badge,status,image,color_images")
+        .eq("status", "Активен")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        setProducts([]);
+        setLoading(false);
+        return;
+      }
+
+      const mapped = ((data || []) as ProductRow[]).map(mapRowToProduct);
+      setProducts(mapped);
+      setLoading(false);
+    };
+
+    loadProducts();
+
+    const channel = supabase
+      .channel("favorites-products-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "products" },
+        () => {
+          loadProducts();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const favoriteProducts = useMemo(() => {
+    if (favoriteIds.length === 0) return [];
+    return products.filter((p) => favoriteIds.includes(p.id));
+  }, [favoriteIds, products]);
 
   const toggleFavorite = (id: string) => {
     const updated = favoriteIds.includes(id)
@@ -31,6 +148,7 @@ export default function FavoritesPage() {
 
     setFavoriteIds(updated);
     localStorage.setItem("favorites", JSON.stringify(updated));
+    window.dispatchEvent(new Event("favorites-updated"));
   };
 
   return (
@@ -48,7 +166,23 @@ export default function FavoritesPage() {
         <div className="w-[86px]" />
       </div>
 
-      {favoriteProducts.length === 0 ? (
+      {loading ? (
+        <div className="grid grid-cols-2 gap-3">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div
+              key={`fav-skeleton-${index}`}
+              className="overflow-hidden rounded-[20px] bg-white shadow-[0_10px_28px_rgba(0,0,0,0.05)]"
+            >
+              <div className="aspect-[3/4] animate-pulse bg-[#EAEAEA]" />
+              <div className="p-3">
+                <div className="h-3 w-20 animate-pulse rounded bg-[#ECECEC]" />
+                <div className="mt-3 h-4 w-28 animate-pulse rounded bg-[#ECECEC]" />
+                <div className="mt-3 h-4 w-24 animate-pulse rounded bg-[#ECECEC]" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : favoriteProducts.length === 0 ? (
         <div className="rounded-[24px] bg-white p-7 text-center shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
           <p className="text-[16px] font-medium text-black">Избранное пусто</p>
           <p className="mt-2 text-sm text-gray-400">
@@ -78,7 +212,22 @@ export default function FavoritesPage() {
                     src={p.image}
                     alt={p.name}
                     className="h-full w-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.src = "/products/product-1.jpg";
+                    }}
                   />
+
+                  {p.badge.trim() && (
+                    <div
+                      className={`absolute left-3 top-3 rounded-full px-2.5 py-1 text-[10px] font-medium backdrop-blur shadow-sm ${
+                        p.badge.trim().toLowerCase() === "из-за рубежа"
+                          ? "bg-black text-white"
+                          : "bg-white/90 text-black"
+                      }`}
+                    >
+                      {p.badge}
+                    </div>
+                  )}
 
                   <button
                     type="button"
@@ -103,7 +252,7 @@ export default function FavoritesPage() {
 
                 <div className="flex min-h-[150px] flex-col p-3">
                   <div className="h-[20px] overflow-hidden text-[10px] text-gray-400">
-                    <span className="max-w-[110px] uppercase tracking-[0.14em] break-words">
+                    <span className="max-w-[110px] break-words uppercase tracking-[0.14em]">
                       {p.brand}
                     </span>
                   </div>
