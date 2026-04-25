@@ -100,7 +100,7 @@ export default function HomePageClient({
     const timer = window.setTimeout(() => {
       setShowSplash(false);
       sessionStorage.setItem("montreaux_splash_shown", "1");
-    }, 700);
+    }, 3000);
 
     return () => window.clearTimeout(timer);
   }, []);
