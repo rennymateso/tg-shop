@@ -526,7 +526,7 @@ export default function ProductPageClient({
                 !canOrder
                   ? "bg-gray-200 text-gray-500"
                   : isAddedToCart
-                  ? "scale-[0.985] bg-[#16A34A] text-white shadow-[0_10px_24px_rgba(22,163,74,0.22)]"
+                  ? "scale-[0.985] bg-[#16A34A] text-white"
                   : "bg-black text-white shadow-none active:scale-[0.99]"
               }`}
             >
@@ -549,7 +549,7 @@ export default function ProductPageClient({
             : "translate-y-3 opacity-0"
         }`}
       >
-        <div className="rounded-2xl bg-black px-4 py-3 text-center text-sm text-white shadow-[0_14px_40px_rgba(0,0,0,0.22)]">
+        <div className="rounded-2xl bg-black px-4 py-3 text-center text-sm text-white">
           Товар добавлен в корзину
         </div>
       </div>
