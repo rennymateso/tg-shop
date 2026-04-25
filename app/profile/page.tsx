@@ -7,7 +7,10 @@ import {
   syncTelegramCustomer,
   type CustomerProfile,
 } from "../lib/customer-profile";
-import { getTelegramWebApp } from "../lib/telegram-mini-app";
+import {
+  getTelegramWebApp,
+  requestTelegramContact,
+} from "../lib/telegram-mini-app";
 
 function setCachedCustomer(customer: CustomerProfile | null) {
   if (!customer) return;
@@ -19,6 +22,8 @@ export default function ProfilePage() {
   const router = useRouter();
   const [customer, setCustomer] = useState<CustomerProfile | null>(null);
   const [loadingCustomer, setLoadingCustomer] = useState(true);
+  const [isRequestingPhone, setIsRequestingPhone] = useState(false);
+  const [phoneRequestMessage, setPhoneRequestMessage] = useState("");
 
   useEffect(() => {
     const init = async () => {
@@ -69,6 +74,37 @@ export default function ProfilePage() {
   const profileInitial =
     customer?.first_name?.trim()?.charAt(0)?.toUpperCase() || "P";
 
+  const handleRequestPhone = async () => {
+    setPhoneRequestMessage("");
+    setIsRequestingPhone(true);
+
+    try {
+      const result = await requestTelegramContact();
+
+      if (result.status === "unsupported") {
+        setPhoneRequestMessage("Запрос номера недоступен в этом режиме.");
+        setIsRequestingPhone(false);
+        return;
+      }
+
+      if (!result.ok) {
+        setPhoneRequestMessage("Вы не поделились номером.");
+        setIsRequestingPhone(false);
+        return;
+      }
+
+      setPhoneRequestMessage("Номер отправлен через Telegram.");
+
+      const refreshedProfile = await syncTelegramCustomer();
+      if (refreshedProfile) {
+        setCustomer(refreshedProfile);
+        setCachedCustomer(refreshedProfile);
+      }
+    } finally {
+      setIsRequestingPhone(false);
+    }
+  };
+
   return (
     <main className="min-h-screen bg-[#F5F5F5] px-4 pt-[76px] pb-32">
       <div className="mb-5 flex items-center justify-center">
@@ -107,6 +143,27 @@ export default function ProfilePage() {
             </p>
           </div>
         </div>
+
+        {!customer?.phone && !loadingCustomer && (
+          <div className="mt-4">
+            <button
+              type="button"
+              onClick={handleRequestPhone}
+              disabled={isRequestingPhone}
+              className="w-full rounded-2xl bg-black py-3 text-sm font-medium text-white disabled:opacity-60"
+            >
+              {isRequestingPhone
+                ? "Запрашиваем номер..."
+                : "Поделиться номером"}
+            </button>
+
+            {phoneRequestMessage ? (
+              <p className="mt-2 text-center text-sm text-gray-500">
+                {phoneRequestMessage}
+              </p>
+            ) : null}
+          </div>
+        )}
       </div>
 
       <div className="space-y-3">
