@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import BottomNav from "../components/BottomNav";
 import { supabase } from "../lib/supabase";
 import { syncTelegramCustomer } from "../lib/customer-profile";
+import { getTelegramInitData } from "../lib/telegram-mini-app";
 
 type CheckoutItem = {
   id: string;
@@ -26,6 +27,19 @@ type OrderStatus =
 
 type PaymentMethod = "Картой" | "Наличными";
 type DeliveryMethod = "Доставка" | "Самовывоз";
+
+type CustomerAddress = {
+  id: string;
+  label: string;
+  city: string | null;
+  street: string | null;
+  house: string | null;
+  apartment: string | null;
+  entrance: string | null;
+  floor: string | null;
+  comment: string | null;
+  is_default: boolean;
+};
 
 type Product = {
   id: string;
@@ -76,6 +90,7 @@ type CheckoutDraft = {
   floor: string;
   deliveryComment: string;
   promoCode: string;
+  selectedAddressId: string;
 };
 
 function mapRowToProduct(row: ProductRow): Product {
@@ -189,6 +204,17 @@ function getValidationMessage(params: {
   return "";
 }
 
+function formatSavedAddress(address: CustomerAddress) {
+  const parts = [
+    address.city ? `г. ${address.city}` : "",
+    address.street ? `ул. ${address.street}` : "",
+    address.house ? `д. ${address.house}` : "",
+    address.apartment ? `кв. ${address.apartment}` : "",
+  ].filter(Boolean);
+
+  return parts.join(", ");
+}
+
 async function createOrderInSupabase(params: {
   customer: string;
   phone: string;
@@ -250,10 +276,15 @@ async function createOrderInSupabase(params: {
 export default function CheckoutPageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const initData = getTelegramInitData();
 
   const [items, setItems] = useState<CheckoutItem[]>([]);
   const [productsMap, setProductsMap] = useState<Record<string, Product>>({});
   const [loadingProducts, setLoadingProducts] = useState(true);
+
+  const [savedAddresses, setSavedAddresses] = useState<CustomerAddress[]>([]);
+  const [loadingAddresses, setLoadingAddresses] = useState(true);
+  const [selectedAddressId, setSelectedAddressId] = useState("");
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("+7");
@@ -273,6 +304,42 @@ export default function CheckoutPageClient() {
   const [paymentError, setPaymentError] = useState("");
 
   const paymentStatus = searchParams.get("payment");
+
+  const loadAddresses = async () => {
+    if (!initData) {
+      setSavedAddresses([]);
+      setLoadingAddresses(false);
+      return;
+    }
+
+    setLoadingAddresses(true);
+
+    const response = await fetch(
+      `/api/customer/addresses?initData=${encodeURIComponent(initData)}`
+    );
+    const result = await response.json();
+
+    if (response.ok && result?.success && Array.isArray(result.addresses)) {
+      const addresses = result.addresses as CustomerAddress[];
+      setSavedAddresses(addresses);
+
+      const defaultAddress = addresses.find((item) => item.is_default);
+      if (defaultAddress && !selectedAddressId) {
+        setSelectedAddressId(defaultAddress.id);
+        setCity(defaultAddress.city || "");
+        setStreet(defaultAddress.street || "");
+        setHouse(defaultAddress.house || "");
+        setApartment(defaultAddress.apartment || "");
+        setEntrance(defaultAddress.entrance || "");
+        setFloor(defaultAddress.floor || "");
+        setDeliveryComment(defaultAddress.comment || "");
+      }
+    } else {
+      setSavedAddresses([]);
+    }
+
+    setLoadingAddresses(false);
+  };
 
   useEffect(() => {
     const cart = JSON.parse(localStorage.getItem("cart") || "[]");
@@ -298,6 +365,7 @@ export default function CheckoutPageClient() {
         setFloor(savedDraft.floor || "");
         setDeliveryComment(savedDraft.deliveryComment || "");
         setPromoCode(savedDraft.promoCode || "");
+        setSelectedAddressId(savedDraft.selectedAddressId || "");
       }
     } catch {
       //
@@ -322,6 +390,10 @@ export default function CheckoutPageClient() {
     };
 
     syncCustomer();
+  }, []);
+
+  useEffect(() => {
+    loadAddresses();
   }, []);
 
   useEffect(() => {
@@ -365,6 +437,7 @@ export default function CheckoutPageClient() {
       floor,
       deliveryComment,
       promoCode,
+      selectedAddressId,
     };
 
     localStorage.setItem("checkout_draft", JSON.stringify(draft));
@@ -381,6 +454,7 @@ export default function CheckoutPageClient() {
     floor,
     deliveryComment,
     promoCode,
+    selectedAddressId,
   ]);
 
   useEffect(() => {
@@ -461,6 +535,28 @@ export default function CheckoutPageClient() {
 
   const handlePhoneChange = (value: string) => {
     setPhone(formatPhone(value));
+  };
+
+  const handleSelectSavedAddress = (address: CustomerAddress) => {
+    setSelectedAddressId(address.id);
+    setCity(address.city || "");
+    setStreet(address.street || "");
+    setHouse(address.house || "");
+    setApartment(address.apartment || "");
+    setEntrance(address.entrance || "");
+    setFloor(address.floor || "");
+    setDeliveryComment(address.comment || "");
+  };
+
+  const handleNewAddress = () => {
+    setSelectedAddressId("");
+    setCity("");
+    setStreet("");
+    setHouse("");
+    setApartment("");
+    setEntrance("");
+    setFloor("");
+    setDeliveryComment("");
   };
 
   const pickupAddress =
@@ -793,46 +889,126 @@ export default function CheckoutPageClient() {
 
             {deliveryMethod === "delivery" ? (
               <>
+                <div className="mb-4">
+                  <p className="mb-2 text-sm text-gray-500">Сохранённые адреса</p>
+
+                  {loadingAddresses ? (
+                    <div className="rounded-2xl bg-[#F5F5F5] p-3 text-sm text-gray-500">
+                      Загружаем адреса...
+                    </div>
+                  ) : savedAddresses.length === 0 ? (
+                    <div className="rounded-2xl bg-[#F5F5F5] p-3 text-sm text-gray-500">
+                      Сохранённых адресов пока нет
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {savedAddresses.map((address) => (
+                        <button
+                          key={address.id}
+                          type="button"
+                          onClick={() => handleSelectSavedAddress(address)}
+                          className={`w-full rounded-2xl border p-3 text-left ${
+                            selectedAddressId === address.id
+                              ? "border-black bg-black text-white"
+                              : "border-gray-200 bg-[#F5F5F5] text-black"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium">{address.label}</span>
+                            {address.is_default && (
+                              <span
+                                className={`rounded-full px-2 py-0.5 text-[10px] ${
+                                  selectedAddressId === address.id
+                                    ? "bg-white text-black"
+                                    : "bg-black text-white"
+                                }`}
+                              >
+                                Основной
+                              </span>
+                            )}
+                          </div>
+
+                          <p
+                            className={`mt-1 text-sm ${
+                              selectedAddressId === address.id
+                                ? "text-white/80"
+                                : "text-gray-500"
+                            }`}
+                          >
+                            {formatSavedAddress(address)}
+                          </p>
+                        </button>
+                      ))}
+
+                      <button
+                        type="button"
+                        onClick={handleNewAddress}
+                        className="w-full rounded-2xl border border-dashed border-gray-300 bg-white p-3 text-sm text-black"
+                      >
+                        Ввести новый адрес
+                      </button>
+                    </div>
+                  )}
+                </div>
+
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <input
                     placeholder="Город *"
                     value={city}
-                    onChange={(e) => setCity(e.target.value)}
+                    onChange={(e) => {
+                      setSelectedAddressId("");
+                      setCity(e.target.value);
+                    }}
                     className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
                   />
 
                   <input
                     placeholder="Улица *"
                     value={street}
-                    onChange={(e) => setStreet(e.target.value)}
+                    onChange={(e) => {
+                      setSelectedAddressId("");
+                      setStreet(e.target.value);
+                    }}
                     className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
                   />
 
                   <input
                     placeholder="Дом *"
                     value={house}
-                    onChange={(e) => setHouse(e.target.value)}
+                    onChange={(e) => {
+                      setSelectedAddressId("");
+                      setHouse(e.target.value);
+                    }}
                     className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
                   />
 
                   <input
                     placeholder="Квартира"
                     value={apartment}
-                    onChange={(e) => setApartment(e.target.value)}
+                    onChange={(e) => {
+                      setSelectedAddressId("");
+                      setApartment(e.target.value);
+                    }}
                     className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
                   />
 
                   <input
                     placeholder="Подъезд"
                     value={entrance}
-                    onChange={(e) => setEntrance(e.target.value)}
+                    onChange={(e) => {
+                      setSelectedAddressId("");
+                      setEntrance(e.target.value);
+                    }}
                     className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
                   />
 
                   <input
                     placeholder="Этаж"
                     value={floor}
-                    onChange={(e) => setFloor(e.target.value)}
+                    onChange={(e) => {
+                      setSelectedAddressId("");
+                      setFloor(e.target.value);
+                    }}
                     className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
                   />
                 </div>
@@ -840,7 +1016,10 @@ export default function CheckoutPageClient() {
                 <textarea
                   placeholder="Комментарий для доставки"
                   value={deliveryComment}
-                  onChange={(e) => setDeliveryComment(e.target.value)}
+                  onChange={(e) => {
+                    setSelectedAddressId("");
+                    setDeliveryComment(e.target.value);
+                  }}
                   rows={3}
                   className="mt-3 w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
                 />
