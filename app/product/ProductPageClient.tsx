@@ -56,9 +56,11 @@ export default function ProductPageClient({
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [isAddedToCart, setIsAddedToCart] = useState(false);
+  const [showCartToast, setShowCartToast] = useState(false);
 
   const touchStartXRef = useRef<number | null>(null);
   const addedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const data = JSON.parse(localStorage.getItem("favorites") || "[]");
@@ -67,9 +69,8 @@ export default function ProductPageClient({
 
   useEffect(() => {
     return () => {
-      if (addedTimeoutRef.current) {
-        clearTimeout(addedTimeoutRef.current);
-      }
+      if (addedTimeoutRef.current) clearTimeout(addedTimeoutRef.current);
+      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     };
   }, []);
 
@@ -217,14 +218,18 @@ export default function ProductPageClient({
     window.dispatchEvent(new Event("cart-updated"));
 
     setIsAddedToCart(true);
+    setShowCartToast(true);
 
-    if (addedTimeoutRef.current) {
-      clearTimeout(addedTimeoutRef.current);
-    }
+    if (addedTimeoutRef.current) clearTimeout(addedTimeoutRef.current);
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
 
     addedTimeoutRef.current = setTimeout(() => {
       setIsAddedToCart(false);
     }, 1800);
+
+    toastTimeoutRef.current = setTimeout(() => {
+      setShowCartToast(false);
+    }, 2200);
   };
 
   if (!product) {
@@ -531,17 +536,23 @@ export default function ProductPageClient({
                 ? "Добавлено"
                 : "Добавить в корзину"}
             </button>
-
-            {isAddedToCart && (
-              <p className="mt-2 text-center text-[12px] text-[#16A34A]">
-                Товар добавлен в корзину
-              </p>
-            )}
           </div>
         </div>
       </div>
 
       <BottomNav />
+
+      <div
+        className={`pointer-events-none fixed bottom-24 left-1/2 z-[60] w-[calc(100%-32px)] max-w-sm -translate-x-1/2 transition-all duration-300 ${
+          showCartToast
+            ? "translate-y-0 opacity-100"
+            : "translate-y-3 opacity-0"
+        }`}
+      >
+        <div className="rounded-2xl bg-black px-4 py-3 text-center text-sm text-white shadow-[0_14px_40px_rgba(0,0,0,0.22)]">
+          Товар добавлен в корзину
+        </div>
+      </div>
     </main>
   );
 }
