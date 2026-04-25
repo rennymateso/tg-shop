@@ -98,13 +98,26 @@ export async function POST(req: NextRequest) {
 
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
+    const { data: existingCustomer, error: existingError } = await supabase
+      .from("customers")
+      .select("*")
+      .eq("telegram_user_id", telegramUser.id)
+      .maybeSingle();
+
+    if (existingError) {
+      return NextResponse.json(
+        { success: false, error: existingError.message },
+        { status: 500 }
+      );
+    }
+
     const payload = {
       telegram_user_id: telegramUser.id,
       telegram_username: telegramUser.username || null,
       first_name: telegramUser.first_name || null,
       last_name: telegramUser.last_name || null,
       photo_url: telegramUser.photo_url || null,
-      phone: phone || null,
+      phone: phone || existingCustomer?.phone || null,
       updated_at: new Date().toISOString(),
     };
 
