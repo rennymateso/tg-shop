@@ -207,6 +207,10 @@ function formatSavedAddress(address: CustomerAddress) {
   return parts.join(", ");
 }
 
+function normalizeAddressPart(value: string | null | undefined) {
+  return (value || "").trim().toLowerCase();
+}
+
 async function createOrderInSupabase(params: {
   customer: string;
   phone: string;
@@ -561,6 +565,47 @@ export default function CheckoutPageClient() {
     }
   };
 
+  const saveAddressIfNeeded = async () => {
+    if (deliveryMethod !== "delivery") return;
+    if (!initData) return;
+    if (!city.trim() || !street.trim() || !house.trim()) return;
+    if (selectedAddressId) return;
+
+    const addressExists = savedAddresses.some((address) => {
+      return (
+        normalizeAddressPart(address.city) === normalizeAddressPart(city) &&
+        normalizeAddressPart(address.street) === normalizeAddressPart(street) &&
+        normalizeAddressPart(address.house) === normalizeAddressPart(house) &&
+        normalizeAddressPart(address.apartment) === normalizeAddressPart(apartment)
+      );
+    });
+
+    if (addressExists) return;
+
+    const response = await fetch("/api/customer/addresses", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        initData,
+        label: "Другой адрес",
+        city,
+        street,
+        house,
+        apartment,
+        comment: deliveryComment,
+        is_default: savedAddresses.length === 0,
+      }),
+    });
+
+    const result = await response.json();
+
+    if (response.ok && result?.success) {
+      await loadAddresses();
+    }
+  };
+
   const handleCashOrder = async () => {
     if (!isFormValid) {
       alert("Заполните все обязательные данные");
@@ -616,6 +661,7 @@ export default function CheckoutPageClient() {
     try {
       setIsPaying(true);
       await persistCustomerPhone();
+      await saveAddressIfNeeded();
 
       const finalAddress =
         deliveryMethod === "pickup" ? pickupAddress : deliveryAddress;
