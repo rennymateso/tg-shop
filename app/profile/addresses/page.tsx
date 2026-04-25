@@ -3,7 +3,10 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import BottomNav from "../../components/BottomNav";
-import { getTelegramInitData, getTelegramWebApp } from "../../lib/telegram-mini-app";
+import {
+  getTelegramInitData,
+  getTelegramWebApp,
+} from "../../lib/telegram-mini-app";
 
 type CustomerAddress = {
   id: string;
@@ -34,6 +37,7 @@ export default function ProfileAddressesPage() {
   const [addresses, setAddresses] = useState<CustomerAddress[]>([]);
   const [loadingAddresses, setLoadingAddresses] = useState(true);
   const [savingAddress, setSavingAddress] = useState(false);
+  const [editingAddressId, setEditingAddressId] = useState("");
 
   const [label, setLabel] = useState("Дом");
   const [city, setCity] = useState("");
@@ -41,6 +45,16 @@ export default function ProfileAddressesPage() {
   const [house, setHouse] = useState("");
   const [apartment, setApartment] = useState("");
   const [comment, setComment] = useState("");
+
+  const resetForm = () => {
+    setEditingAddressId("");
+    setLabel("Дом");
+    setCity("");
+    setStreet("");
+    setHouse("");
+    setApartment("");
+    setComment("");
+  };
 
   const loadAddresses = async () => {
     if (!initData) {
@@ -85,20 +99,33 @@ export default function ProfileAddressesPage() {
     setSavingAddress(true);
 
     const response = await fetch("/api/customer/addresses", {
-      method: "POST",
+      method: editingAddressId ? "PATCH" : "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        initData,
-        label,
-        city,
-        street,
-        house,
-        apartment,
-        comment,
-        is_default: addresses.length === 0,
-      }),
+      body: JSON.stringify(
+        editingAddressId
+          ? {
+              initData,
+              addressId: editingAddressId,
+              label,
+              city,
+              street,
+              house,
+              apartment,
+              comment,
+            }
+          : {
+              initData,
+              label,
+              city,
+              street,
+              house,
+              apartment,
+              comment,
+              is_default: addresses.length === 0,
+            }
+      ),
     });
 
     const result = await response.json();
@@ -109,15 +136,20 @@ export default function ProfileAddressesPage() {
       return;
     }
 
-    setLabel("Дом");
-    setCity("");
-    setStreet("");
-    setHouse("");
-    setApartment("");
-    setComment("");
-
+    resetForm();
     await loadAddresses();
     setSavingAddress(false);
+  };
+
+  const handleEditAddress = (address: CustomerAddress) => {
+    setEditingAddressId(address.id);
+    setLabel(address.label || "Дом");
+    setCity(address.city || "");
+    setStreet(address.street || "");
+    setHouse(address.house || "");
+    setApartment(address.apartment || "");
+    setComment(address.comment || "");
+    window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
   };
 
   const handleMakeDefault = async (addressId: string) => {
@@ -160,6 +192,10 @@ export default function ProfileAddressesPage() {
     if (!response.ok || !result?.success) {
       alert(result?.error || "Не удалось удалить адрес");
       return;
+    }
+
+    if (editingAddressId === addressId) {
+      resetForm();
     }
 
     await loadAddresses();
@@ -218,15 +254,25 @@ export default function ProfileAddressesPage() {
                   </button>
                 </div>
 
-                {!address.is_default && (
+                <div className="mt-3 flex flex-wrap gap-4">
                   <button
                     type="button"
-                    onClick={() => handleMakeDefault(address.id)}
-                    className="mt-3 text-sm text-black underline underline-offset-2"
+                    onClick={() => handleEditAddress(address)}
+                    className="text-sm text-black underline underline-offset-2"
                   >
-                    Сделать основным
+                    Редактировать
                   </button>
-                )}
+
+                  {!address.is_default && (
+                    <button
+                      type="button"
+                      onClick={() => handleMakeDefault(address.id)}
+                      className="text-sm text-black underline underline-offset-2"
+                    >
+                      Сделать основным
+                    </button>
+                  )}
+                </div>
               </div>
             ))
           )}
@@ -234,9 +280,23 @@ export default function ProfileAddressesPage() {
       </div>
 
       <div className="rounded-[24px] bg-white p-5 shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
-        <h2 className="text-[18px] font-medium text-black">Добавить адрес</h2>
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <h2 className="text-[18px] font-medium text-black">
+            {editingAddressId ? "Редактировать адрес" : "Добавить адрес"}
+          </h2>
 
-        <div className="mt-4 space-y-3">
+          {editingAddressId ? (
+            <button
+              type="button"
+              onClick={resetForm}
+              className="text-sm text-gray-500"
+            >
+              Отмена
+            </button>
+          ) : null}
+        </div>
+
+        <div className="space-y-3">
           <select
             value={label}
             onChange={(e) => setLabel(e.target.value)}
@@ -291,7 +351,13 @@ export default function ProfileAddressesPage() {
             disabled={savingAddress}
             className="w-full rounded-2xl bg-black py-3 text-sm font-medium text-white disabled:opacity-60"
           >
-            {savingAddress ? "Сохраняем..." : "Сохранить адрес"}
+            {savingAddress
+              ? editingAddressId
+                ? "Сохраняем изменения..."
+                : "Сохраняем..."
+              : editingAddressId
+              ? "Сохранить изменения"
+              : "Сохранить адрес"}
           </button>
         </div>
       </div>

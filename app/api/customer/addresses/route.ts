@@ -168,8 +168,6 @@ export async function POST(req: NextRequest) {
     const street = String(body?.street || "").trim();
     const house = String(body?.house || "").trim();
     const apartment = String(body?.apartment || "").trim();
-    const entrance = String(body?.entrance || "").trim();
-    const floor = String(body?.floor || "").trim();
     const comment = String(body?.comment || "").trim();
     const isDefault = Boolean(body?.is_default);
 
@@ -210,8 +208,6 @@ export async function POST(req: NextRequest) {
         street,
         house,
         apartment: apartment || null,
-        entrance: entrance || null,
-        floor: floor || null,
         comment: comment || null,
         is_default: isDefault,
         updated_at: new Date().toISOString(),
@@ -257,7 +253,6 @@ export async function PATCH(req: NextRequest) {
     const body = await req.json();
     const initData = String(body?.initData || "");
     const addressId = String(body?.addressId || "");
-    const isDefault = Boolean(body?.is_default);
 
     if (!initData || !addressId) {
       return NextResponse.json(
@@ -272,6 +267,60 @@ export async function PATCH(req: NextRequest) {
       supabaseUrl,
       serviceRoleKey,
     });
+
+    const hasFieldUpdate =
+      body?.label !== undefined ||
+      body?.city !== undefined ||
+      body?.street !== undefined ||
+      body?.house !== undefined ||
+      body?.apartment !== undefined ||
+      body?.comment !== undefined;
+
+    if (hasFieldUpdate) {
+      const label = String(body?.label || "Дом").trim();
+      const city = String(body?.city || "").trim();
+      const street = String(body?.street || "").trim();
+      const house = String(body?.house || "").trim();
+      const apartment = String(body?.apartment || "").trim();
+      const comment = String(body?.comment || "").trim();
+
+      if (!city || !street || !house) {
+        return NextResponse.json(
+          { success: false, error: "Заполните город, улицу и дом" },
+          { status: 400 }
+        );
+      }
+
+      const { data, error } = await supabase
+        .from("customer_addresses")
+        .update({
+          label: label || "Дом",
+          city,
+          street,
+          house,
+          apartment: apartment || null,
+          comment: comment || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", addressId)
+        .eq("customer_id", customerId)
+        .select("*")
+        .single();
+
+      if (error) {
+        return NextResponse.json(
+          { success: false, error: error.message },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        address: data,
+      });
+    }
+
+    const isDefault = Boolean(body?.is_default);
 
     if (isDefault) {
       await supabase
