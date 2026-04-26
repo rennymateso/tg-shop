@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import BottomNav from "../../components/BottomNav";
 import { supabase } from "../../lib/supabase";
 import {
@@ -114,7 +114,6 @@ function OrderDetailsSkeleton() {
 }
 
 export default function OrderDetailsPage() {
-  const router = useRouter();
   const params = useParams();
   const orderId = String(params?.id || "");
 
@@ -191,18 +190,8 @@ export default function OrderDetailsPage() {
 
   return (
     <main className="min-h-screen bg-[#F5F5F5] px-4 pt-[76px] pb-32">
-      <div className="mb-5 flex items-center justify-between">
-        <button
-          type="button"
-          onClick={() => router.push("/orders")}
-          className="rounded-full bg-white px-4 py-2 text-sm text-black shadow-[0_4px_16px_rgba(0,0,0,0.04)]"
-        >
-          К заказам
-        </button>
-
+      <div className="mb-5 flex items-center justify-center">
         <h1 className="text-[20px] font-medium">Детали заказа</h1>
-
-        <div className="w-[92px]" />
       </div>
 
       {loading ? (
@@ -225,11 +214,35 @@ export default function OrderDetailsPage() {
           <div className="rounded-[24px] bg-white p-5 shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-[18px] font-medium text-black">
-                  Заказ {order.id}
-                </p>
+                <div className="flex items-center gap-2">
+                  <p className="truncate text-[18px] font-medium text-black">
+                    Заказ {order.id}
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={copyOrderId}
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#F5F5F5]"
+                    aria-label="Скопировать номер заказа"
+                  >
+                    <svg
+                      width="15"
+                      height="15"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="black"
+                      strokeWidth="1.8"
+                    >
+                      <rect x="9" y="9" width="10" height="10" rx="2" />
+                      <path d="M5 15V7a2 2 0 0 1 2-2h8" />
+                    </svg>
+                  </button>
+                </div>
+
                 <p className="mt-1 text-sm text-gray-500">
-                  {formatDate(order.created_at || order.updated_at)}
+                  {copied
+                    ? "Номер заказа скопирован"
+                    : formatDate(order.created_at || order.updated_at)}
                 </p>
               </div>
 
@@ -241,14 +254,6 @@ export default function OrderDetailsPage() {
                 {order.status}
               </span>
             </div>
-
-            <button
-              type="button"
-              onClick={copyOrderId}
-              className="mt-4 w-full rounded-2xl bg-[#F5F5F5] py-3 text-sm font-medium text-black"
-            >
-              {copied ? "Номер заказа скопирован" : "Скопировать номер заказа"}
-            </button>
           </div>
 
           <div className="rounded-[24px] bg-white p-5 shadow-[0_8px_28px_rgba(0,0,0,0.05)]">

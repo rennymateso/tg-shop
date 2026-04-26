@@ -92,7 +92,7 @@ function OrdersSkeleton() {
         >
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1">
-              <div className="h-5 w-36 rounded-full bg-[#ECECEC]" />
+              <div className="h-5 w-40 rounded-full bg-[#ECECEC]" />
               <div className="mt-3 h-4 w-28 rounded-full bg-[#ECECEC]" />
               <div className="mt-3 h-4 w-24 rounded-full bg-[#ECECEC]" />
             </div>
@@ -234,19 +234,41 @@ export default function OrdersPage() {
             const itemsCount = getItemsCount(order.id);
 
             return (
-              <button
+              <div
                 key={order.id}
-                type="button"
-                onClick={() => router.push(`/orders/${order.id}`)}
-                className="w-full rounded-[24px] bg-white p-4 text-left shadow-[0_8px_28px_rgba(0,0,0,0.05)]"
+                className="rounded-[24px] bg-white p-4 shadow-[0_8px_28px_rgba(0,0,0,0.05)]"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-[16px] font-medium text-black">
-                      Заказ {order.id}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="truncate text-[16px] font-medium text-black">
+                        Заказ {order.id}
+                      </p>
+
+                      <button
+                        type="button"
+                        onClick={() => copyOrderId(order.id)}
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#F5F5F5]"
+                        aria-label="Скопировать номер заказа"
+                      >
+                        <svg
+                          width="15"
+                          height="15"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="black"
+                          strokeWidth="1.8"
+                        >
+                          <rect x="9" y="9" width="10" height="10" rx="2" />
+                          <path d="M5 15V7a2 2 0 0 1 2-2h8" />
+                        </svg>
+                      </button>
+                    </div>
+
                     <p className="mt-1 text-sm text-gray-500">
-                      {formatDate(order.created_at || order.updated_at)}
+                      {copiedOrderId === order.id
+                        ? "Номер заказа скопирован"
+                        : formatDate(order.created_at || order.updated_at)}
                     </p>
                   </div>
 
@@ -283,17 +305,12 @@ export default function OrdersPage() {
 
                 <button
                   type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    copyOrderId(order.id);
-                  }}
+                  onClick={() => router.push(`/orders/${order.id}`)}
                   className="mt-4 w-full rounded-2xl bg-[#F5F5F5] py-3 text-sm font-medium text-black"
                 >
-                  {copiedOrderId === order.id
-                    ? "Номер заказа скопирован"
-                    : "Скопировать номер заказа"}
+                  Перейти
                 </button>
-              </button>
+              </div>
             );
           })}
         </div>
