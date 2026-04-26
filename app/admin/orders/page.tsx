@@ -71,6 +71,27 @@ type OrderRow = {
   items: OrderItem[];
 };
 
+type QuickFilter =
+  | "Все"
+  | "Новый"
+  | "В обработке"
+  | "Частично готов"
+  | "В пути из-за рубежа"
+  | "В доставке"
+  | "Доставлен"
+  | "Отменен";
+
+const quickFilters: QuickFilter[] = [
+  "Все",
+  "Новый",
+  "В обработке",
+  "Частично готов",
+  "В пути из-за рубежа",
+  "В доставке",
+  "Доставлен",
+  "Отменен",
+];
+
 const itemStatusOptions: OrderItemStatus[] = [
   "Новый",
   "Подтвержден",
@@ -170,6 +191,7 @@ export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [search, setSearch] = useState("");
   const [selectedOrderId, setSelectedOrderId] = useState<string>("");
+  const [selectedFilter, setSelectedFilter] = useState<QuickFilter>("Все");
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [updatingItemId, setUpdatingItemId] = useState<number | null>(null);
@@ -272,19 +294,23 @@ export default function AdminOrdersPage() {
 
   const filteredOrders = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return orders;
 
     return orders.filter((order) => {
-      return (
+      const matchesFilter =
+        selectedFilter === "Все" || order.status === selectedFilter;
+
+      const matchesSearch =
+        !q ||
         order.id.toLowerCase().includes(q) ||
         order.customer.toLowerCase().includes(q) ||
         order.phone.toLowerCase().includes(q) ||
         order.status.toLowerCase().includes(q) ||
         order.payment.toLowerCase().includes(q) ||
-        order.delivery.toLowerCase().includes(q)
-      );
+        order.delivery.toLowerCase().includes(q);
+
+      return matchesFilter && matchesSearch;
     });
-  }, [orders, search]);
+  }, [orders, search, selectedFilter]);
 
   const selectedOrder =
     filteredOrders.find((order) => order.id === selectedOrderId) ||
@@ -338,6 +364,11 @@ export default function AdminOrdersPage() {
     [orders]
   );
 
+  const getFilterCount = (filter: QuickFilter) => {
+    if (filter === "Все") return orders.length;
+    return orders.filter((order) => order.status === filter).length;
+  };
+
   return (
     <>
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -354,6 +385,28 @@ export default function AdminOrdersPage() {
             placeholder="Поиск по заказам"
             className="w-full bg-transparent text-sm outline-none placeholder:text-gray-400 sm:w-80"
           />
+        </div>
+      </div>
+
+      <div className="mb-6 overflow-x-auto">
+        <div className="flex min-w-max gap-2">
+          {quickFilters.map((filter) => {
+            const isActive = selectedFilter === filter;
+            return (
+              <button
+                key={filter}
+                type="button"
+                onClick={() => setSelectedFilter(filter)}
+                className={`rounded-full px-4 py-2 text-sm transition ${
+                  isActive
+                    ? "bg-black text-white"
+                    : "bg-white text-black shadow-sm"
+                }`}
+              >
+                {filter} ({getFilterCount(filter)})
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -459,7 +512,7 @@ export default function AdminOrdersPage() {
 
               {filteredOrders.length === 0 && (
                 <div className="rounded-[24px] bg-[#F7F7F7] p-6 text-center text-sm text-gray-500">
-                  Нет оформленных заказов
+                  Нет заказов по выбранному фильтру
                 </div>
               )}
             </div>
