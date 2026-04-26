@@ -51,6 +51,11 @@ export default function ProfilePage() {
 
   const menuItems = [
     {
+      title: "Мои заказы",
+      description: "История заказов и статусы",
+      onClick: () => router.push("/orders"),
+    },
+    {
       title: "Избранное",
       description: "Сохраненные товары",
       onClick: () => router.push("/favorites"),
