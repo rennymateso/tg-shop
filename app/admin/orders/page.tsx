@@ -66,6 +66,7 @@ type OrderRow = {
   address: string;
   status: OrderStatus;
   createdAt: string;
+  createdAtRaw: string;
   comment: string;
   promoCode: string;
   items: OrderItem[];
@@ -187,6 +188,17 @@ function getOrderHint(status: OrderStatus) {
   }
 }
 
+function isToday(dateString: string) {
+  const date = new Date(dateString);
+  const now = new Date();
+
+  return (
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate()
+  );
+}
+
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [search, setSearch] = useState("");
@@ -248,6 +260,7 @@ export default function AdminOrdersPage() {
       address: order.address,
       status: order.status,
       createdAt: formatOrderDate(order.created_at),
+      createdAtRaw: order.created_at,
       comment: order.comment || "",
       promoCode: order.promo_code || "",
       items: itemsMap[order.id] || [],
@@ -364,6 +377,26 @@ export default function AdminOrdersPage() {
     [orders]
   );
 
+  const todayOrders = useMemo(
+    () => orders.filter((order) => isToday(order.createdAtRaw)),
+    [orders]
+  );
+
+  const todayNewOrders = useMemo(
+    () => todayOrders.filter((order) => order.status === "Новый").length,
+    [todayOrders]
+  );
+
+  const todayDeliveryOrders = useMemo(
+    () => todayOrders.filter((order) => order.delivery === "Доставка").length,
+    [todayOrders]
+  );
+
+  const todayPickupOrders = useMemo(
+    () => todayOrders.filter((order) => order.delivery === "Самовывоз").length,
+    [todayOrders]
+  );
+
   const getFilterCount = (filter: QuickFilter) => {
     if (filter === "Все") return orders.length;
     return orders.filter((order) => order.status === filter).length;
@@ -385,6 +418,36 @@ export default function AdminOrdersPage() {
             placeholder="Поиск по заказам"
             className="w-full bg-transparent text-sm outline-none placeholder:text-gray-400 sm:w-80"
           />
+        </div>
+      </div>
+
+      <div className="mb-6 grid grid-cols-2 gap-4 xl:grid-cols-4">
+        <div className="rounded-[28px] bg-white p-5 shadow-sm">
+          <p className="text-sm text-gray-500">Заказы за сегодня</p>
+          <p className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-black">
+            {todayOrders.length}
+          </p>
+        </div>
+
+        <div className="rounded-[28px] bg-white p-5 shadow-sm">
+          <p className="text-sm text-gray-500">Новые сегодня</p>
+          <p className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-black">
+            {todayNewOrders}
+          </p>
+        </div>
+
+        <div className="rounded-[28px] bg-white p-5 shadow-sm">
+          <p className="text-sm text-gray-500">Сегодня в доставку</p>
+          <p className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-black">
+            {todayDeliveryOrders}
+          </p>
+        </div>
+
+        <div className="rounded-[28px] bg-white p-5 shadow-sm">
+          <p className="text-sm text-gray-500">Сегодня самовывоз</p>
+          <p className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-black">
+            {todayPickupOrders}
+          </p>
         </div>
       </div>
 
