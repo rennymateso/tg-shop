@@ -4,7 +4,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import BottomNav from "../components/BottomNav";
 import { supabase } from "../lib/supabase";
-import { syncTelegramCustomer } from "../lib/customer-profile";
+import {
+  syncTelegramCustomer,
+  type CustomerProfile,
+} from "../lib/customer-profile";
 import { getTelegramInitData } from "../lib/telegram-mini-app";
 import { CheckoutPageSkeleton } from "../components/PageSkeletons";
 
@@ -213,6 +216,7 @@ function normalizeAddressPart(value: string | null | undefined) {
 }
 
 async function createOrderInSupabase(params: {
+  customerId: string | null;
   customer: string;
   phone: string;
   total: number;
@@ -228,6 +232,7 @@ async function createOrderInSupabase(params: {
 
   const orderPayload = {
     id: orderId,
+    customer_id: params.customerId,
     customer: params.customer,
     phone: params.phone,
     total: params.total,
@@ -278,6 +283,8 @@ export default function CheckoutPageClient() {
   const [items, setItems] = useState<CheckoutItem[]>([]);
   const [productsMap, setProductsMap] = useState<Record<string, Product>>({});
   const [loadingProducts, setLoadingProducts] = useState(true);
+
+  const [customerProfile, setCustomerProfile] = useState<CustomerProfile | null>(null);
 
   const [savedAddresses, setSavedAddresses] = useState<CustomerAddress[]>([]);
   const [loadingAddresses, setLoadingAddresses] = useState(true);
@@ -368,6 +375,8 @@ export default function CheckoutPageClient() {
       const customer = await syncTelegramCustomer();
 
       if (!customer) return;
+
+      setCustomerProfile(customer);
 
       const nextName =
         [customer.first_name, customer.last_name].filter(Boolean).join(" ").trim();
@@ -562,7 +571,10 @@ export default function CheckoutPageClient() {
 
   const persistCustomerPhone = async () => {
     if (isPhoneValid) {
-      await syncTelegramCustomer(phone);
+      const updatedCustomer = await syncTelegramCustomer(phone);
+      if (updatedCustomer) {
+        setCustomerProfile(updatedCustomer);
+      }
     }
   };
 
@@ -625,6 +637,7 @@ export default function CheckoutPageClient() {
       await persistCustomerPhone();
 
       await createOrderInSupabase({
+        customerId: customerProfile?.id || null,
         customer: name.trim(),
         phone,
         total: finalNewTotal,
@@ -668,6 +681,7 @@ export default function CheckoutPageClient() {
         deliveryMethod === "pickup" ? pickupAddress : deliveryAddress;
 
       const localOrderId = await createOrderInSupabase({
+        customerId: customerProfile?.id || null,
         customer: name.trim(),
         phone,
         total: finalNewTotal,
