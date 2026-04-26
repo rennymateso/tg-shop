@@ -169,6 +169,20 @@ export default function ProductPageClient({
     touchStartXRef.current = null;
   };
 
+  const handleImageTap = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (galleryImages.length <= 1) return;
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const half = rect.width / 2;
+
+    if (clickX >= half) {
+      nextImage();
+    } else {
+      prevImage();
+    }
+  };
+
   const addToCart = () => {
     if (!product || !canOrder) return;
 
@@ -267,6 +281,7 @@ export default function ProductPageClient({
           className="relative aspect-[3/4] overflow-hidden bg-[#ECECEC]"
           onTouchStart={onTouchStart}
           onTouchEnd={onTouchEnd}
+          onClick={handleImageTap}
         >
           <img
             src={activeImage || product.image || "/products/product-1.jpg"}
@@ -277,34 +292,15 @@ export default function ProductPageClient({
             }}
           />
 
-          {galleryImages.length > 1 && (
-            <>
-              <button
-                type="button"
-                onClick={prevImage}
-                className="absolute left-3 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/85 text-black shadow"
-                aria-label="Предыдущее фото"
-              >
-                ‹
-              </button>
-
-              <button
-                type="button"
-                onClick={nextImage}
-                className="absolute right-3 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/85 text-black shadow"
-                aria-label="Следующее фото"
-              >
-                ›
-              </button>
-            </>
-          )}
-
           <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-1.5">
             {galleryImages.map((_, index) => (
               <button
                 key={`${product.id}-dot-${index}`}
                 type="button"
-                onClick={() => setActiveImageIndex(index)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActiveImageIndex(index);
+                }}
                 className={`block rounded-full ${
                   index === activeImageIndex
                     ? "h-1.5 w-4 bg-white"
