@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import BottomNav from "../components/BottomNav";
 import { supabase } from "../lib/supabase";
 import {
@@ -96,6 +97,7 @@ function OrdersSkeleton() {
 }
 
 export default function OrdersPage() {
+  const router = useRouter();
   const [customer, setCustomer] = useState<CustomerProfile | null>(null);
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -178,9 +180,11 @@ export default function OrdersPage() {
       ) : (
         <div className="space-y-3">
           {orders.map((order) => (
-            <div
+            <button
               key={order.id}
-              className="rounded-[24px] bg-white p-4 shadow-[0_8px_28px_rgba(0,0,0,0.05)]"
+              type="button"
+              onClick={() => router.push(`/orders/${order.id}`)}
+              className="w-full rounded-[24px] bg-white p-4 text-left shadow-[0_8px_28px_rgba(0,0,0,0.05)]"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -220,14 +224,17 @@ export default function OrdersPage() {
 
               <button
                 type="button"
-                onClick={() => copyOrderId(order.id)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  copyOrderId(order.id);
+                }}
                 className="mt-4 w-full rounded-2xl bg-[#F5F5F5] py-3 text-sm font-medium text-black"
               >
                 {copiedOrderId === order.id
                   ? "Номер заказа скопирован"
                   : "Скопировать номер заказа"}
               </button>
-            </div>
+            </button>
           ))}
         </div>
       )}
