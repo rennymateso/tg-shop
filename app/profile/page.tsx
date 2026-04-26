@@ -121,9 +121,12 @@ export default function ProfilePage() {
         <ProfilePageSkeleton />
       ) : (
         <>
-          <div className="mb-4 rounded-[24px] border border-black/10 bg-[#EFEAE3] p-5 shadow-[0_10px_30px_rgba(0,0,0,0.06)]">
-            <div className="flex items-center gap-4">
-              <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full bg-white shadow-[0_4px_14px_rgba(0,0,0,0.05)]">
+          <div className="relative mb-4 overflow-hidden rounded-[24px] border border-black/10 bg-white/35 p-5 shadow-[0_10px_30px_rgba(0,0,0,0.06)] backdrop-blur-[14px]">
+            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.42)_0%,rgba(255,255,255,0.18)_45%,rgba(255,255,255,0.10)_100%)]" />
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-[1px] bg-white/60" />
+
+            <div className="relative flex items-center gap-4">
+              <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full border border-white/60 bg-white/65 shadow-[0_4px_14px_rgba(0,0,0,0.05)] backdrop-blur-[8px]">
                 {customer?.photo_url ? (
                   <img
                     src={customer.photo_url}
@@ -143,19 +146,19 @@ export default function ProfilePage() {
                 </p>
 
                 {customer?.telegram_username ? (
-                  <p className="mt-1 text-sm text-gray-600">
+                  <p className="mt-1 text-sm text-gray-700">
                     @{customer.telegram_username}
                   </p>
                 ) : null}
 
-                <p className="mt-1 text-sm text-gray-600">
+                <p className="mt-1 text-sm text-gray-700">
                   {customer?.phone || "Телефон не указан"}
                 </p>
               </div>
             </div>
 
             {!customer?.phone && (
-              <div className="mt-4">
+              <div className="relative mt-4">
                 <button
                   type="button"
                   onClick={handleRequestPhone}
@@ -168,7 +171,7 @@ export default function ProfilePage() {
                 </button>
 
                 {phoneRequestMessage ? (
-                  <p className="mt-2 text-center text-sm text-gray-600">
+                  <p className="mt-2 text-center text-sm text-gray-700">
                     {phoneRequestMessage}
                   </p>
                 ) : null}
