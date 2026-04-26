@@ -19,6 +19,23 @@ function setCachedCustomer(customer: CustomerProfile | null) {
   window.dispatchEvent(new Event("customer-profile-updated"));
 }
 
+function ProfileBadgeIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      aria-hidden="true"
+    >
+      <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" />
+      <path d="M4 20a8 8 0 0 1 16 0" />
+    </svg>
+  );
+}
+
 export default function ProfilePage() {
   const router = useRouter();
   const [customer, setCustomer] = useState<CustomerProfile | null>(null);
@@ -121,63 +138,66 @@ export default function ProfilePage() {
         <ProfilePageSkeleton />
       ) : (
         <>
-          <div className="mb-4 rounded-[24px] bg-[#EFEAE3] p-5 shadow-[0_10px_30px_rgba(0,0,0,0.06)]">
-            <p className="mb-4 text-[11px] uppercase tracking-[0.16em] text-gray-500">
-              Данные клиента
-            </p>
-
-            <div className="flex items-center gap-4">
-              <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full bg-white shadow-[0_4px_14px_rgba(0,0,0,0.05)]">
-                {customer?.photo_url ? (
-                  <img
-                    src={customer.photo_url}
-                    alt={fullName}
-                    className="h-full w-full rounded-full object-cover"
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-xl text-gray-500">
-                    {profileInitial}
-                  </div>
-                )}
-              </div>
-
-              <div className="min-w-0">
-                <p className="truncate text-[18px] font-medium text-black">
-                  {fullName}
-                </p>
-
-                {customer?.telegram_username ? (
-                  <p className="mt-1 text-sm text-gray-600">
-                    @{customer.telegram_username}
-                  </p>
-                ) : null}
-
-                <p className="mt-1 text-sm text-gray-600">
-                  {customer?.phone || "Телефон не указан"}
-                </p>
-              </div>
+          <div className="mb-4 overflow-hidden rounded-[28px] border border-[#E7E0D7] bg-[#F2EDE6] p-5 shadow-[0_12px_34px_rgba(0,0,0,0.06)]">
+            <div className="mb-4 flex items-center gap-2 text-[11px] uppercase tracking-[0.16em] text-[#6B6258]">
+              <ProfileBadgeIcon />
+              <span>Данные клиента</span>
             </div>
 
-            {!customer?.phone && (
-              <div className="mt-4">
-                <button
-                  type="button"
-                  onClick={handleRequestPhone}
-                  disabled={isRequestingPhone}
-                  className="w-full rounded-2xl bg-black py-3 text-sm font-medium text-white disabled:opacity-60"
-                >
-                  {isRequestingPhone
-                    ? "Запрашиваем номер..."
-                    : "Поделиться номером"}
-                </button>
+            <div className="rounded-[22px] bg-white/55 p-4 backdrop-blur-[2px]">
+              <div className="flex items-center gap-4">
+                <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full bg-white shadow-[0_8px_20px_rgba(0,0,0,0.08)] ring-1 ring-black/5">
+                  {customer?.photo_url ? (
+                    <img
+                      src={customer.photo_url}
+                      alt={fullName}
+                      className="h-full w-full rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-xl text-gray-500">
+                      {profileInitial}
+                    </div>
+                  )}
+                </div>
 
-                {phoneRequestMessage ? (
-                  <p className="mt-2 text-center text-sm text-gray-600">
-                    {phoneRequestMessage}
+                <div className="min-w-0">
+                  <p className="truncate text-[19px] font-semibold tracking-[-0.02em] text-black">
+                    {fullName}
                   </p>
-                ) : null}
+
+                  {customer?.telegram_username ? (
+                    <p className="mt-1 text-sm text-[#6B6258]">
+                      @{customer.telegram_username}
+                    </p>
+                  ) : null}
+
+                  <p className="mt-1 text-sm text-[#6B6258]">
+                    {customer?.phone || "Телефон не указан"}
+                  </p>
+                </div>
               </div>
-            )}
+
+              {!customer?.phone && (
+                <div className="mt-4">
+                  <button
+                    type="button"
+                    onClick={handleRequestPhone}
+                    disabled={isRequestingPhone}
+                    className="w-full rounded-2xl bg-black py-3 text-sm font-medium text-white disabled:opacity-60"
+                  >
+                    {isRequestingPhone
+                      ? "Запрашиваем номер..."
+                      : "Поделиться номером"}
+                  </button>
+
+                  {phoneRequestMessage ? (
+                    <p className="mt-2 text-center text-sm text-[#6B6258]">
+                      {phoneRequestMessage}
+                    </p>
+                  ) : null}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="space-y-3">
