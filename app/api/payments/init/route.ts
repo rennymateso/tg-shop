@@ -64,15 +64,16 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
 
-    const localOrderId = String(body?.localOrderId || "").trim();
-    const name = String(body?.name || "").trim();
+    const customerId = body?.customerId ? String(body.customerId) : null;
+    const customer = String(body?.customer || body?.name || "").trim();
     const phone = String(body?.phone || "").trim();
     const address = String(body?.address || "").trim();
     const deliveryMethod = String(body?.deliveryMethod || "delivery").trim();
-    const paymentMethod = String(body?.paymentMethod || "card").trim();
+    const promoCode = String(body?.promoCode || "").trim();
+    const comment = String(body?.comment || "").trim();
     const items = (body?.items || []) as CartItem[];
 
-    if (!localOrderId || !name || !phone || !Array.isArray(items) || items.length === 0) {
+    if (!customer || !phone || !address || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json(
         { success: false, error: "Некорректные данные заказа" },
         { status: 400 }
@@ -88,12 +89,42 @@ export async function POST(req: NextRequest) {
     const totalRub = itemsTotal + deliveryPrice;
     const amount = Math.round(totalRub * 100);
 
-    const tbankOrderId = `TBANK-${localOrderId}`;
+    const attemptId = `PAY-${Date.now()}`;
+    const tbankOrderId = `TBANK-${attemptId}`;
+
+    const attemptPayload = {
+      id: attemptId,
+      customer_id: customerId,
+      customer,
+      phone,
+      total: totalRub,
+      payment: "Картой",
+      delivery: deliveryMethod === "pickup" ? "Самовывоз" : "Доставка",
+      address,
+      comment,
+      promo_code: promoCode,
+      items,
+      status: "pending",
+      updated_at: new Date().toISOString(),
+    };
+
+    const { error: attemptInsertError } = await supabase
+      .from("payment_attempts")
+      .insert(attemptPayload);
+
+    if (attemptInsertError) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Не удалось создать попытку оплаты: ${attemptInsertError.message}`,
+        },
+        { status: 500 }
+      );
+    }
 
     const descriptionParts = [
-      `Заказ ${localOrderId}`,
+      `Попытка оплаты ${attemptId}`,
       `Получение: ${deliveryMethod === "delivery" ? "доставка" : "самовывоз"}`,
-      `Оплата: ${paymentMethod === "card" ? "картой" : "наличными"}`,
     ];
 
     if (address) {
@@ -106,8 +137,8 @@ export async function POST(req: NextRequest) {
       OrderId: tbankOrderId,
       Description: descriptionParts.join(" | "),
       NotificationURL: `${baseUrl}/api/payments/notification`,
-      SuccessURL: `${baseUrl}/checkout?payment=success`,
-      FailURL: `${baseUrl}/checkout?payment=fail`,
+      SuccessURL: `${baseUrl}/checkout?payment=success&attemptId=${attemptId}`,
+      FailURL: `${baseUrl}/checkout?payment=fail&attemptId=${attemptId}`,
     };
 
     const token = generateToken(payload, terminalPassword);
@@ -127,6 +158,16 @@ export async function POST(req: NextRequest) {
     const result = await response.json();
 
     if (!response.ok || !result?.Success || !result?.PaymentURL) {
+      await supabase
+        .from("payment_attempts")
+        .update({
+          status: "failed",
+          tbank_order_id: tbankOrderId,
+          tbank_payment_status: result?.Status ? String(result.Status) : "INIT_FAILED",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", attemptId);
+
       return NextResponse.json(
         {
           success: false,
@@ -138,20 +179,20 @@ export async function POST(req: NextRequest) {
     }
 
     const { error: updateError } = await supabase
-      .from("orders")
+      .from("payment_attempts")
       .update({
         tbank_order_id: tbankOrderId,
         tbank_payment_id: result.PaymentId ? String(result.PaymentId) : null,
         tbank_payment_status: result.Status ? String(result.Status) : "NEW",
         updated_at: new Date().toISOString(),
       })
-      .eq("id", localOrderId);
+      .eq("id", attemptId);
 
     if (updateError) {
       return NextResponse.json(
         {
           success: false,
-          error: `Платеж создан, но не удалось обновить заказ: ${updateError.message}`,
+          error: `Платеж создан, но не удалось обновить попытку оплаты: ${updateError.message}`,
         },
         { status: 500 }
       );
@@ -160,8 +201,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       paymentUrl: result.PaymentURL,
-      orderId: tbankOrderId,
       paymentId: result.PaymentId ?? null,
+      attemptId,
     });
   } catch (error) {
     return NextResponse.json(

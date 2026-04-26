@@ -95,6 +95,15 @@ type CheckoutDraft = {
   selectedAddressId: string;
 };
 
+type PaymentAttemptStatus = {
+  id: string;
+  order_id: string | null;
+  status: "pending" | "confirmed" | "failed" | "cancelled";
+  tbank_payment_status: string | null;
+  paid_at: string | null;
+  updated_at: string;
+};
+
 function mapRowToProduct(row: ProductRow): Product {
   const normalizedColorImages: Record<string, string> = {};
 
@@ -220,13 +229,12 @@ function normalizeAddressPart(value: string | null | undefined) {
 function getCheckoutItemImage(product: Product | undefined, color: string) {
   if (!product) return "/products/product-1.jpg";
 
-  const colorImage =
+  return (
     product.colorImages?.[color] ||
     product.image ||
     product.images?.[0] ||
-    "/products/product-1.jpg";
-
-  return colorImage;
+    "/products/product-1.jpg"
+  );
 }
 
 async function createOrderInSupabase(params: {
@@ -318,8 +326,10 @@ export default function CheckoutPageClient() {
   const [promoCode, setPromoCode] = useState("");
   const [isPaying, setIsPaying] = useState(false);
   const [paymentError, setPaymentError] = useState("");
+  const [paymentCheckMessage, setPaymentCheckMessage] = useState("");
 
   const paymentStatus = searchParams.get("payment");
+  const attemptId = searchParams.get("attemptId");
 
   const loadAddresses = async () => {
     if (!initData) {
@@ -468,12 +478,60 @@ export default function CheckoutPageClient() {
   ]);
 
   useEffect(() => {
-    if (paymentStatus === "success") {
-      localStorage.removeItem("cart");
-      window.dispatchEvent(new Event("cart-updated"));
-      setItems([]);
-    }
-  }, [paymentStatus]);
+    if (!paymentStatus || !attemptId) return;
+
+    let cancelled = false;
+
+    const checkAttempt = async () => {
+      if (paymentStatus === "fail") {
+        setPaymentError("Оплата не была завершена.");
+        return;
+      }
+
+      setPaymentCheckMessage("Проверяем оплату...");
+
+      for (let i = 0; i < 8; i += 1) {
+        if (cancelled) return;
+
+        const response = await fetch(
+          `/api/payments/status?attemptId=${encodeURIComponent(attemptId)}`,
+          { cache: "no-store" }
+        );
+        const result = await response.json();
+
+        if (response.ok && result?.success) {
+          const attempt = result.attempt as PaymentAttemptStatus;
+
+          if (attempt.status === "confirmed") {
+            localStorage.removeItem("cart");
+            localStorage.removeItem("checkout_draft");
+            window.dispatchEvent(new Event("cart-updated"));
+            setItems([]);
+            setPaymentCheckMessage("Оплата подтверждена. Заказ успешно создан.");
+            return;
+          }
+
+          if (attempt.status === "failed" || attempt.status === "cancelled") {
+            setPaymentCheckMessage("");
+            setPaymentError("Оплата не подтверждена.");
+            return;
+          }
+        }
+
+        await new Promise((resolve) => window.setTimeout(resolve, 1500));
+      }
+
+      setPaymentCheckMessage(
+        "Платёж ещё обрабатывается банком. Если оплата уже прошла, статус обновится чуть позже."
+      );
+    };
+
+    checkAttempt();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [paymentStatus, attemptId]);
 
   useEffect(() => {
     if (deliveryMethod === "delivery" && paymentMethod === "cash") {
@@ -647,6 +705,7 @@ export default function CheckoutPageClient() {
     try {
       setIsPaying(true);
       setPaymentError("");
+      setPaymentCheckMessage("");
 
       await persistCustomerPhone();
 
@@ -680,6 +739,7 @@ export default function CheckoutPageClient() {
 
   const handleCardPayment = async () => {
     setPaymentError("");
+    setPaymentCheckMessage("");
 
     if (!isFormValid) {
       alert("Заполните все обязательные данные");
@@ -694,33 +754,19 @@ export default function CheckoutPageClient() {
       const finalAddress =
         deliveryMethod === "pickup" ? pickupAddress : deliveryAddress;
 
-      const localOrderId = await createOrderInSupabase({
-        customerId: customerProfile?.id || null,
-        customer: name.trim(),
-        phone,
-        total: finalNewTotal,
-        payment: "Картой",
-        delivery: deliveryMethod === "pickup" ? "Самовывоз" : "Доставка",
-        address: finalAddress,
-        status: "Новый",
-        comment: orderComment,
-        promoCode: promoCode.trim(),
-        items,
-      });
-
       const response = await fetch("/api/payments/init", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          localOrderId,
-          name,
+          customerId: customerProfile?.id || null,
+          customer: name.trim(),
           phone,
           address: finalAddress,
           deliveryMethod,
-          paymentMethod,
           promoCode,
+          comment: orderComment,
           items,
         }),
       });
@@ -758,14 +804,9 @@ export default function CheckoutPageClient() {
         <CheckoutPageSkeleton />
       ) : (
         <>
-          {paymentStatus === "success" && (
+          {paymentCheckMessage && (
             <div className="mb-4 rounded-[20px] bg-white p-4 shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
-              <p className="text-sm font-medium text-black">Заказ создан.</p>
-              <p className="mt-2 text-sm leading-6 text-gray-500">
-                После подтверждения оплаты статус заказа автоматически станет
-                «Оплачен». Если это был самовывоз с наличными, статус останется
-                «Новый».
-              </p>
+              <p className="text-sm font-medium text-black">{paymentCheckMessage}</p>
             </div>
           )}
 
