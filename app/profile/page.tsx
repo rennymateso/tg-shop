@@ -121,9 +121,13 @@ export default function ProfilePage() {
         <ProfilePageSkeleton />
       ) : (
         <>
-          <div className="mb-4 rounded-[24px] bg-white p-5 shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
+          <div className="mb-4 rounded-[24px] bg-[#EFEAE3] p-5 shadow-[0_10px_30px_rgba(0,0,0,0.06)]">
+            <p className="mb-4 text-[11px] uppercase tracking-[0.16em] text-gray-500">
+              Данные клиента
+            </p>
+
             <div className="flex items-center gap-4">
-              <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full bg-[#F5F5F5]">
+              <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full bg-white shadow-[0_4px_14px_rgba(0,0,0,0.05)]">
                 {customer?.photo_url ? (
                   <img
                     src={customer.photo_url}
@@ -143,12 +147,12 @@ export default function ProfilePage() {
                 </p>
 
                 {customer?.telegram_username ? (
-                  <p className="mt-1 text-sm text-gray-500">
+                  <p className="mt-1 text-sm text-gray-600">
                     @{customer.telegram_username}
                   </p>
                 ) : null}
 
-                <p className="mt-1 text-sm text-gray-500">
+                <p className="mt-1 text-sm text-gray-600">
                   {customer?.phone || "Телефон не указан"}
                 </p>
               </div>
@@ -168,7 +172,7 @@ export default function ProfilePage() {
                 </button>
 
                 {phoneRequestMessage ? (
-                  <p className="mt-2 text-center text-sm text-gray-500">
+                  <p className="mt-2 text-center text-sm text-gray-600">
                     {phoneRequestMessage}
                   </p>
                 ) : null}
