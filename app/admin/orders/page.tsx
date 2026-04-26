@@ -203,6 +203,22 @@ function isToday(dateString: string) {
   );
 }
 
+function CopyIcon() {
+  return (
+    <svg
+      width="15"
+      height="15"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+    >
+      <rect x="9" y="9" width="10" height="10" rx="2" />
+      <path d="M5 15V7a2 2 0 0 1 2-2h8" />
+    </svg>
+  );
+}
+
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [search, setSearch] = useState("");
@@ -213,6 +229,19 @@ export default function AdminOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [updatingItemId, setUpdatingItemId] = useState<number | null>(null);
+  const [copiedOrderId, setCopiedOrderId] = useState("");
+
+  const copyOrderId = async (orderId: string) => {
+    try {
+      await navigator.clipboard.writeText(orderId);
+      setCopiedOrderId(orderId);
+      window.setTimeout(() => {
+        setCopiedOrderId("");
+      }, 1500);
+    } catch {
+      setMessage("Не удалось скопировать номер заказа");
+    }
+  };
 
   const loadOrders = async () => {
     setLoading(true);
@@ -530,6 +559,12 @@ export default function AdminOrdersPage() {
         </div>
       )}
 
+      {copiedOrderId && (
+        <div className="mb-6 rounded-[24px] bg-white p-4 text-sm text-black shadow-sm">
+          Номер заказа {copiedOrderId} скопирован
+        </div>
+      )}
+
       <section className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <div className="rounded-[28px] bg-white p-5 shadow-sm">
           <p className="text-sm text-gray-500">Всего заказов</p>
@@ -587,8 +622,27 @@ export default function AdminOrdersPage() {
                   }`}
                 >
                   <div className="mb-3 flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-medium">{order.id}</p>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="truncate text-sm font-medium">{order.id}</p>
+
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            copyOrderId(order.id);
+                          }}
+                          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${
+                            selectedOrder?.id === order.id
+                              ? "bg-white text-black"
+                              : "bg-white text-black"
+                          }`}
+                          aria-label="Скопировать номер заказа"
+                        >
+                          <CopyIcon />
+                        </button>
+                      </div>
+
                       <p
                         className={`mt-1 text-xs ${
                           selectedOrder?.id === order.id
@@ -639,9 +693,22 @@ export default function AdminOrdersPage() {
               <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div>
                   <p className="text-sm text-gray-500">Карточка заказа</p>
-                  <h2 className="text-xl font-semibold text-black">
-                    {selectedOrder.id}
-                  </h2>
+
+                  <div className="mt-1 flex items-center gap-2">
+                    <h2 className="text-xl font-semibold text-black">
+                      {selectedOrder.id}
+                    </h2>
+
+                    <button
+                      type="button"
+                      onClick={() => copyOrderId(selectedOrder.id)}
+                      className="flex h-8 w-8 items-center justify-center rounded-full bg-[#F5F5F5] text-black"
+                      aria-label="Скопировать номер заказа"
+                    >
+                      <CopyIcon />
+                    </button>
+                  </div>
+
                   <p className="mt-2 text-sm text-gray-500">
                     {getOrderHint(selectedOrder.status)}
                   </p>
