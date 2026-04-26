@@ -41,8 +41,18 @@ type OrderItem = {
   created_at: string;
 };
 
+type CustomerRow = {
+  id: string;
+  telegram_user_id: number | null;
+  telegram_username: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  phone: string | null;
+};
+
 type OrderRowDb = {
   id: string;
+  customer_id: string | null;
   customer: string;
   phone: string;
   total: number;
@@ -58,6 +68,7 @@ type OrderRowDb = {
 
 type OrderRow = {
   id: string;
+  customerId: string | null;
   customer: string;
   phone: string;
   total: number;
@@ -70,6 +81,8 @@ type OrderRow = {
   comment: string;
   promoCode: string;
   items: OrderItem[];
+  telegramUserId: number | null;
+  telegramUsername: string | null;
 };
 
 type QuickFilter =
@@ -219,6 +232,20 @@ function CopyIcon() {
   );
 }
 
+function TelegramIcon() {
+  return (
+    <svg
+      width="15"
+      height="15"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <path d="M21.6 4.2c-.3-.2-.8-.2-1.4 0L3.8 10.5c-.7.3-.7.7-.1.9l4.2 1.3 1.6 5c.2.6.3.8.7.8.3 0 .5-.1.8-.4l2.3-2.2 4.7 3.5c.9.5 1.5.3 1.8-.8l2.8-13.1c.2-.8 0-1.2-.3-1.3Zm-12.7 8.3 8.2-5.2c.4-.3.8-.1.4.2l-6.8 6.1-.3 3.1-1.5-4.2Z" />
+    </svg>
+  );
+}
+
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [search, setSearch] = useState("");
@@ -243,6 +270,21 @@ export default function AdminOrdersPage() {
     }
   };
 
+  const getTelegramLink = (order: OrderRow) => {
+    if (order.telegramUsername?.trim()) {
+      return `https://t.me/${order.telegramUsername.trim()}`;
+    }
+
+    if (order.telegramUserId) {
+      return `tg://user?id=${order.telegramUserId}`;
+    }
+
+    return "";
+  };
+
+  const hasTelegramLink = (order: OrderRow) =>
+    Boolean(order.telegramUsername?.trim() || order.telegramUserId);
+
   const loadOrders = async () => {
     setLoading(true);
     setMessage("");
@@ -261,8 +303,12 @@ export default function AdminOrdersPage() {
 
     const safeOrders = ((ordersData || []) as OrderRowDb[]) || [];
     const orderIds = safeOrders.map((order) => order.id);
+    const customerIds = safeOrders
+      .map((order) => order.customer_id)
+      .filter(Boolean) as string[];
 
     let itemsMap: Record<string, OrderItem[]> = {};
+    let customersMap: Record<string, CustomerRow> = {};
 
     if (orderIds.length > 0) {
       const { data: itemsData, error: itemsError } = await supabase
@@ -284,21 +330,46 @@ export default function AdminOrdersPage() {
       }
     }
 
-    const merged: OrderRow[] = safeOrders.map((order) => ({
-      id: order.id,
-      customer: order.customer,
-      phone: order.phone,
-      total: order.total,
-      payment: order.payment,
-      delivery: order.delivery,
-      address: order.address,
-      status: order.status,
-      createdAt: formatOrderDate(order.created_at),
-      createdAtRaw: order.created_at,
-      comment: order.comment || "",
-      promoCode: order.promo_code || "",
-      items: itemsMap[order.id] || [],
-    }));
+    if (customerIds.length > 0) {
+      const { data: customersData, error: customersError } = await supabase
+        .from("customers")
+        .select("id, telegram_user_id, telegram_username, first_name, last_name, phone")
+        .in("id", customerIds);
+
+      if (customersError) {
+        setMessage(`Ошибка загрузки клиентов: ${customersError.message}`);
+      } else {
+        customersMap = ((customersData || []) as CustomerRow[]).reduce<
+          Record<string, CustomerRow>
+        >((acc, customer) => {
+          acc[customer.id] = customer;
+          return acc;
+        }, {});
+      }
+    }
+
+    const merged: OrderRow[] = safeOrders.map((order) => {
+      const customer = order.customer_id ? customersMap[order.customer_id] : undefined;
+
+      return {
+        id: order.id,
+        customerId: order.customer_id,
+        customer: order.customer,
+        phone: order.phone,
+        total: order.total,
+        payment: order.payment,
+        delivery: order.delivery,
+        address: order.address,
+        status: order.status,
+        createdAt: formatOrderDate(order.created_at),
+        createdAtRaw: order.created_at,
+        comment: order.comment || "",
+        promoCode: order.promo_code || "",
+        items: itemsMap[order.id] || [],
+        telegramUserId: customer?.telegram_user_id ?? null,
+        telegramUsername: customer?.telegram_username ?? null,
+      };
+    });
 
     setOrders(merged);
 
@@ -328,6 +399,13 @@ export default function AdminOrdersPage() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "order_items" },
+        async () => {
+          await loadOrders();
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "customers" },
         async () => {
           await loadOrders();
         }
@@ -632,15 +710,24 @@ export default function AdminOrdersPage() {
                             e.stopPropagation();
                             copyOrderId(order.id);
                           }}
-                          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${
-                            selectedOrder?.id === order.id
-                              ? "bg-white text-black"
-                              : "bg-white text-black"
-                          }`}
+                          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-black"
                           aria-label="Скопировать номер заказа"
                         >
                           <CopyIcon />
                         </button>
+
+                        {hasTelegramLink(order) ? (
+                          <a
+                            href={getTelegramLink(order)}
+                            target="_blank"
+                            rel="noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#229ED9] text-white"
+                            aria-label="Написать клиенту в Telegram"
+                          >
+                            <TelegramIcon />
+                          </a>
+                        ) : null}
                       </div>
 
                       <p
@@ -707,6 +794,18 @@ export default function AdminOrdersPage() {
                     >
                       <CopyIcon />
                     </button>
+
+                    {hasTelegramLink(selectedOrder) ? (
+                      <a
+                        href={getTelegramLink(selectedOrder)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex h-8 w-8 items-center justify-center rounded-full bg-[#229ED9] text-white"
+                        aria-label="Написать клиенту в Telegram"
+                      >
+                        <TelegramIcon />
+                      </a>
+                    ) : null}
                   </div>
 
                   <p className="mt-2 text-sm text-gray-500">
@@ -734,6 +833,11 @@ export default function AdminOrdersPage() {
                   <p className="mt-1 text-sm text-gray-500">
                     {selectedOrder.phone}
                   </p>
+                  {selectedOrder.telegramUsername ? (
+                    <p className="mt-1 text-sm text-gray-500">
+                      @{selectedOrder.telegramUsername}
+                    </p>
+                  ) : null}
                 </div>
 
                 <div className="rounded-[24px] bg-[#F7F7F7] p-4">
