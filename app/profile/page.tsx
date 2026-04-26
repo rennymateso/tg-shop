@@ -121,14 +121,15 @@ export default function ProfilePage() {
         <ProfilePageSkeleton />
       ) : (
         <>
-          <div className="relative mb-4 overflow-hidden rounded-[24px] border border-white/60 bg-[rgba(255,255,255,0.38)] p-5 shadow-[0_10px_30px_rgba(0,0,0,0.06)] backdrop-blur-[18px]">
-            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.48)_0%,rgba(255,255,255,0.24)_38%,rgba(255,255,255,0.14)_100%)]" />
+          <div className="relative mb-4 overflow-hidden rounded-[24px] border border-white/55 bg-[rgba(232,238,245,0.42)] p-5 shadow-[0_10px_30px_rgba(0,0,0,0.08)] backdrop-blur-[22px]">
+            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.42)_0%,rgba(255,255,255,0.20)_36%,rgba(210,220,232,0.16)_100%)]" />
             <div className="pointer-events-none absolute inset-x-0 top-0 h-[1px] bg-white/80" />
-            <div className="pointer-events-none absolute inset-y-0 left-0 w-[1px] bg-white/45" />
-            <div className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-white/20 blur-2xl" />
+            <div className="pointer-events-none absolute inset-y-0 left-0 w-[1px] bg-white/35" />
+            <div className="pointer-events-none absolute -right-12 -top-10 h-32 w-32 rounded-full bg-white/20 blur-3xl" />
+            <div className="pointer-events-none absolute -left-10 bottom-0 h-24 w-24 rounded-full bg-[#DDE7F2]/40 blur-2xl" />
 
             <div className="relative flex items-center gap-4">
-              <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full border border-white/70 bg-[rgba(255,255,255,0.55)] shadow-[0_6px_18px_rgba(0,0,0,0.06)] backdrop-blur-[10px]">
+              <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full border border-white/65 bg-[rgba(255,255,255,0.52)] shadow-[0_8px_20px_rgba(0,0,0,0.08)] backdrop-blur-[12px]">
                 {customer?.photo_url ? (
                   <img
                     src={customer.photo_url}
