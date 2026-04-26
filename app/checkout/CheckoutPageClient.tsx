@@ -6,6 +6,7 @@ import BottomNav from "../components/BottomNav";
 import { supabase } from "../lib/supabase";
 import { syncTelegramCustomer } from "../lib/customer-profile";
 import { getTelegramInitData } from "../lib/telegram-mini-app";
+import { CheckoutPageSkeleton } from "../components/PageSkeletons";
 
 type CheckoutItem = {
   id: string;
@@ -717,401 +718,403 @@ export default function CheckoutPageClient() {
     }
   };
 
+  const isPageLoading = loadingProducts;
+
   return (
     <main className="min-h-screen bg-[#F5F5F5] px-4 pt-[76px] pb-32">
       <div className="mb-5 flex items-center justify-center">
         <h1 className="text-[20px] font-medium">Оформление</h1>
       </div>
 
-      {paymentStatus === "success" && (
-        <div className="mb-4 rounded-[20px] bg-white p-4 shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
-          <p className="text-sm font-medium text-black">Заказ создан.</p>
-          <p className="mt-2 text-sm leading-6 text-gray-500">
-            После подтверждения оплаты статус заказа автоматически станет
-            «Оплачен». Если это был самовывоз с наличными, статус останется
-            «Новый».
-          </p>
-        </div>
-      )}
-
-      {paymentError && (
-        <div className="mb-4 whitespace-pre-wrap break-words rounded-[20px] bg-white p-4 text-xs text-black shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
-          {paymentError}
-        </div>
-      )}
-
-      {items.length === 0 ? (
-        <div className="rounded-[24px] bg-white p-7 text-center shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
-          <p className="text-[16px] font-medium text-black">
-            Нет товаров для оформления
-          </p>
-
-          <button
-            onClick={() => router.push("/")}
-            className="mt-5 rounded-2xl bg-black px-5 py-3 text-sm font-medium text-white"
-          >
-            Перейти в каталог
-          </button>
-        </div>
+      {isPageLoading ? (
+        <CheckoutPageSkeleton />
       ) : (
-        <div className="space-y-4">
-          {loadingProducts && (
-            <div className="rounded-[20px] bg-white p-4 text-sm text-gray-500 shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
-              Обновляем данные товаров...
+        <>
+          {paymentStatus === "success" && (
+            <div className="mb-4 rounded-[20px] bg-white p-4 shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
+              <p className="text-sm font-medium text-black">Заказ создан.</p>
+              <p className="mt-2 text-sm leading-6 text-gray-500">
+                После подтверждения оплаты статус заказа автоматически станет
+                «Оплачен». Если это был самовывоз с наличными, статус останется
+                «Новый».
+              </p>
             </div>
           )}
 
-          {items.map((item, i) => {
-            const product = getProductById(item.id);
-            const oldUnitPrice = productsMap[item.id]?.oldPrice ?? item.price;
-            const lineOldTotal = oldUnitPrice * item.quantity;
-            const lineNewTotal = item.price * item.quantity;
-            const lineDiscountPercent = getDiscountPercent(
-              lineOldTotal,
-              lineNewTotal
-            );
+          {paymentError && (
+            <div className="mb-4 whitespace-pre-wrap break-words rounded-[20px] bg-white p-4 text-xs text-black shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
+              {paymentError}
+            </div>
+          )}
 
-            return (
-              <div
-                key={`${item.id}-${item.size}-${item.color}-${i}`}
-                className="rounded-[24px] bg-white p-4 shadow-[0_8px_28px_rgba(0,0,0,0.05)]"
-              >
-                <div className="flex gap-4">
-                  <div className="aspect-[3/4] w-[88px] shrink-0 overflow-hidden rounded-[18px] bg-[#ECECEC]">
-                    <img
-                      src={product?.image || "/products/product-1.jpg"}
-                      alt={item.name}
-                      className="h-full w-full object-cover"
-                    />
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <div className="mb-1 text-[11px] uppercase tracking-[0.14em] text-gray-400">
-                          {product?.brand || "MONTREAUX"}
-                        </div>
-
-                        <h2 className="text-[15px] font-medium leading-[1.3] text-black">
-                          {item.name}
-                        </h2>
-                      </div>
-
-                      <button
-                        onClick={() => removeItem(i)}
-                        className="whitespace-nowrap text-xs text-gray-400"
-                      >
-                        удалить
-                      </button>
-                    </div>
-
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      <span className="rounded-full bg-[#F3F3F3] px-2.5 py-1 text-[11px] text-gray-600">
-                        Размер: {item.size}
-                      </span>
-
-                      <span className="rounded-full bg-[#F3F3F3] px-2.5 py-1 text-[11px] text-gray-600">
-                        Цвет: {item.color}
-                      </span>
-                    </div>
-
-                    <div className="mt-4 flex items-center justify-between gap-3">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-[13px] text-gray-400 line-through">
-                          {lineOldTotal} ₽
-                        </span>
-
-                        <span className="text-[16px] font-semibold tracking-[-0.02em] text-[#16A34A]">
-                          {lineNewTotal} ₽
-                        </span>
-
-                        <span className="rounded-full bg-[#E8F7EE] px-1.5 py-0.5 text-[10px] font-medium text-[#16A34A]">
-                          -{lineDiscountPercent}%
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => updateQuantity(i, item.quantity - 1)}
-                          className="flex h-9 w-9 items-center justify-center rounded-full bg-[#F5F5F5] text-lg text-black"
-                        >
-                          −
-                        </button>
-
-                        <span className="w-6 text-center text-[15px] font-medium text-black">
-                          {item.quantity}
-                        </span>
-
-                        <button
-                          onClick={() => updateQuantity(i, item.quantity + 1)}
-                          className="flex h-9 w-9 items-center justify-center rounded-full bg-[#F5F5F5] text-lg text-black"
-                        >
-                          +
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-
-          <div className="rounded-[24px] bg-white p-4 shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
-            <h2 className="mb-4 text-[18px] font-medium text-black">
-              Данные клиента
-            </h2>
-
-            <input
-              placeholder="Ваше имя *"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="mb-3 w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-            />
-
-            <input
-              placeholder="+7 (___) ___-__-__ *"
-              value={phone}
-              onChange={(e) => handlePhoneChange(e.target.value)}
-              className="mb-4 w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-            />
-
-            <p className="mb-2 text-sm text-gray-500">Получение</p>
-            <div className="mb-4 grid grid-cols-2 gap-2">
-              <button
-                onClick={() => setDeliveryMethod("delivery")}
-                className={`rounded-2xl py-3 text-sm ${
-                  deliveryMethod === "delivery"
-                    ? "bg-black text-white"
-                    : "bg-gray-100 text-black"
-                }`}
-              >
-                Доставка
-              </button>
+          {items.length === 0 ? (
+            <div className="rounded-[24px] bg-white p-7 text-center shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
+              <p className="text-[16px] font-medium text-black">
+                Нет товаров для оформления
+              </p>
 
               <button
-                onClick={() => setDeliveryMethod("pickup")}
-                className={`rounded-2xl py-3 text-sm ${
-                  deliveryMethod === "pickup"
-                    ? "bg-black text-white"
-                    : "bg-gray-100 text-black"
-                }`}
+                onClick={() => router.push("/")}
+                className="mt-5 rounded-2xl bg-black px-5 py-3 text-sm font-medium text-white"
               >
-                Самовывоз
+                Перейти в каталог
               </button>
             </div>
+          ) : (
+            <div className="space-y-4">
+              {items.map((item, i) => {
+                const product = getProductById(item.id);
+                const oldUnitPrice = productsMap[item.id]?.oldPrice ?? item.price;
+                const lineOldTotal = oldUnitPrice * item.quantity;
+                const lineNewTotal = item.price * item.quantity;
+                const lineDiscountPercent = getDiscountPercent(
+                  lineOldTotal,
+                  lineNewTotal
+                );
 
-            {deliveryMethod === "delivery" ? (
-              <>
-                <div className="mb-4">
-                  <p className="mb-2 text-sm text-gray-500">Сохранённые адреса</p>
+                return (
+                  <div
+                    key={`${item.id}-${item.size}-${item.color}-${i}`}
+                    className="rounded-[24px] bg-white p-4 shadow-[0_8px_28px_rgba(0,0,0,0.05)]"
+                  >
+                    <div className="flex gap-4">
+                      <div className="aspect-[3/4] w-[88px] shrink-0 overflow-hidden rounded-[18px] bg-[#ECECEC]">
+                        <img
+                          src={product?.image || "/products/product-1.jpg"}
+                          alt={item.name}
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
 
-                  {loadingAddresses ? (
-                    <div className="rounded-2xl bg-[#F5F5F5] p-3 text-sm text-gray-500">
-                      Загружаем адреса...
-                    </div>
-                  ) : savedAddresses.length === 0 ? (
-                    <div className="rounded-2xl bg-[#F5F5F5] p-3 text-sm text-gray-500">
-                      Сохранённых адресов пока нет
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {savedAddresses.map((address) => (
-                        <button
-                          key={address.id}
-                          type="button"
-                          onClick={() => handleSelectSavedAddress(address)}
-                          className={`w-full rounded-2xl border p-3 text-left ${
-                            selectedAddressId === address.id
-                              ? "border-black bg-black text-white"
-                              : "border-gray-200 bg-[#F5F5F5] text-black"
-                          }`}
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium">{address.label}</span>
-                            {address.is_default && (
-                              <span
-                                className={`rounded-full px-2 py-0.5 text-[10px] ${
-                                  selectedAddressId === address.id
-                                    ? "bg-white text-black"
-                                    : "bg-black text-white"
-                                }`}
-                              >
-                                Основной
-                              </span>
-                            )}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <div className="mb-1 text-[11px] uppercase tracking-[0.14em] text-gray-400">
+                              {product?.brand || "MONTREAUX"}
+                            </div>
+
+                            <h2 className="text-[15px] font-medium leading-[1.3] text-black">
+                              {item.name}
+                            </h2>
                           </div>
 
-                          <p
-                            className={`mt-1 text-sm ${
-                              selectedAddressId === address.id
-                                ? "text-white/80"
-                                : "text-gray-500"
-                            }`}
+                          <button
+                            onClick={() => removeItem(i)}
+                            className="whitespace-nowrap text-xs text-gray-400"
                           >
-                            {formatSavedAddress(address)}
-                          </p>
-                        </button>
-                      ))}
+                            удалить
+                          </button>
+                        </div>
 
-                      <button
-                        type="button"
-                        onClick={handleNewAddress}
-                        className="w-full rounded-2xl border border-dashed border-gray-300 bg-white p-3 text-sm text-black"
-                      >
-                        Ввести новый адрес
-                      </button>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          <span className="rounded-full bg-[#F3F3F3] px-2.5 py-1 text-[11px] text-gray-600">
+                            Размер: {item.size}
+                          </span>
+
+                          <span className="rounded-full bg-[#F3F3F3] px-2.5 py-1 text-[11px] text-gray-600">
+                            Цвет: {item.color}
+                          </span>
+                        </div>
+
+                        <div className="mt-4 flex items-center justify-between gap-3">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-[13px] text-gray-400 line-through">
+                              {lineOldTotal} ₽
+                            </span>
+
+                            <span className="text-[16px] font-semibold tracking-[-0.02em] text-[#16A34A]">
+                              {lineNewTotal} ₽
+                            </span>
+
+                            <span className="rounded-full bg-[#E8F7EE] px-1.5 py-0.5 text-[10px] font-medium text-[#16A34A]">
+                              -{lineDiscountPercent}%
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => updateQuantity(i, item.quantity - 1)}
+                              className="flex h-9 w-9 items-center justify-center rounded-full bg-[#F5F5F5] text-lg text-black"
+                            >
+                              −
+                            </button>
+
+                            <span className="w-6 text-center text-[15px] font-medium text-black">
+                              {item.quantity}
+                            </span>
+
+                            <button
+                              onClick={() => updateQuantity(i, item.quantity + 1)}
+                              className="flex h-9 w-9 items-center justify-center rounded-full bg-[#F5F5F5] text-lg text-black"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  )}
-                </div>
+                  </div>
+                );
+              })}
+
+              <div className="rounded-[24px] bg-white p-4 shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
+                <h2 className="mb-4 text-[18px] font-medium text-black">
+                  Данные клиента
+                </h2>
 
                 <input
-                  placeholder="Город *"
-                  value={city}
-                  onChange={(e) => {
-                    setSelectedAddressId("");
-                    setCity(e.target.value);
-                  }}
+                  placeholder="Ваше имя *"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
                   className="mb-3 w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
                 />
 
-                <div className="grid grid-cols-[1fr_88px_110px] gap-2">
-                  <input
-                    placeholder="Улица *"
-                    value={street}
-                    onChange={(e) => {
-                      setSelectedAddressId("");
-                      setStreet(e.target.value);
-                    }}
-                    className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-                  />
+                <input
+                  placeholder="+7 (___) ___-__-__ *"
+                  value={phone}
+                  onChange={(e) => handlePhoneChange(e.target.value)}
+                  className="mb-4 w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
+                />
 
-                  <input
-                    placeholder="Дом *"
-                    value={house}
-                    onChange={(e) => {
-                      setSelectedAddressId("");
-                      setHouse(e.target.value);
-                    }}
-                    className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-                  />
+                <p className="mb-2 text-sm text-gray-500">Получение</p>
+                <div className="mb-4 grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => setDeliveryMethod("delivery")}
+                    className={`rounded-2xl py-3 text-sm ${
+                      deliveryMethod === "delivery"
+                        ? "bg-black text-white"
+                        : "bg-gray-100 text-black"
+                    }`}
+                  >
+                    Доставка
+                  </button>
 
-                  <input
-                    placeholder="Кв."
-                    value={apartment}
-                    onChange={(e) => {
-                      setSelectedAddressId("");
-                      setApartment(e.target.value);
-                    }}
-                    className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-                  />
+                  <button
+                    onClick={() => setDeliveryMethod("pickup")}
+                    className={`rounded-2xl py-3 text-sm ${
+                      deliveryMethod === "pickup"
+                        ? "bg-black text-white"
+                        : "bg-gray-100 text-black"
+                    }`}
+                  >
+                    Самовывоз
+                  </button>
                 </div>
 
-                <textarea
-                  placeholder="Комментарий (подъезд, этаж, код домофона и другое)"
-                  value={deliveryComment}
-                  onChange={(e) => {
-                    setSelectedAddressId("");
-                    setDeliveryComment(e.target.value);
-                  }}
-                  rows={3}
-                  className="mt-3 w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
+                {deliveryMethod === "delivery" ? (
+                  <>
+                    <div className="mb-4">
+                      <p className="mb-2 text-sm text-gray-500">Сохранённые адреса</p>
+
+                      {loadingAddresses ? (
+                        <div className="rounded-2xl bg-[#F5F5F5] p-3 text-sm text-gray-500">
+                          Загружаем адреса...
+                        </div>
+                      ) : savedAddresses.length === 0 ? (
+                        <div className="rounded-2xl bg-[#F5F5F5] p-3 text-sm text-gray-500">
+                          Сохранённых адресов пока нет
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {savedAddresses.map((address) => (
+                            <button
+                              key={address.id}
+                              type="button"
+                              onClick={() => handleSelectSavedAddress(address)}
+                              className={`w-full rounded-2xl border p-3 text-left ${
+                                selectedAddressId === address.id
+                                  ? "border-black bg-black text-white"
+                                  : "border-gray-200 bg-[#F5F5F5] text-black"
+                              }`}
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-medium">{address.label}</span>
+                                {address.is_default && (
+                                  <span
+                                    className={`rounded-full px-2 py-0.5 text-[10px] ${
+                                      selectedAddressId === address.id
+                                        ? "bg-white text-black"
+                                        : "bg-black text-white"
+                                    }`}
+                                  >
+                                    Основной
+                                  </span>
+                                )}
+                              </div>
+
+                              <p
+                                className={`mt-1 text-sm ${
+                                  selectedAddressId === address.id
+                                    ? "text-white/80"
+                                    : "text-gray-500"
+                                }`}
+                              >
+                                {formatSavedAddress(address)}
+                              </p>
+                            </button>
+                          ))}
+
+                          <button
+                            type="button"
+                            onClick={handleNewAddress}
+                            className="w-full rounded-2xl border border-dashed border-gray-300 bg-white p-3 text-sm text-black"
+                          >
+                            Ввести новый адрес
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    <input
+                      placeholder="Город *"
+                      value={city}
+                      onChange={(e) => {
+                        setSelectedAddressId("");
+                        setCity(e.target.value);
+                      }}
+                      className="mb-3 w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
+                    />
+
+                    <div className="grid grid-cols-[1fr_88px_110px] gap-2">
+                      <input
+                        placeholder="Улица *"
+                        value={street}
+                        onChange={(e) => {
+                          setSelectedAddressId("");
+                          setStreet(e.target.value);
+                        }}
+                        className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
+                      />
+
+                      <input
+                        placeholder="Дом *"
+                        value={house}
+                        onChange={(e) => {
+                          setSelectedAddressId("");
+                          setHouse(e.target.value);
+                        }}
+                        className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
+                      />
+
+                      <input
+                        placeholder="Кв."
+                        value={apartment}
+                        onChange={(e) => {
+                          setSelectedAddressId("");
+                          setApartment(e.target.value);
+                        }}
+                        className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
+                      />
+                    </div>
+
+                    <textarea
+                      placeholder="Комментарий (подъезд, этаж, код домофона и другое)"
+                      value={deliveryComment}
+                      onChange={(e) => {
+                        setSelectedAddressId("");
+                        setDeliveryComment(e.target.value);
+                      }}
+                      rows={3}
+                      className="mt-3 w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
+                    />
+                  </>
+                ) : (
+                  <div className="mb-4 rounded-2xl bg-[#F5F5F5] p-3.5 text-sm leading-6 text-gray-600">
+                    Самовывоз по адресу: {pickupAddress}. Подробнее уточняйте у менеджера.
+                  </div>
+                )}
+
+                <p className="mb-2 mt-4 text-sm text-gray-500">Способ оплаты</p>
+                <div className="mb-3 grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => setPaymentMethod("card")}
+                    className={`rounded-2xl py-3 text-sm ${
+                      paymentMethod === "card"
+                        ? "bg-black text-white"
+                        : "bg-gray-100 text-black"
+                    }`}
+                  >
+                    Картой
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      if (deliveryMethod !== "pickup") return;
+                      setPaymentMethod("cash");
+                    }}
+                    disabled={deliveryMethod !== "pickup"}
+                    className={`rounded-2xl py-3 text-sm ${
+                      paymentMethod === "cash"
+                        ? "bg-black text-white"
+                        : "bg-gray-100 text-black"
+                    } disabled:cursor-not-allowed disabled:opacity-50`}
+                  >
+                    Наличными
+                  </button>
+                </div>
+
+                {deliveryMethod !== "pickup" && (
+                  <div className="mb-3 rounded-2xl bg-[#F5F5F5] p-3 text-sm text-gray-500">
+                    Оплата наличными доступна только при выборе самовывоза.
+                  </div>
+                )}
+
+                <input
+                  placeholder="Промокод"
+                  value={promoCode}
+                  onChange={(e) => setPromoCode(e.target.value)}
+                  className="mb-4 w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
                 />
-              </>
-            ) : (
-              <div className="mb-4 rounded-2xl bg-[#F5F5F5] p-3.5 text-sm leading-6 text-gray-600">
-                Самовывоз по адресу: {pickupAddress}. Подробнее уточняйте у менеджера.
-              </div>
-            )}
 
-            <p className="mb-2 mt-4 text-sm text-gray-500">Способ оплаты</p>
-            <div className="mb-3 grid grid-cols-2 gap-2">
-              <button
-                onClick={() => setPaymentMethod("card")}
-                className={`rounded-2xl py-3 text-sm ${
-                  paymentMethod === "card"
-                    ? "bg-black text-white"
-                    : "bg-gray-100 text-black"
-                }`}
-              >
-                Картой
-              </button>
+                <div className="mb-4 rounded-2xl bg-[#F7F7F7] px-4 py-3 text-sm">
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="text-gray-500">До скидки</span>
+                    <span className="text-gray-400 line-through">
+                      {finalOldTotal} ₽
+                    </span>
+                  </div>
 
-              <button
-                onClick={() => {
-                  if (deliveryMethod !== "pickup") return;
-                  setPaymentMethod("cash");
-                }}
-                disabled={deliveryMethod !== "pickup"}
-                className={`rounded-2xl py-3 text-sm ${
-                  paymentMethod === "cash"
-                    ? "bg-black text-white"
-                    : "bg-gray-100 text-black"
-                } disabled:cursor-not-allowed disabled:opacity-50`}
-              >
-                Наличными
-              </button>
-            </div>
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="text-gray-500">После скидки</span>
+                    <span className="text-[#16A34A]">{finalNewTotal} ₽</span>
+                  </div>
 
-            {deliveryMethod !== "pickup" && (
-              <div className="mb-3 rounded-2xl bg-[#F5F5F5] p-3 text-sm text-gray-500">
-                Оплата наличными доступна только при выборе самовывоза.
-              </div>
-            )}
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="text-gray-500">Скидка</span>
+                    <span className="text-[#16A34A]">-{finalDiscountPercent}%</span>
+                  </div>
 
-            <input
-              placeholder="Промокод"
-              value={promoCode}
-              onChange={(e) => setPromoCode(e.target.value)}
-              className="mb-4 w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-            />
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-500">Доставка</span>
+                    <span className="text-black">{deliveryPrice} ₽</span>
+                  </div>
+                </div>
 
-            <div className="mb-4 rounded-2xl bg-[#F7F7F7] px-4 py-3 text-sm">
-              <div className="mb-2 flex items-center justify-between">
-                <span className="text-gray-500">До скидки</span>
-                <span className="text-gray-400 line-through">
-                  {finalOldTotal} ₽
-                </span>
-              </div>
+                {!!validationMessage && (
+                  <p className="mb-3 text-sm text-[#B45309]">{validationMessage}</p>
+                )}
 
-              <div className="mb-2 flex items-center justify-between">
-                <span className="text-gray-500">После скидки</span>
-                <span className="text-[#16A34A]">{finalNewTotal} ₽</span>
-              </div>
-
-              <div className="mb-2 flex items-center justify-between">
-                <span className="text-gray-500">Скидка</span>
-                <span className="text-[#16A34A]">-{finalDiscountPercent}%</span>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-gray-500">Доставка</span>
-                <span className="text-black">{deliveryPrice} ₽</span>
+                {paymentMethod === "card" ? (
+                  <button
+                    onClick={handleCardPayment}
+                    disabled={!isFormValid || isPaying}
+                    className="w-full rounded-2xl bg-black py-3.5 text-sm font-medium text-white disabled:opacity-60"
+                  >
+                    {isPaying ? "Переход..." : "Перейти к оплате"}
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleCashOrder}
+                    disabled={!isFormValid || deliveryMethod !== "pickup" || isPaying}
+                    className="w-full rounded-2xl bg-black py-3.5 text-sm font-medium text-white disabled:opacity-60"
+                  >
+                    {isPaying ? "Сохраняем..." : "Оформить заказ"}
+                  </button>
+                )}
               </div>
             </div>
-
-            {!!validationMessage && (
-              <p className="mb-3 text-sm text-[#B45309]">{validationMessage}</p>
-            )}
-
-            {paymentMethod === "card" ? (
-              <button
-                onClick={handleCardPayment}
-                disabled={!isFormValid || isPaying}
-                className="w-full rounded-2xl bg-black py-3.5 text-sm font-medium text-white disabled:opacity-60"
-              >
-                {isPaying ? "Переход..." : "Перейти к оплате"}
-              </button>
-            ) : (
-              <button
-                onClick={handleCashOrder}
-                disabled={!isFormValid || deliveryMethod !== "pickup" || isPaying}
-                className="w-full rounded-2xl bg-black py-3.5 text-sm font-medium text-white disabled:opacity-60"
-              >
-                {isPaying ? "Сохраняем..." : "Оформить заказ"}
-              </button>
-            )}
-          </div>
-        </div>
+          )}
+        </>
       )}
 
       <BottomNav />

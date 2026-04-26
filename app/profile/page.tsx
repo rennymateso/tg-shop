@@ -11,6 +11,7 @@ import {
   getTelegramWebApp,
   requestTelegramContact,
 } from "../lib/telegram-mini-app";
+import { ProfilePageSkeleton } from "../components/PageSkeletons";
 
 function setCachedCustomer(customer: CustomerProfile | null) {
   if (!customer) return;
@@ -49,11 +50,6 @@ export default function ProfilePage() {
   }, [customer]);
 
   const menuItems = [
-    {
-      title: "Мои адреса",
-      description: "Сохранённые адреса доставки",
-      onClick: () => router.push("/profile/addresses"),
-    },
     {
       title: "Избранное",
       description: "Сохраненные товары",
@@ -100,33 +96,12 @@ export default function ProfilePage() {
 
       setPhoneRequestMessage("Номер отправлен через Telegram.");
 
-      let attempts = 0;
-      const maxAttempts = 8;
-
-      const pollProfile = async () => {
-        attempts += 1;
-
-        const refreshedProfile = await syncTelegramCustomer();
-        if (refreshedProfile?.phone) {
-          setCustomer(refreshedProfile);
-          setCachedCustomer(refreshedProfile);
-          setPhoneRequestMessage("");
-          setIsRequestingPhone(false);
-          return;
-        }
-
-        if (attempts < maxAttempts) {
-          window.setTimeout(pollProfile, 1000);
-          return;
-        }
-
-        setPhoneRequestMessage("Номер отправлен, обновите страницу через пару секунд.");
-        setIsRequestingPhone(false);
-      };
-
-      window.setTimeout(pollProfile, 1200);
-    } catch {
-      setPhoneRequestMessage("Не удалось запросить номер.");
+      const refreshedProfile = await syncTelegramCustomer();
+      if (refreshedProfile) {
+        setCustomer(refreshedProfile);
+        setCachedCustomer(refreshedProfile);
+      }
+    } finally {
       setIsRequestingPhone(false);
     }
   };
@@ -137,99 +112,105 @@ export default function ProfilePage() {
         <h1 className="text-[20px] font-medium">Профиль</h1>
       </div>
 
-      <div className="mb-4 rounded-[24px] bg-white p-5 shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
-        <div className="flex items-center gap-4">
-          <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full bg-[#F5F5F5]">
-            {customer?.photo_url ? (
-              <img
-                src={customer.photo_url}
-                alt={fullName}
-                className="h-full w-full rounded-full object-cover"
-              />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center text-xl text-gray-500">
-                {profileInitial}
+      {loadingCustomer ? (
+        <ProfilePageSkeleton />
+      ) : (
+        <>
+          <div className="mb-4 rounded-[24px] bg-white p-5 shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
+            <div className="flex items-center gap-4">
+              <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full bg-[#F5F5F5]">
+                {customer?.photo_url ? (
+                  <img
+                    src={customer.photo_url}
+                    alt={fullName}
+                    className="h-full w-full rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-xl text-gray-500">
+                    {profileInitial}
+                  </div>
+                )}
+              </div>
+
+              <div className="min-w-0">
+                <p className="truncate text-[18px] font-medium text-black">
+                  {fullName}
+                </p>
+
+                {customer?.telegram_username ? (
+                  <p className="mt-1 text-sm text-gray-500">
+                    @{customer.telegram_username}
+                  </p>
+                ) : null}
+
+                <p className="mt-1 text-sm text-gray-500">
+                  {customer?.phone || "Телефон не указан"}
+                </p>
+              </div>
+            </div>
+
+            {!customer?.phone && (
+              <div className="mt-4">
+                <button
+                  type="button"
+                  onClick={handleRequestPhone}
+                  disabled={isRequestingPhone}
+                  className="w-full rounded-2xl bg-black py-3 text-sm font-medium text-white disabled:opacity-60"
+                >
+                  {isRequestingPhone
+                    ? "Запрашиваем номер..."
+                    : "Поделиться номером"}
+                </button>
+
+                {phoneRequestMessage ? (
+                  <p className="mt-2 text-center text-sm text-gray-500">
+                    {phoneRequestMessage}
+                  </p>
+                ) : null}
               </div>
             )}
           </div>
 
-          <div className="min-w-0">
-            <p className="truncate text-[18px] font-medium text-black">
-              {loadingCustomer ? "Загрузка..." : fullName}
-            </p>
+          <div className="space-y-3">
+            {menuItems.map((item) => (
+              <button
+                key={item.title}
+                onClick={item.onClick}
+                className="w-full rounded-[24px] bg-white p-4 text-left shadow-[0_8px_28px_rgba(0,0,0,0.05)]"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[15px] font-medium text-black">{item.title}</p>
+                    <p className="mt-1 text-sm text-gray-500">{item.description}</p>
+                  </div>
 
-            {customer?.telegram_username ? (
-              <p className="mt-1 text-sm text-gray-500">
-                @{customer.telegram_username}
-              </p>
-            ) : null}
+                  <span className="text-lg text-gray-300">›</span>
+                </div>
+              </button>
+            ))}
 
-            <p className="mt-1 text-sm text-gray-500">
-              {customer?.phone || "Телефон не указан"}
-            </p>
-          </div>
-        </div>
-
-        {!customer?.phone && !loadingCustomer && (
-          <div className="mt-4">
             <button
-              type="button"
-              onClick={handleRequestPhone}
-              disabled={isRequestingPhone}
-              className="w-full rounded-2xl bg-black py-3 text-sm font-medium text-white disabled:opacity-60"
+              onClick={() => router.push("/support")}
+              className="w-full rounded-[24px] bg-black p-4 text-left text-white shadow-[0_8px_28px_rgba(0,0,0,0.10)]"
             >
-              {isRequestingPhone
-                ? "Запрашиваем номер..."
-                : "Поделиться номером"}
+              <p className="text-[15px] font-medium">Поддержка</p>
+              <p className="mt-1 text-sm text-white/70">
+                Связаться с нами по вопросам заказа
+              </p>
             </button>
 
-            {phoneRequestMessage ? (
-              <p className="mt-2 text-center text-sm text-gray-500">
-                {phoneRequestMessage}
+            <button
+              onClick={() => router.push("/channel")}
+              className="w-full rounded-[24px] bg-[#229ED9] p-4 text-left text-white shadow-[0_8px_28px_rgba(34,158,217,0.20)]"
+            >
+              <p className="text-[15px] font-medium">Перейти на наш канал</p>
+              <p className="mt-1 text-sm text-white/80">
+                Новости, поступления и обновления
               </p>
-            ) : null}
+            </button>
           </div>
-        )}
-      </div>
-
-      <div className="space-y-3">
-        {menuItems.map((item) => (
-          <button
-            key={item.title}
-            onClick={item.onClick}
-            className="w-full rounded-[24px] bg-white p-4 text-left shadow-[0_8px_28px_rgba(0,0,0,0.05)]"
-          >
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-[15px] font-medium text-black">{item.title}</p>
-                <p className="mt-1 text-sm text-gray-500">{item.description}</p>
-              </div>
-
-              <span className="text-lg text-gray-300">›</span>
-            </div>
-          </button>
-        ))}
-
-        <button
-          onClick={() => router.push("/support")}
-          className="w-full rounded-[24px] bg-black p-4 text-left text-white shadow-[0_8px_28px_rgba(0,0,0,0.10)]"
-        >
-          <p className="text-[15px] font-medium">Поддержка</p>
-          <p className="mt-1 text-sm text-white/70">
-            Связаться с нами по вопросам заказа
-          </p>
-        </button>
-
-        <button
-          onClick={() => router.push("/channel")}
-          className="w-full rounded-[24px] bg-[#229ED9] p-4 text-left text-white shadow-[0_8px_28px_rgba(34,158,217,0.20)]"
-        >
-          <p className="text-[15px] font-medium">Перейти на наш канал</p>
-          <p className="mt-1 text-sm text-white/80">
-            Новости, поступления и обновления
-          </p>
-        </button>
-      </div>
+        </>
+      )}
 
       <BottomNav />
     </main>

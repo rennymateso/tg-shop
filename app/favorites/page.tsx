@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import BottomNav from "../components/BottomNav";
 import { supabase } from "../lib/supabase";
+import { FavoritesPageSkeleton } from "../components/PageSkeletons";
 
 type ProductBadge = "Новинка" | "Скидка" | "В наличии" | "Из-за рубежа";
 type ProductCategory = "Футболки" | "Поло" | "Джинсы" | "Брюки" | "Костюмы";
@@ -115,6 +116,7 @@ export default function FavoritesPage() {
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
   const [productsMap, setProductsMap] = useState<Record<string, Product>>({});
   const [loadingProducts, setLoadingProducts] = useState(true);
+  const [pageReady, setPageReady] = useState(false);
 
   useEffect(() => {
     const saved = JSON.parse(localStorage.getItem("favorites") || "[]");
@@ -148,6 +150,14 @@ export default function FavoritesPage() {
     loadProducts();
   }, []);
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setPageReady(true);
+    }, 250);
+
+    return () => window.clearTimeout(timer);
+  }, []);
+
   const favoriteProducts = useMemo(
     () =>
       Object.values(productsMap).filter((product) =>
@@ -172,10 +182,8 @@ export default function FavoritesPage() {
         <h1 className="text-[20px] font-medium">Избранное</h1>
       </div>
 
-      {loadingProducts ? (
-        <div className="rounded-[24px] bg-white p-7 text-center shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
-          <p className="text-sm text-gray-500">Загрузка избранного...</p>
-        </div>
+      {!pageReady || loadingProducts ? (
+        <FavoritesPageSkeleton />
       ) : favoriteProducts.length === 0 ? (
         <div className="rounded-[24px] bg-white p-7 text-center shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
           <p className="text-[16px] font-medium text-black">Избранное пусто</p>
