@@ -123,12 +123,19 @@ export default function CartPageClient() {
   const router = useRouter();
 
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [cartReady, setCartReady] = useState(false);
   const [productsMap, setProductsMap] = useState<Record<string, Product>>({});
   const [loadingProducts, setLoadingProducts] = useState(true);
 
   useEffect(() => {
-    const data = JSON.parse(localStorage.getItem("cart") || "[]");
-    setCart(Array.isArray(data) ? data : []);
+    try {
+      const data = JSON.parse(localStorage.getItem("cart") || "[]");
+      setCart(Array.isArray(data) ? data : []);
+    } catch {
+      setCart([]);
+    } finally {
+      setCartReady(true);
+    }
   }, []);
 
   useEffect(() => {
@@ -212,6 +219,24 @@ export default function CartPageClient() {
     router.push("/checkout");
   };
 
+  if (!cartReady) {
+    return (
+      <main className="min-h-screen bg-[#F5F5F5] px-4 pt-[76px] pb-32">
+        <div className="mb-5 flex items-center justify-between">
+          <div className="w-[70px]" />
+          <h1 className="text-[20px] font-medium">Корзина</h1>
+          <div className="w-[70px]" />
+        </div>
+
+        <div className="rounded-[24px] bg-white p-4 text-sm text-gray-500 shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
+          Загружаем корзину...
+        </div>
+
+        <BottomNav />
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-[#F5F5F5] px-4 pt-[76px] pb-32">
       <div className="mb-5 flex items-center justify-between">
@@ -281,7 +306,7 @@ export default function CartPageClient() {
 
             return (
               <div
-                key={`${item.id}-${item.size}-${item.color}-${i}`}
+                key={`${item.id}-${item.size || ""}-${item.color || ""}`}
                 className="rounded-[24px] bg-white p-4 shadow-[0_8px_28px_rgba(0,0,0,0.05)]"
               >
                 <div className="flex gap-4">
