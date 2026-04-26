@@ -29,6 +29,7 @@ type OrderItemStatus =
   | "Отменен";
 
 type PaymentAttemptStatus = "pending" | "confirmed" | "failed" | "cancelled";
+type AttemptFilter = "Все попытки" | "Только ожидающие";
 
 type OrderItem = {
   id: number;
@@ -154,6 +155,7 @@ const quickFilters: QuickFilter[] = [
 ];
 
 const dateFilters: DateFilter[] = ["Все даты", "Только сегодня"];
+const attemptFilters: AttemptFilter[] = ["Все попытки", "Только ожидающие"];
 
 const itemStatusOptions: OrderItemStatus[] = [
   "Новый",
@@ -329,6 +331,8 @@ export default function AdminOrdersPage() {
   const [selectedFilter, setSelectedFilter] = useState<QuickFilter>("Все");
   const [selectedDateFilter, setSelectedDateFilter] =
     useState<DateFilter>("Все даты");
+  const [selectedAttemptFilter, setSelectedAttemptFilter] =
+    useState<AttemptFilter>("Все попытки");
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [updatingItemId, setUpdatingItemId] = useState<number | null>(null);
@@ -575,6 +579,9 @@ export default function AdminOrdersPage() {
     const q = search.trim().toLowerCase();
 
     return paymentAttempts.filter((attempt) => {
+      const matchesAttemptFilter =
+        selectedAttemptFilter === "Все попытки" || attempt.status === "pending";
+
       const matchesDate =
         selectedDateFilter === "Все даты" || isToday(attempt.createdAtRaw);
 
@@ -587,9 +594,9 @@ export default function AdminOrdersPage() {
         attempt.delivery.toLowerCase().includes(q) ||
         (attempt.tbankPaymentStatus || "").toLowerCase().includes(q);
 
-      return matchesDate && matchesSearch;
+      return matchesAttemptFilter && matchesDate && matchesSearch;
     });
-  }, [paymentAttempts, search, selectedDateFilter]);
+  }, [paymentAttempts, search, selectedDateFilter, selectedAttemptFilter]);
 
   const selectedOrder =
     filteredOrders.find((order) => order.id === selectedOrderId) ||
@@ -689,6 +696,16 @@ export default function AdminOrdersPage() {
   const getDateFilterCount = (filter: DateFilter) => {
     if (filter === "Все даты") return orders.length;
     return orders.filter((order) => isToday(order.createdAtRaw)).length;
+  };
+
+  const getAttemptFilterCount = (filter: AttemptFilter) => {
+    const base =
+      selectedDateFilter === "Только сегодня"
+        ? paymentAttempts.filter((attempt) => isToday(attempt.createdAtRaw))
+        : paymentAttempts;
+
+    if (filter === "Все попытки") return base.length;
+    return base.filter((attempt) => attempt.status === "pending").length;
   };
 
   return (
@@ -854,12 +871,34 @@ export default function AdminOrdersPage() {
       </section>
 
       <section className="mb-6 rounded-[28px] bg-white p-5 shadow-sm">
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
-            <h2 className="text-lg font-medium text-black">Ожидают оплату</h2>
+            <h2 className="text-lg font-medium text-black">Попытки оплаты</h2>
             <p className="text-sm text-gray-500">
-              Попытки оплаты картой, которые не стали заказами
+              Отдельно от настоящих заказов
             </p>
+          </div>
+
+          <div className="overflow-x-auto">
+            <div className="flex min-w-max gap-2">
+              {attemptFilters.map((filter) => {
+                const isActive = selectedAttemptFilter === filter;
+                return (
+                  <button
+                    key={filter}
+                    type="button"
+                    onClick={() => setSelectedAttemptFilter(filter)}
+                    className={`rounded-full px-4 py-2 text-sm transition ${
+                      isActive
+                        ? "bg-black text-white"
+                        : "bg-[#F7F7F7] text-black"
+                    }`}
+                  >
+                    {filter} ({getAttemptFilterCount(filter)})
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 
