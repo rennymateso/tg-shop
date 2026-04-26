@@ -119,6 +119,52 @@ function mapRowToProduct(row: ProductRow): Product {
   };
 }
 
+function CartSkeleton() {
+  return (
+    <div className="space-y-4">
+      {[1, 2].map((item) => (
+        <div
+          key={item}
+          className="animate-pulse rounded-[24px] bg-white p-4 shadow-[0_8px_28px_rgba(0,0,0,0.05)]"
+        >
+          <div className="flex gap-4">
+            <div className="aspect-[3/4] w-[88px] shrink-0 rounded-[18px] bg-[#ECECEC]" />
+
+            <div className="flex-1">
+              <div className="mb-2 h-3 w-24 rounded-full bg-[#ECECEC]" />
+              <div className="h-7 w-40 rounded-full bg-[#ECECEC]" />
+
+              <div className="mt-4 flex gap-2">
+                <div className="h-8 w-24 rounded-full bg-[#F3F3F3]" />
+                <div className="h-8 w-24 rounded-full bg-[#F3F3F3]" />
+              </div>
+
+              <div className="mt-5 flex items-center justify-between">
+                <div className="h-8 w-28 rounded-full bg-[#ECECEC]" />
+
+                <div className="flex items-center gap-2">
+                  <div className="h-9 w-9 rounded-full bg-[#F5F5F5]" />
+                  <div className="h-6 w-6 rounded-full bg-[#ECECEC]" />
+                  <div className="h-9 w-9 rounded-full bg-[#F5F5F5]" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+
+      <div className="animate-pulse rounded-[24px] border border-white bg-white p-4 shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
+        <div className="mb-4 flex items-center justify-between">
+          <div className="h-5 w-20 rounded-full bg-[#ECECEC]" />
+          <div className="h-7 w-28 rounded-full bg-[#ECECEC]" />
+        </div>
+
+        <div className="h-14 w-full rounded-2xl bg-[#ECECEC]" />
+      </div>
+    </div>
+  );
+}
+
 export default function CartPageClient() {
   const router = useRouter();
 
@@ -128,19 +174,38 @@ export default function CartPageClient() {
   const [loadingProducts, setLoadingProducts] = useState(true);
 
   useEffect(() => {
-    try {
-      const data = JSON.parse(localStorage.getItem("cart") || "[]");
-      setCart(Array.isArray(data) ? data : []);
-    } catch {
-      setCart([]);
-    } finally {
-      setCartReady(true);
-    }
+    const readCart = () => {
+      try {
+        const data = JSON.parse(localStorage.getItem("cart") || "[]");
+        setCart(Array.isArray(data) ? data : []);
+      } catch {
+        setCart([]);
+      } finally {
+        setCartReady(true);
+      }
+    };
+
+    readCart();
+
+    const handleFocus = () => readCart();
+    const handleStorage = () => readCart();
+    const handleCartUpdated = () => readCart();
+
+    window.addEventListener("focus", handleFocus);
+    window.addEventListener("storage", handleStorage);
+    window.addEventListener("cart-updated", handleCartUpdated);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener("cart-updated", handleCartUpdated);
+    };
   }, []);
 
   useEffect(() => {
     const loadProducts = async () => {
       setLoadingProducts(true);
+      setProductsMap({});
 
       const { data, error } = await supabase.from("products").select("*");
 
@@ -219,23 +284,7 @@ export default function CartPageClient() {
     router.push("/checkout");
   };
 
-  if (!cartReady) {
-    return (
-      <main className="min-h-screen bg-[#F5F5F5] px-4 pt-[76px] pb-32">
-        <div className="mb-5 flex items-center justify-between">
-          <div className="w-[70px]" />
-          <h1 className="text-[20px] font-medium">Корзина</h1>
-          <div className="w-[70px]" />
-        </div>
-
-        <div className="rounded-[24px] bg-white p-4 text-sm text-gray-500 shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
-          Загружаем корзину...
-        </div>
-
-        <BottomNav />
-      </main>
-    );
-  }
+  const isPageLoading = !cartReady || loadingProducts;
 
   return (
     <main className="min-h-screen bg-[#F5F5F5] px-4 pt-[76px] pb-32">
@@ -247,7 +296,9 @@ export default function CartPageClient() {
         </button>
       </div>
 
-      {cart.length === 0 && (
+      {isPageLoading ? (
+        <CartSkeleton />
+      ) : cart.length === 0 ? (
         <div className="rounded-[24px] bg-white p-7 text-center shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#F3F3F3]">
             <svg
@@ -280,16 +331,8 @@ export default function CartPageClient() {
             Перейти в каталог
           </button>
         </div>
-      )}
-
-      {cart.length > 0 && (
+      ) : (
         <div className="space-y-4">
-          {loadingProducts && (
-            <div className="rounded-[24px] bg-white p-4 text-sm text-gray-500 shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
-              Обновляем данные товаров...
-            </div>
-          )}
-
           {cart.map((item, i) => {
             const product = getProductById(item.id);
             const quantity = item.quantity || 1;
