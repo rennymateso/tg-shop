@@ -262,6 +262,11 @@ export default function CartPageClient() {
               item.price
             );
 
+            const itemImage =
+              (item.color ? product?.colorImages?.[item.color] : undefined) ||
+              product?.image ||
+              "/products/product-1.jpg";
+
             return (
               <div
                 key={`${item.id}-${item.size}-${item.color}-${i}`}
@@ -270,9 +275,12 @@ export default function CartPageClient() {
                 <div className="flex gap-4">
                   <div className="aspect-[3/4] w-[88px] shrink-0 overflow-hidden rounded-[18px] bg-[#ECECEC]">
                     <img
-                      src={product?.image || "/products/product-1.jpg"}
+                      src={itemImage}
                       alt={item.name}
                       className="h-full w-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.src = "/products/product-1.jpg";
+                      }}
                     />
                   </div>
 
