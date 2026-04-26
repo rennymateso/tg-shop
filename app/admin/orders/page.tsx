@@ -28,6 +28,8 @@ type OrderItemStatus =
   | "Доставлен"
   | "Отменен";
 
+type PaymentAttemptStatus = "pending" | "confirmed" | "failed" | "cancelled";
+
 type OrderItem = {
   id: number;
   order_id: string;
@@ -81,6 +83,49 @@ type OrderRow = {
   comment: string;
   promoCode: string;
   items: OrderItem[];
+  telegramUserId: number | null;
+  telegramUsername: string | null;
+};
+
+type PaymentAttemptRowDb = {
+  id: string;
+  order_id: string | null;
+  customer_id: string | null;
+  customer: string;
+  phone: string;
+  total: number;
+  payment: "Картой";
+  delivery: DeliveryMethod;
+  address: string;
+  comment: string | null;
+  promo_code: string | null;
+  status: PaymentAttemptStatus;
+  tbank_order_id: string | null;
+  tbank_payment_id: string | null;
+  tbank_payment_status: string | null;
+  paid_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type PaymentAttemptRow = {
+  id: string;
+  orderId: string | null;
+  customerId: string | null;
+  customer: string;
+  phone: string;
+  total: number;
+  delivery: DeliveryMethod;
+  address: string;
+  comment: string;
+  promoCode: string;
+  status: PaymentAttemptStatus;
+  tbankOrderId: string | null;
+  tbankPaymentId: string | null;
+  tbankPaymentStatus: string | null;
+  paidAt: string | null;
+  createdAt: string;
+  createdAtRaw: string;
   telegramUserId: number | null;
   telegramUsername: string | null;
 };
@@ -172,6 +217,36 @@ function itemStatusClass(status: OrderItemStatus | null) {
   }
 }
 
+function attemptStatusClass(status: PaymentAttemptStatus) {
+  switch (status) {
+    case "pending":
+      return "bg-amber-100 text-amber-700";
+    case "confirmed":
+      return "bg-emerald-100 text-emerald-700";
+    case "failed":
+      return "bg-red-100 text-red-600";
+    case "cancelled":
+      return "bg-gray-100 text-gray-700";
+    default:
+      return "bg-gray-100 text-gray-700";
+  }
+}
+
+function formatAttemptStatus(status: PaymentAttemptStatus) {
+  switch (status) {
+    case "pending":
+      return "Ожидает оплату";
+    case "confirmed":
+      return "Оплачено";
+    case "failed":
+      return "Ошибка";
+    case "cancelled":
+      return "Отменено";
+    default:
+      return status;
+  }
+}
+
 function formatOrderDate(value: string) {
   try {
     return new Date(value).toLocaleString("ru-RU");
@@ -248,6 +323,7 @@ function TelegramIcon() {
 
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<OrderRow[]>([]);
+  const [paymentAttempts, setPaymentAttempts] = useState<PaymentAttemptRow[]>([]);
   const [search, setSearch] = useState("");
   const [selectedOrderId, setSelectedOrderId] = useState<string>("");
   const [selectedFilter, setSelectedFilter] = useState<QuickFilter>("Все");
@@ -270,20 +346,25 @@ export default function AdminOrdersPage() {
     }
   };
 
-  const getTelegramLink = (order: OrderRow) => {
-    if (order.telegramUsername?.trim()) {
-      return `https://t.me/${order.telegramUsername.trim()}`;
+  const getTelegramLink = (params: {
+    telegramUsername: string | null;
+    telegramUserId: number | null;
+  }) => {
+    if (params.telegramUsername?.trim()) {
+      return `https://t.me/${params.telegramUsername.trim()}`;
     }
 
-    if (order.telegramUserId) {
-      return `tg://user?id=${order.telegramUserId}`;
+    if (params.telegramUserId) {
+      return `tg://user?id=${params.telegramUserId}`;
     }
 
     return "";
   };
 
-  const hasTelegramLink = (order: OrderRow) =>
-    Boolean(order.telegramUsername?.trim() || order.telegramUserId);
+  const hasTelegramLink = (params: {
+    telegramUsername: string | null;
+    telegramUserId: number | null;
+  }) => Boolean(params.telegramUsername?.trim() || params.telegramUserId);
 
   const loadOrders = async () => {
     setLoading(true);
@@ -303,9 +384,23 @@ export default function AdminOrdersPage() {
 
     const safeOrders = ((ordersData || []) as OrderRowDb[]) || [];
     const orderIds = safeOrders.map((order) => order.id);
-    const customerIds = safeOrders
-      .map((order) => order.customer_id)
-      .filter(Boolean) as string[];
+
+    const { data: attemptsData, error: attemptsError } = await supabase
+      .from("payment_attempts")
+      .select("*")
+      .in("status", ["pending", "failed", "cancelled"])
+      .order("created_at", { ascending: false });
+
+    if (attemptsError) {
+      setMessage(`Ошибка загрузки попыток оплаты: ${attemptsError.message}`);
+    }
+
+    const safeAttempts = ((attemptsData || []) as PaymentAttemptRowDb[]) || [];
+
+    const customerIds = [
+      ...safeOrders.map((order) => order.customer_id),
+      ...safeAttempts.map((attempt) => attempt.customer_id),
+    ].filter(Boolean) as string[];
 
     let itemsMap: Record<string, OrderItem[]> = {};
     let customersMap: Record<string, CustomerRow> = {};
@@ -348,7 +443,7 @@ export default function AdminOrdersPage() {
       }
     }
 
-    const merged: OrderRow[] = safeOrders.map((order) => {
+    const mergedOrders: OrderRow[] = safeOrders.map((order) => {
       const customer = order.customer_id ? customersMap[order.customer_id] : undefined;
 
       return {
@@ -371,11 +466,40 @@ export default function AdminOrdersPage() {
       };
     });
 
-    setOrders(merged);
+    const mergedAttempts: PaymentAttemptRow[] = safeAttempts.map((attempt) => {
+      const customer = attempt.customer_id ? customersMap[attempt.customer_id] : undefined;
 
-    if (merged.length > 0) {
+      return {
+        id: attempt.id,
+        orderId: attempt.order_id,
+        customerId: attempt.customer_id,
+        customer: attempt.customer,
+        phone: attempt.phone,
+        total: attempt.total,
+        delivery: attempt.delivery,
+        address: attempt.address,
+        comment: attempt.comment || "",
+        promoCode: attempt.promo_code || "",
+        status: attempt.status,
+        tbankOrderId: attempt.tbank_order_id,
+        tbankPaymentId: attempt.tbank_payment_id,
+        tbankPaymentStatus: attempt.tbank_payment_status,
+        paidAt: attempt.paid_at,
+        createdAt: formatOrderDate(attempt.created_at),
+        createdAtRaw: attempt.created_at,
+        telegramUserId: customer?.telegram_user_id ?? null,
+        telegramUsername: customer?.telegram_username ?? null,
+      };
+    });
+
+    setOrders(mergedOrders);
+    setPaymentAttempts(mergedAttempts);
+
+    if (mergedOrders.length > 0) {
       setSelectedOrderId((prev) =>
-        prev && merged.some((order) => order.id === prev) ? prev : merged[0].id
+        prev && mergedOrders.some((order) => order.id === prev)
+          ? prev
+          : mergedOrders[0].id
       );
     } else {
       setSelectedOrderId("");
@@ -410,6 +534,13 @@ export default function AdminOrdersPage() {
           await loadOrders();
         }
       )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "payment_attempts" },
+        async () => {
+          await loadOrders();
+        }
+      )
       .subscribe();
 
     return () => {
@@ -439,6 +570,26 @@ export default function AdminOrdersPage() {
       return matchesStatus && matchesDate && matchesSearch;
     });
   }, [orders, search, selectedFilter, selectedDateFilter]);
+
+  const filteredAttempts = useMemo(() => {
+    const q = search.trim().toLowerCase();
+
+    return paymentAttempts.filter((attempt) => {
+      const matchesDate =
+        selectedDateFilter === "Все даты" || isToday(attempt.createdAtRaw);
+
+      const matchesSearch =
+        !q ||
+        attempt.id.toLowerCase().includes(q) ||
+        attempt.customer.toLowerCase().includes(q) ||
+        attempt.phone.toLowerCase().includes(q) ||
+        formatAttemptStatus(attempt.status).toLowerCase().includes(q) ||
+        attempt.delivery.toLowerCase().includes(q) ||
+        (attempt.tbankPaymentStatus || "").toLowerCase().includes(q);
+
+      return matchesDate && matchesSearch;
+    });
+  }, [paymentAttempts, search, selectedDateFilter]);
 
   const selectedOrder =
     filteredOrders.find((order) => order.id === selectedOrderId) ||
@@ -512,6 +663,19 @@ export default function AdminOrdersPage() {
     [todayOrders]
   );
 
+  const pendingAttemptsCount = useMemo(
+    () => paymentAttempts.filter((attempt) => attempt.status === "pending").length,
+    [paymentAttempts]
+  );
+
+  const failedAttemptsCount = useMemo(
+    () =>
+      paymentAttempts.filter(
+        (attempt) => attempt.status === "failed" || attempt.status === "cancelled"
+      ).length,
+    [paymentAttempts]
+  );
+
   const getFilterCount = (filter: QuickFilter) => {
     const base =
       selectedDateFilter === "Только сегодня"
@@ -541,7 +705,7 @@ export default function AdminOrdersPage() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Поиск по заказам"
+              placeholder="Поиск по заказам и оплатам"
               className="w-full bg-transparent text-sm outline-none placeholder:text-gray-400 sm:w-80"
             />
           </div>
@@ -583,6 +747,22 @@ export default function AdminOrdersPage() {
           <p className="text-sm text-gray-500">Сегодня самовывоз</p>
           <p className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-black">
             {todayPickupOrders}
+          </p>
+        </div>
+      </div>
+
+      <div className="mb-4 grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <div className="rounded-[28px] bg-white p-5 shadow-sm">
+          <p className="text-sm text-gray-500">Ожидают оплату</p>
+          <p className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-black">
+            {pendingAttemptsCount}
+          </p>
+        </div>
+
+        <div className="rounded-[28px] bg-white p-5 shadow-sm">
+          <p className="text-sm text-gray-500">Неуспешные оплаты</p>
+          <p className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-black">
+            {failedAttemptsCount}
           </p>
         </div>
       </div>
@@ -671,6 +851,108 @@ export default function AdminOrdersPage() {
             {deliveryOrdersCount} / {pickupOrdersCount}
           </p>
         </div>
+      </section>
+
+      <section className="mb-6 rounded-[28px] bg-white p-5 shadow-sm">
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-medium text-black">Ожидают оплату</h2>
+            <p className="text-sm text-gray-500">
+              Попытки оплаты картой, которые не стали заказами
+            </p>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="rounded-[24px] bg-[#F7F7F7] p-6 text-center text-sm text-gray-500">
+            Загрузка попыток оплаты...
+          </div>
+        ) : filteredAttempts.length === 0 ? (
+          <div className="rounded-[24px] bg-[#F7F7F7] p-6 text-center text-sm text-gray-500">
+            Нет попыток оплаты
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {filteredAttempts.map((attempt) => (
+              <div
+                key={attempt.id}
+                className="rounded-[24px] bg-[#F7F7F7] p-4"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-sm font-medium text-black">{attempt.id}</p>
+
+                      <button
+                        type="button"
+                        onClick={() => copyOrderId(attempt.id)}
+                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-black"
+                        aria-label="Скопировать номер попытки оплаты"
+                      >
+                        <CopyIcon />
+                      </button>
+
+                      {hasTelegramLink(attempt) ? (
+                        <a
+                          href={getTelegramLink(attempt)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#229ED9] text-white"
+                          aria-label="Написать клиенту в Telegram"
+                        >
+                          <TelegramIcon />
+                        </a>
+                      ) : null}
+
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-xs ${attemptStatusClass(
+                          attempt.status
+                        )}`}
+                      >
+                        {formatAttemptStatus(attempt.status)}
+                      </span>
+                    </div>
+
+                    <p className="mt-2 text-sm text-black">
+                      {attempt.customer} • {attempt.phone}
+                    </p>
+
+                    <p className="mt-1 text-sm text-gray-500">
+                      {attempt.createdAt}
+                    </p>
+
+                    <p className="mt-1 text-sm text-gray-500">
+                      {attempt.delivery} • {attempt.address}
+                    </p>
+
+                    {attempt.tbankPaymentStatus ? (
+                      <p className="mt-1 text-xs text-gray-500">
+                        T-Bank: {attempt.tbankPaymentStatus}
+                      </p>
+                    ) : null}
+
+                    {attempt.comment ? (
+                      <p className="mt-2 text-sm text-gray-500">
+                        Комментарий: {attempt.comment}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  <div className="text-right">
+                    <p className="text-sm font-semibold text-black">
+                      {attempt.total.toLocaleString("ru-RU")} ₽
+                    </p>
+                    {attempt.promoCode ? (
+                      <p className="mt-1 text-xs text-gray-500">
+                        Промокод: {attempt.promoCode}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       <section className="grid grid-cols-1 gap-6 xl:grid-cols-[0.95fr_1.05fr]">
