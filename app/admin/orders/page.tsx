@@ -7,6 +7,8 @@ type OrderStatus =
   | "Новый"
   | "Оплачен"
   | "В обработке"
+  | "Частично готов"
+  | "В пути из-за рубежа"
   | "Собран"
   | "В доставке"
   | "Доставлен"
@@ -14,6 +16,17 @@ type OrderStatus =
 
 type PaymentMethod = "Картой" | "Наличными";
 type DeliveryMethod = "Доставка" | "Самовывоз";
+
+type OrderItemStatus =
+  | "Новый"
+  | "Подтвержден"
+  | "Готов к отправке"
+  | "В пути из-за рубежа"
+  | "Прибыл"
+  | "Собран"
+  | "Отправлен"
+  | "Доставлен"
+  | "Отменен";
 
 type OrderItem = {
   id: number;
@@ -24,6 +37,7 @@ type OrderItem = {
   color: string;
   quantity: number;
   price: number;
+  item_status: OrderItemStatus | null;
   created_at: string;
 };
 
@@ -53,20 +67,23 @@ type OrderRow = {
   status: OrderStatus;
   createdAt: string;
   comment: string;
+  promoCode: string;
   items: OrderItem[];
 };
 
-const statusOptions: OrderStatus[] = [
+const itemStatusOptions: OrderItemStatus[] = [
   "Новый",
-  "Оплачен",
-  "В обработке",
+  "Подтвержден",
+  "Готов к отправке",
+  "В пути из-за рубежа",
+  "Прибыл",
   "Собран",
-  "В доставке",
+  "Отправлен",
   "Доставлен",
   "Отменен",
 ];
 
-function statusClass(status: OrderStatus) {
+function orderStatusClass(status: OrderStatus) {
   switch (status) {
     case "Новый":
       return "bg-black text-white";
@@ -74,10 +91,39 @@ function statusClass(status: OrderStatus) {
       return "bg-emerald-100 text-emerald-700";
     case "В обработке":
       return "bg-amber-100 text-amber-700";
+    case "Частично готов":
+      return "bg-orange-100 text-orange-700";
+    case "В пути из-за рубежа":
+      return "bg-indigo-100 text-indigo-700";
     case "Собран":
       return "bg-blue-100 text-blue-700";
     case "В доставке":
       return "bg-violet-100 text-violet-700";
+    case "Доставлен":
+      return "bg-sky-100 text-sky-700";
+    case "Отменен":
+      return "bg-red-100 text-red-600";
+    default:
+      return "bg-gray-100 text-gray-700";
+  }
+}
+
+function itemStatusClass(status: OrderItemStatus | null) {
+  switch (status) {
+    case "Новый":
+      return "bg-gray-100 text-gray-700";
+    case "Подтвержден":
+      return "bg-amber-100 text-amber-700";
+    case "Готов к отправке":
+      return "bg-emerald-100 text-emerald-700";
+    case "В пути из-за рубежа":
+      return "bg-indigo-100 text-indigo-700";
+    case "Прибыл":
+      return "bg-blue-100 text-blue-700";
+    case "Собран":
+      return "bg-violet-100 text-violet-700";
+    case "Отправлен":
+      return "bg-fuchsia-100 text-fuchsia-700";
     case "Доставлен":
       return "bg-sky-100 text-sky-700";
     case "Отменен":
@@ -95,12 +141,38 @@ function formatOrderDate(value: string) {
   }
 }
 
+function getOrderHint(status: OrderStatus) {
+  switch (status) {
+    case "Новый":
+      return "Заказ только создан";
+    case "Оплачен":
+      return "Оплата подтверждена";
+    case "В обработке":
+      return "Начали работу по заказу";
+    case "Частично готов":
+      return "Часть товаров уже готова";
+    case "В пути из-за рубежа":
+      return "Ждём зарубежные позиции";
+    case "Собран":
+      return "Все товары готовы";
+    case "В доставке":
+      return "Заказ уже отправлен";
+    case "Доставлен":
+      return "Заказ завершён";
+    case "Отменен":
+      return "Заказ отменён";
+    default:
+      return "";
+  }
+}
+
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [search, setSearch] = useState("");
   const [selectedOrderId, setSelectedOrderId] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const [updatingItemId, setUpdatingItemId] = useState<number | null>(null);
 
   const loadOrders = async () => {
     setLoading(true);
@@ -155,6 +227,7 @@ export default function AdminOrdersPage() {
       status: order.status,
       createdAt: formatOrderDate(order.created_at),
       comment: order.comment || "",
+      promoCode: order.promo_code || "",
       items: itemsMap[order.id] || [],
     }));
 
@@ -218,21 +291,28 @@ export default function AdminOrdersPage() {
     filteredOrders[0] ||
     null;
 
-  const updateOrderStatus = async (id: string, status: OrderStatus) => {
+  const updateItemStatus = async (
+    itemId: number,
+    status: OrderItemStatus
+  ) => {
+    setUpdatingItemId(itemId);
+    setMessage("");
+
     const { error } = await supabase
-      .from("orders")
+      .from("order_items")
       .update({
-        status,
-        updated_at: new Date().toISOString(),
+        item_status: status,
       })
-      .eq("id", id);
+      .eq("id", itemId);
 
     if (error) {
-      setMessage(`Ошибка обновления статуса: ${error.message}`);
+      setMessage(`Ошибка обновления статуса товара: ${error.message}`);
+      setUpdatingItemId(null);
       return;
     }
 
     await loadOrders();
+    setUpdatingItemId(null);
   };
 
   const totalRevenue = useMemo(
@@ -318,7 +398,7 @@ export default function AdminOrdersPage() {
           <div className="mb-4 flex items-center justify-between">
             <div>
               <h2 className="text-lg font-medium text-black">Список заказов</h2>
-              <p className="text-sm text-gray-500">Просмотр и изменение статусов</p>
+              <p className="text-sm text-gray-500">Открой заказ и меняй статусы товаров</p>
             </div>
           </div>
 
@@ -357,7 +437,7 @@ export default function AdminOrdersPage() {
                       className={`rounded-full px-2.5 py-1 text-xs ${
                         selectedOrder?.id === order.id
                           ? "bg-white text-black"
-                          : statusClass(order.status)
+                          : orderStatusClass(order.status)
                       }`}
                     >
                       {order.status}
@@ -395,32 +475,18 @@ export default function AdminOrdersPage() {
                   <h2 className="text-xl font-semibold text-black">
                     {selectedOrder.id}
                   </h2>
+                  <p className="mt-2 text-sm text-gray-500">
+                    {getOrderHint(selectedOrder.status)}
+                  </p>
                 </div>
 
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <span
-                    className={`inline-flex rounded-full px-3 py-1.5 text-xs ${statusClass(
-                      selectedOrder.status
-                    )}`}
-                  >
-                    {selectedOrder.status}
-                  </span>
-
-                  <select
-                    value={selectedOrder.status}
-                    onChange={(e) =>
-                      updateOrderStatus(
-                        selectedOrder.id,
-                        e.target.value as OrderStatus
-                      )
-                    }
-                    className="rounded-2xl border border-black/5 bg-[#F5F5F5] px-3 py-2 text-sm outline-none"
-                  >
-                    {statusOptions.map((status) => (
-                      <option key={status}>{status}</option>
-                    ))}
-                  </select>
-                </div>
+                <span
+                  className={`inline-flex rounded-full px-3 py-1.5 text-xs ${orderStatusClass(
+                    selectedOrder.status
+                  )}`}
+                >
+                  {selectedOrder.status}
+                </span>
               </div>
 
               <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -477,6 +543,11 @@ export default function AdminOrdersPage() {
                 <p className="mt-2 text-sm text-gray-600">
                   {selectedOrder.comment || "Комментарий отсутствует"}
                 </p>
+                {selectedOrder.promoCode ? (
+                  <p className="mt-3 text-sm text-gray-600">
+                    Промокод: <span className="font-medium text-black">{selectedOrder.promoCode}</span>
+                  </p>
+                ) : null}
               </div>
 
               <div className="rounded-[24px] bg-[#F7F7F7] p-4">
@@ -494,10 +565,21 @@ export default function AdminOrdersPage() {
                       className="rounded-[20px] bg-white p-4"
                     >
                       <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-medium text-black">
-                            {item.name}
-                          </p>
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="text-sm font-medium text-black">
+                              {item.name}
+                            </p>
+
+                            <span
+                              className={`rounded-full px-2.5 py-1 text-[11px] ${itemStatusClass(
+                                item.item_status
+                              )}`}
+                            >
+                              {item.item_status || "Новый"}
+                            </span>
+                          </div>
+
                           <p className="mt-1 text-xs text-gray-500">
                             Размер: {item.size} • Цвет: {item.color}
                           </p>
@@ -511,6 +593,26 @@ export default function AdminOrdersPage() {
                             {item.quantity} шт. × {item.price.toLocaleString("ru-RU")} ₽
                           </p>
                         </div>
+                      </div>
+
+                      <div className="mt-4">
+                        <select
+                          value={item.item_status || "Новый"}
+                          onChange={(e) =>
+                            updateItemStatus(
+                              item.id,
+                              e.target.value as OrderItemStatus
+                            )
+                          }
+                          disabled={updatingItemId === item.id}
+                          className="w-full rounded-2xl border border-black/5 bg-[#F5F5F5] px-3 py-3 text-sm outline-none disabled:opacity-60"
+                        >
+                          {itemStatusOptions.map((status) => (
+                            <option key={status} value={status}>
+                              {status}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                     </div>
                   ))}
