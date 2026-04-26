@@ -20,6 +20,17 @@ type OrderStatus =
   | "Доставлен"
   | "Отменен";
 
+type OrderItemStatus =
+  | "Новый"
+  | "Подтвержден"
+  | "Готов к отправке"
+  | "В пути из-за рубежа"
+  | "Прибыл"
+  | "Собран"
+  | "Отправлен"
+  | "Доставлен"
+  | "Отменен";
+
 type OrderRow = {
   id: string;
   customer_id: string | null;
@@ -45,6 +56,7 @@ type OrderItemRow = {
   color: string | null;
   quantity: number;
   price: number;
+  item_status: OrderItemStatus | null;
 };
 
 function getStatusClasses(status: OrderStatus) {
@@ -97,6 +109,31 @@ function getStatusHint(status: OrderStatus) {
   }
 }
 
+function getItemStatusClasses(status: OrderItemStatus | null) {
+  switch (status) {
+    case "Новый":
+      return "bg-[#F3F4F6] text-gray-700";
+    case "Подтвержден":
+      return "bg-[#FEF3C7] text-[#B45309]";
+    case "Готов к отправке":
+      return "bg-[#DCFCE7] text-[#166534]";
+    case "В пути из-за рубежа":
+      return "bg-[#E0E7FF] text-[#4338CA]";
+    case "Прибыл":
+      return "bg-[#DBEAFE] text-[#1D4ED8]";
+    case "Собран":
+      return "bg-[#EDE9FE] text-[#6D28D9]";
+    case "Отправлен":
+      return "bg-[#FCE7F3] text-[#BE185D]";
+    case "Доставлен":
+      return "bg-[#DCFCE7] text-[#166534]";
+    case "Отменен":
+      return "bg-[#FEE2E2] text-[#B91C1C]";
+    default:
+      return "bg-[#F3F4F6] text-gray-700";
+  }
+}
+
 function formatDate(value?: string) {
   if (!value) return "Дата не указана";
 
@@ -125,8 +162,8 @@ function OrderDetailsSkeleton() {
       <div className="animate-pulse rounded-[24px] bg-white p-5 shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
         <div className="h-5 w-36 rounded-full bg-[#ECECEC]" />
         <div className="mt-4 space-y-3">
-          <div className="h-20 rounded-[20px] bg-[#ECECEC]" />
-          <div className="h-20 rounded-[20px] bg-[#ECECEC]" />
+          <div className="h-24 rounded-[20px] bg-[#ECECEC]" />
+          <div className="h-24 rounded-[20px] bg-[#ECECEC]" />
         </div>
       </div>
 
@@ -305,9 +342,19 @@ export default function OrderDetailsPage() {
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="text-[15px] font-medium text-black">
-                          {item.name}
-                        </p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-[15px] font-medium text-black">
+                            {item.name}
+                          </p>
+
+                          <span
+                            className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${getItemStatusClasses(
+                              item.item_status
+                            )}`}
+                          >
+                            {item.item_status || "Новый"}
+                          </span>
+                        </div>
 
                         <div className="mt-2 flex flex-wrap gap-2">
                           {item.size ? (
