@@ -82,6 +82,8 @@ type QuickFilter =
   | "Доставлен"
   | "Отменен";
 
+type DateFilter = "Все даты" | "Только сегодня";
+
 const quickFilters: QuickFilter[] = [
   "Все",
   "Новый",
@@ -92,6 +94,8 @@ const quickFilters: QuickFilter[] = [
   "Доставлен",
   "Отменен",
 ];
+
+const dateFilters: DateFilter[] = ["Все даты", "Только сегодня"];
 
 const itemStatusOptions: OrderItemStatus[] = [
   "Новый",
@@ -204,6 +208,8 @@ export default function AdminOrdersPage() {
   const [search, setSearch] = useState("");
   const [selectedOrderId, setSelectedOrderId] = useState<string>("");
   const [selectedFilter, setSelectedFilter] = useState<QuickFilter>("Все");
+  const [selectedDateFilter, setSelectedDateFilter] =
+    useState<DateFilter>("Все даты");
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [updatingItemId, setUpdatingItemId] = useState<number | null>(null);
@@ -239,14 +245,13 @@ export default function AdminOrdersPage() {
       if (itemsError) {
         setMessage(`Ошибка загрузки товаров заказа: ${itemsError.message}`);
       } else {
-        itemsMap = ((itemsData || []) as OrderItem[]).reduce<Record<string, OrderItem[]>>(
-          (acc, item) => {
-            if (!acc[item.order_id]) acc[item.order_id] = [];
-            acc[item.order_id].push(item);
-            return acc;
-          },
-          {}
-        );
+        itemsMap = ((itemsData || []) as OrderItem[]).reduce<
+          Record<string, OrderItem[]>
+        >((acc, item) => {
+          if (!acc[item.order_id]) acc[item.order_id] = [];
+          acc[item.order_id].push(item);
+          return acc;
+        }, {});
       }
     }
 
@@ -309,8 +314,11 @@ export default function AdminOrdersPage() {
     const q = search.trim().toLowerCase();
 
     return orders.filter((order) => {
-      const matchesFilter =
+      const matchesStatus =
         selectedFilter === "Все" || order.status === selectedFilter;
+
+      const matchesDate =
+        selectedDateFilter === "Все даты" || isToday(order.createdAtRaw);
 
       const matchesSearch =
         !q ||
@@ -321,9 +329,9 @@ export default function AdminOrdersPage() {
         order.payment.toLowerCase().includes(q) ||
         order.delivery.toLowerCase().includes(q);
 
-      return matchesFilter && matchesSearch;
+      return matchesStatus && matchesDate && matchesSearch;
     });
-  }, [orders, search, selectedFilter]);
+  }, [orders, search, selectedFilter, selectedDateFilter]);
 
   const selectedOrder =
     filteredOrders.find((order) => order.id === selectedOrderId) ||
@@ -398,8 +406,18 @@ export default function AdminOrdersPage() {
   );
 
   const getFilterCount = (filter: QuickFilter) => {
-    if (filter === "Все") return orders.length;
-    return orders.filter((order) => order.status === filter).length;
+    const base =
+      selectedDateFilter === "Только сегодня"
+        ? orders.filter((order) => isToday(order.createdAtRaw))
+        : orders;
+
+    if (filter === "Все") return base.length;
+    return base.filter((order) => order.status === filter).length;
+  };
+
+  const getDateFilterCount = (filter: DateFilter) => {
+    if (filter === "Все даты") return orders.length;
+    return orders.filter((order) => isToday(order.createdAtRaw)).length;
   };
 
   return (
@@ -448,6 +466,28 @@ export default function AdminOrdersPage() {
           <p className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-black">
             {todayPickupOrders}
           </p>
+        </div>
+      </div>
+
+      <div className="mb-4 overflow-x-auto">
+        <div className="flex min-w-max gap-2">
+          {dateFilters.map((filter) => {
+            const isActive = selectedDateFilter === filter;
+            return (
+              <button
+                key={filter}
+                type="button"
+                onClick={() => setSelectedDateFilter(filter)}
+                className={`rounded-full px-4 py-2 text-sm transition ${
+                  isActive
+                    ? "bg-black text-white"
+                    : "bg-white text-black shadow-sm"
+                }`}
+              >
+                {filter} ({getDateFilterCount(filter)})
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -575,7 +615,7 @@ export default function AdminOrdersPage() {
 
               {filteredOrders.length === 0 && (
                 <div className="rounded-[24px] bg-[#F7F7F7] p-6 text-center text-sm text-gray-500">
-                  Нет заказов по выбранному фильтру
+                  Нет заказов по выбранным фильтрам
                 </div>
               )}
             </div>
@@ -661,7 +701,10 @@ export default function AdminOrdersPage() {
                 </p>
                 {selectedOrder.promoCode ? (
                   <p className="mt-3 text-sm text-gray-600">
-                    Промокод: <span className="font-medium text-black">{selectedOrder.promoCode}</span>
+                    Промокод:{" "}
+                    <span className="font-medium text-black">
+                      {selectedOrder.promoCode}
+                    </span>
                   </p>
                 ) : null}
               </div>
