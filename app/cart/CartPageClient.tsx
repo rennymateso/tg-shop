@@ -158,12 +158,26 @@ export default function CartPageClient() {
     loadProducts();
   }, []);
 
-  const removeItem = (index: number) => {
-    const newCart = [...cart];
-    newCart.splice(index, 1);
-    setCart(newCart);
-    localStorage.setItem("cart", JSON.stringify(newCart));
+  const syncCart = (nextCart: CartItem[]) => {
+    setCart(nextCart);
+    localStorage.setItem("cart", JSON.stringify(nextCart));
     window.dispatchEvent(new Event("cart-updated"));
+  };
+
+  const updateQuantity = (index: number, nextQuantity: number) => {
+    const safeQuantity = Math.max(1, nextQuantity);
+    const nextCart = [...cart];
+    nextCart[index] = {
+      ...nextCart[index],
+      quantity: safeQuantity,
+    };
+    syncCart(nextCart);
+  };
+
+  const removeItem = (index: number) => {
+    const nextCart = [...cart];
+    nextCart.splice(index, 1);
+    syncCart(nextCart);
   };
 
   const clearCart = () => {
@@ -192,9 +206,7 @@ export default function CartPageClient() {
     [cart, productsMap]
   );
 
-  const getProductById = (id: string) => {
-    return productsMap[id];
-  };
+  const getProductById = (id: string) => productsMap[id];
 
   const goToCheckout = () => {
     router.push("/checkout");
@@ -316,10 +328,6 @@ export default function CartPageClient() {
                           Цвет: {item.color}
                         </span>
                       )}
-
-                      <span className="rounded-full bg-[#F3F3F3] px-2.5 py-1 text-[11px] text-gray-600">
-                        Кол-во: {quantity}
-                      </span>
                     </div>
 
                     <div className="mt-4 flex items-center justify-between gap-3">
@@ -339,6 +347,26 @@ export default function CartPageClient() {
                             -{discountPercent}%
                           </span>
                         )}
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => updateQuantity(i, quantity - 1)}
+                          className="flex h-9 w-9 items-center justify-center rounded-full bg-[#F5F5F5] text-lg text-black"
+                        >
+                          −
+                        </button>
+
+                        <span className="w-6 text-center text-[15px] font-medium text-black">
+                          {quantity}
+                        </span>
+
+                        <button
+                          onClick={() => updateQuantity(i, quantity + 1)}
+                          className="flex h-9 w-9 items-center justify-center rounded-full bg-[#F5F5F5] text-lg text-black"
+                        >
+                          +
+                        </button>
                       </div>
                     </div>
                   </div>
