@@ -13,6 +13,8 @@ type OrderStatus =
   | "Новый"
   | "Оплачен"
   | "В обработке"
+  | "Частично готов"
+  | "В пути из-за рубежа"
   | "Собран"
   | "В доставке"
   | "Доставлен"
@@ -53,6 +55,10 @@ function getStatusClasses(status: OrderStatus) {
       return "bg-[#E8F7EE] text-[#15803D]";
     case "В обработке":
       return "bg-[#FEF3C7] text-[#B45309]";
+    case "Частично готов":
+      return "bg-[#FFF7ED] text-[#C2410C]";
+    case "В пути из-за рубежа":
+      return "bg-[#E0E7FF] text-[#4338CA]";
     case "Собран":
       return "bg-[#DBEAFE] text-[#1D4ED8]";
     case "В доставке":
@@ -63,6 +69,31 @@ function getStatusClasses(status: OrderStatus) {
       return "bg-[#FEE2E2] text-[#B91C1C]";
     default:
       return "bg-[#F3F4F6] text-gray-700";
+  }
+}
+
+function getStatusHint(status: OrderStatus) {
+  switch (status) {
+    case "Новый":
+      return "Заказ создан и ожидает подтверждения";
+    case "Оплачен":
+      return "Оплата получена";
+    case "В обработке":
+      return "Мы начали подготовку заказа";
+    case "Частично готов":
+      return "Часть товаров уже готова, остальные ещё ожидаются";
+    case "В пути из-за рубежа":
+      return "Ожидаем поступление зарубежных позиций";
+    case "Собран":
+      return "Все товары полностью готовы";
+    case "В доставке":
+      return "Заказ передан в доставку";
+    case "Доставлен":
+      return "Заказ успешно получен";
+    case "Отменен":
+      return "Заказ отменён";
+    default:
+      return "";
   }
 }
 
@@ -254,6 +285,10 @@ export default function OrderDetailsPage() {
                 {order.status}
               </span>
             </div>
+
+            <p className="mt-3 text-sm text-gray-500">
+              {getStatusHint(order.status)}
+            </p>
           </div>
 
           <div className="rounded-[24px] bg-white p-5 shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
