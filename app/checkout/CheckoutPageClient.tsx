@@ -24,6 +24,8 @@ type OrderStatus =
   | "Новый"
   | "Оплачен"
   | "В обработке"
+  | "Частично готов"
+  | "В пути из-за рубежа"
   | "Собран"
   | "В доставке"
   | "Доставлен"
@@ -213,6 +215,18 @@ function formatSavedAddress(address: CustomerAddress) {
 
 function normalizeAddressPart(value: string | null | undefined) {
   return (value || "").trim().toLowerCase();
+}
+
+function getCheckoutItemImage(product: Product | undefined, color: string) {
+  if (!product) return "/products/product-1.jpg";
+
+  const colorImage =
+    product.colorImages?.[color] ||
+    product.image ||
+    product.images?.[0] ||
+    "/products/product-1.jpg";
+
+  return colorImage;
 }
 
 async function createOrderInSupabase(params: {
@@ -785,6 +799,7 @@ export default function CheckoutPageClient() {
                   lineOldTotal,
                   lineNewTotal
                 );
+                const itemImage = getCheckoutItemImage(product, item.color);
 
                 return (
                   <div
@@ -794,9 +809,12 @@ export default function CheckoutPageClient() {
                     <div className="flex gap-4">
                       <div className="aspect-[3/4] w-[88px] shrink-0 overflow-hidden rounded-[18px] bg-[#ECECEC]">
                         <img
-                          src={product?.image || "/products/product-1.jpg"}
+                          src={itemImage}
                           alt={item.name}
                           className="h-full w-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.src = "/products/product-1.jpg";
+                          }}
                         />
                       </div>
 
