@@ -55,12 +55,10 @@ export default function ProductPageClient({
   const [favorites, setFavorites] = useState<string[]>([]);
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const [isAddedToCart, setIsAddedToCart] = useState(false);
-  const [showCartToast, setShowCartToast] = useState(false);
+  const [justAdded, setJustAdded] = useState(false);
 
   const touchStartXRef = useRef<number | null>(null);
-  const addedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const addedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const data = JSON.parse(localStorage.getItem("favorites") || "[]");
@@ -69,8 +67,9 @@ export default function ProductPageClient({
 
   useEffect(() => {
     return () => {
-      if (addedTimeoutRef.current) clearTimeout(addedTimeoutRef.current);
-      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+      if (addedTimerRef.current) {
+        clearTimeout(addedTimerRef.current);
+      }
     };
   }, []);
 
@@ -115,16 +114,6 @@ export default function ProductPageClient({
 
   const sizes = product?.type === "bottom" ? bottomSizes : topSizes;
 
-  const colorMap: Record<string, string> = {
-    Черный: "#111111",
-    Белый: "#FFFFFF",
-    Серый: "#9CA3AF",
-    Синий: "#1D3557",
-    Бежевый: "#D6C2A1",
-    Зеленый: "#3F6B4B",
-    Коричневый: "#7A5230",
-  };
-
   const article = product ? `ART-${product.id}` : "";
   const description = product?.description || "";
   const canOrder = selectedSizes.length > 0 && !!selectedColor;
@@ -138,14 +127,13 @@ export default function ProductPageClient({
         ? prev.filter((item) => item !== value)
         : [...prev, value]
     );
-    setIsAddedToCart(false);
   };
 
   const selectColor = (value: string) => {
     setSelectedColor(value);
     setSelectedSizes([]);
     setActiveImageIndex(0);
-    setIsAddedToCart(false);
+    setJustAdded(false);
   };
 
   const nextImage = () => {
@@ -217,30 +205,23 @@ export default function ProductPageClient({
     localStorage.setItem("cart", JSON.stringify(updatedCart));
     window.dispatchEvent(new Event("cart-updated"));
 
-    setIsAddedToCart(true);
-    setShowCartToast(true);
+    setJustAdded(true);
 
-    if (addedTimeoutRef.current) clearTimeout(addedTimeoutRef.current);
-    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    if (addedTimerRef.current) {
+      clearTimeout(addedTimerRef.current);
+    }
 
-    addedTimeoutRef.current = setTimeout(() => {
-      setIsAddedToCart(false);
+    addedTimerRef.current = setTimeout(() => {
+      setJustAdded(false);
     }, 1800);
-
-    toastTimeoutRef.current = setTimeout(() => {
-      setShowCartToast(false);
-    }, 2200);
   };
 
   if (!product) {
     return (
-      <main className="min-h-screen bg-[#F5F5F5] px-4 pt-5 pb-32">
-        <button
-          onClick={() => router.back()}
-          className="mb-4 rounded-full bg-white px-4 py-2 text-sm text-gray-600 shadow-[0_4px_16px_rgba(0,0,0,0.04)]"
-        >
-          ← Назад
-        </button>
+      <main className="min-h-screen bg-[#F5F5F5] px-4 pt-[76px] pb-32">
+        <div className="mb-5 flex items-center justify-center">
+          <h1 className="text-[20px] font-medium">Товар</h1>
+        </div>
 
         <div className="rounded-[24px] bg-white p-5 shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
           <p className="text-sm text-gray-500">Товар не найден</p>
@@ -257,15 +238,8 @@ export default function ProductPageClient({
   }
 
   return (
-    <main className="min-h-screen bg-[#F5F5F5] px-4 pt-5 pb-32">
-      <div className="mb-4 flex items-center justify-between">
-        <button
-          onClick={() => router.back()}
-          className="rounded-full bg-white px-4 py-2 text-sm text-gray-600 shadow-[0_4px_16px_rgba(0,0,0,0.04)] transition-transform duration-200 active:scale-95"
-        >
-          ← Назад
-        </button>
-
+    <main className="min-h-screen bg-[#F5F5F5] px-4 pt-[76px] pb-32">
+      <div className="mb-4 flex items-center justify-end">
         <button
           onClick={toggleFavorite}
           aria-label="В избранное"
@@ -435,7 +409,7 @@ export default function ProductPageClient({
                   <button
                     key={c}
                     onClick={() => selectColor(c)}
-                    className={`overflow-hidden rounded-2xl border bg-white text-left transition-all duration-200 active:scale-95 ${
+                    className={`overflow-hidden rounded-2xl border bg-white transition-all duration-200 active:scale-95 ${
                       isSelected
                         ? "border-black ring-2 ring-black/10"
                         : "border-gray-200"
@@ -450,17 +424,6 @@ export default function ProductPageClient({
                           e.currentTarget.src = "/products/product-1.jpg";
                         }}
                       />
-                    </div>
-                    <div className="px-2 py-2">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`block h-3 w-3 rounded-full ${
-                            c === "Белый" ? "border border-gray-300" : ""
-                          }`}
-                          style={{ backgroundColor: colorMap[c] || "#E5E7EB" }}
-                        />
-                        <span className="text-[11px] text-black">{c}</span>
-                      </div>
                     </div>
                   </button>
                 );
@@ -522,17 +485,17 @@ export default function ProductPageClient({
             <button
               onClick={addToCart}
               disabled={!canOrder}
-              className={`w-full rounded-2xl py-3.5 text-sm font-medium transition-all duration-300 ${
+              className={`w-full rounded-2xl py-3.5 text-sm font-medium transition-all duration-200 ${
                 !canOrder
                   ? "bg-gray-200 text-gray-500"
-                  : isAddedToCart
-                  ? "scale-[0.985] bg-[#16A34A] text-white"
-                  : "bg-black text-white shadow-none active:scale-[0.99]"
+                  : justAdded
+                  ? "bg-[#16A34A] text-white"
+                  : "bg-black text-white active:scale-[0.99]"
               }`}
             >
               {!canOrder
                 ? "Добавить в корзину"
-                : isAddedToCart
+                : justAdded
                 ? "Добавлено"
                 : "Добавить в корзину"}
             </button>
@@ -541,18 +504,6 @@ export default function ProductPageClient({
       </div>
 
       <BottomNav />
-
-      <div
-        className={`pointer-events-none fixed bottom-24 left-1/2 z-[60] w-[calc(100%-32px)] max-w-sm -translate-x-1/2 transition-all duration-300 ${
-          showCartToast
-            ? "translate-y-0 opacity-100"
-            : "translate-y-3 opacity-0"
-        }`}
-      >
-        <div className="rounded-2xl bg-black px-4 py-3 text-center text-sm text-white">
-          Товар добавлен в корзину
-        </div>
-      </div>
     </main>
   );
 }
