@@ -34,6 +34,17 @@ type OrderRow = {
   updated_at?: string;
 };
 
+type OrderItemRow = {
+  id?: string;
+  order_id: string;
+  product_id: string | null;
+  name: string;
+  size: string | null;
+  color: string | null;
+  quantity: number;
+  price: number;
+};
+
 function getStatusClasses(status: OrderStatus) {
   switch (status) {
     case "Новый":
@@ -80,6 +91,14 @@ function OrderDetailsSkeleton() {
         <div className="mt-4 h-8 w-28 rounded-full bg-[#ECECEC]" />
       </div>
 
+      <div className="animate-pulse rounded-[24px] bg-white p-5 shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
+        <div className="h-5 w-36 rounded-full bg-[#ECECEC]" />
+        <div className="mt-4 space-y-3">
+          <div className="h-20 rounded-[20px] bg-[#ECECEC]" />
+          <div className="h-20 rounded-[20px] bg-[#ECECEC]" />
+        </div>
+      </div>
+
       {[1, 2, 3].map((item) => (
         <div
           key={item}
@@ -101,6 +120,7 @@ export default function OrderDetailsPage() {
 
   const [customer, setCustomer] = useState<CustomerProfile | null>(null);
   const [order, setOrder] = useState<OrderRow | null>(null);
+  const [orderItems, setOrderItems] = useState<OrderItemRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
 
@@ -113,25 +133,41 @@ export default function OrderDetailsPage() {
 
       if (!profile?.id || !orderId) {
         setOrder(null);
+        setOrderItems([]);
         setLoading(false);
         return;
       }
 
-      const { data, error } = await supabase
+      const { data: orderData, error: orderError } = await supabase
         .from("orders")
         .select("*")
         .eq("id", orderId)
         .eq("customer_id", profile.id)
         .single();
 
-      if (error) {
-        console.error("Ошибка загрузки заказа:", error.message);
+      if (orderError || !orderData) {
+        console.error("Ошибка загрузки заказа:", orderError?.message || "not found");
         setOrder(null);
+        setOrderItems([]);
         setLoading(false);
         return;
       }
 
-      setOrder(data as OrderRow);
+      setOrder(orderData as OrderRow);
+
+      const { data: itemsData, error: itemsError } = await supabase
+        .from("order_items")
+        .select("*")
+        .eq("order_id", orderId);
+
+      if (itemsError) {
+        console.error("Ошибка загрузки товаров заказа:", itemsError.message);
+        setOrderItems([]);
+        setLoading(false);
+        return;
+      }
+
+      setOrderItems((itemsData || []) as OrderItemRow[]);
       setLoading(false);
     };
 
@@ -213,6 +249,57 @@ export default function OrderDetailsPage() {
             >
               {copied ? "Номер заказа скопирован" : "Скопировать номер заказа"}
             </button>
+          </div>
+
+          <div className="rounded-[24px] bg-white p-5 shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
+            <h2 className="text-[16px] font-medium text-black">Товары в заказе</h2>
+
+            {orderItems.length === 0 ? (
+              <p className="mt-3 text-sm text-gray-500">Товары не найдены</p>
+            ) : (
+              <div className="mt-4 space-y-3">
+                {orderItems.map((item, index) => (
+                  <div
+                    key={`${item.order_id}-${item.product_id || item.name}-${index}`}
+                    className="rounded-[20px] bg-[#F5F5F5] p-4"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-[15px] font-medium text-black">
+                          {item.name}
+                        </p>
+
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {item.size ? (
+                            <span className="rounded-full bg-white px-2.5 py-1 text-[11px] text-gray-600">
+                              Размер: {item.size}
+                            </span>
+                          ) : null}
+
+                          {item.color ? (
+                            <span className="rounded-full bg-white px-2.5 py-1 text-[11px] text-gray-600">
+                              Цвет: {item.color}
+                            </span>
+                          ) : null}
+
+                          <span className="rounded-full bg-white px-2.5 py-1 text-[11px] text-gray-600">
+                            Кол-во: {item.quantity}
+                          </span>
+                        </div>
+                      </div>
+
+                      <span className="shrink-0 text-[15px] font-semibold text-black">
+                        {item.price * item.quantity} ₽
+                      </span>
+                    </div>
+
+                    <p className="mt-2 text-xs text-gray-500">
+                      {item.price} ₽ за штуку
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="rounded-[24px] bg-white p-5 shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
