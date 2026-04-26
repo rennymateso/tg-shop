@@ -428,14 +428,25 @@ export default function AdminOrdersPage() {
           <h1 className="text-2xl font-semibold text-black">Заказы</h1>
         </div>
 
-        <div className="flex items-center gap-2 rounded-2xl bg-white px-4 py-3 shadow-sm">
-          <span className="text-gray-400">⌕</span>
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Поиск по заказам"
-            className="w-full bg-transparent text-sm outline-none placeholder:text-gray-400 sm:w-80"
-          />
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <div className="flex items-center gap-2 rounded-2xl bg-white px-4 py-3 shadow-sm">
+            <span className="text-gray-400">⌕</span>
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Поиск по заказам"
+              className="w-full bg-transparent text-sm outline-none placeholder:text-gray-400 sm:w-80"
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={loadOrders}
+            disabled={loading}
+            className="rounded-2xl bg-white px-4 py-3 text-sm font-medium text-black shadow-sm disabled:opacity-60"
+          >
+            {loading ? "Обновляем..." : "Обновить"}
+          </button>
         </div>
       </div>
 
