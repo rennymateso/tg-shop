@@ -34,6 +34,17 @@ type OrderRow = {
   updated_at?: string;
 };
 
+type OrderItemRow = {
+  id?: string;
+  order_id: string;
+  product_id: string | null;
+  name: string;
+  size: string | null;
+  color: string | null;
+  quantity: number;
+  price: number;
+};
+
 function getStatusClasses(status: OrderStatus) {
   switch (status) {
     case "Новый":
@@ -83,7 +94,7 @@ function OrdersSkeleton() {
             <div className="flex-1">
               <div className="h-5 w-36 rounded-full bg-[#ECECEC]" />
               <div className="mt-3 h-4 w-28 rounded-full bg-[#ECECEC]" />
-              <div className="mt-3 h-4 w-20 rounded-full bg-[#ECECEC]" />
+              <div className="mt-3 h-4 w-24 rounded-full bg-[#ECECEC]" />
             </div>
 
             <div className="h-7 w-24 rounded-full bg-[#ECECEC]" />
@@ -100,6 +111,7 @@ export default function OrdersPage() {
   const router = useRouter();
   const [customer, setCustomer] = useState<CustomerProfile | null>(null);
   const [orders, setOrders] = useState<OrderRow[]>([]);
+  const [orderItemsMap, setOrderItemsMap] = useState<Record<string, OrderItemRow[]>>({});
   const [loading, setLoading] = useState(true);
   const [copiedOrderId, setCopiedOrderId] = useState("");
 
@@ -112,6 +124,7 @@ export default function OrdersPage() {
 
       if (!profile?.id) {
         setOrders([]);
+        setOrderItemsMap({});
         setLoading(false);
         return;
       }
@@ -125,11 +138,44 @@ export default function OrdersPage() {
       if (error) {
         console.error("Ошибка загрузки заказов:", error.message);
         setOrders([]);
+        setOrderItemsMap({});
         setLoading(false);
         return;
       }
 
-      setOrders((data || []) as OrderRow[]);
+      const safeOrders = (data || []) as OrderRow[];
+      setOrders(safeOrders);
+
+      if (safeOrders.length === 0) {
+        setOrderItemsMap({});
+        setLoading(false);
+        return;
+      }
+
+      const orderIds = safeOrders.map((order) => order.id);
+
+      const { data: itemsData, error: itemsError } = await supabase
+        .from("order_items")
+        .select("*")
+        .in("order_id", orderIds);
+
+      if (itemsError) {
+        console.error("Ошибка загрузки товаров заказов:", itemsError.message);
+        setOrderItemsMap({});
+        setLoading(false);
+        return;
+      }
+
+      const nextMap: Record<string, OrderItemRow[]> = {};
+
+      ((itemsData || []) as OrderItemRow[]).forEach((item) => {
+        if (!nextMap[item.order_id]) {
+          nextMap[item.order_id] = [];
+        }
+        nextMap[item.order_id].push(item);
+      });
+
+      setOrderItemsMap(nextMap);
       setLoading(false);
     };
 
@@ -137,6 +183,11 @@ export default function OrdersPage() {
   }, []);
 
   const hasOrders = useMemo(() => orders.length > 0, [orders]);
+
+  const getItemsCount = (orderId: string) => {
+    const items = orderItemsMap[orderId] || [];
+    return items.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+  };
 
   const copyOrderId = async (orderId: string) => {
     try {
@@ -179,63 +230,72 @@ export default function OrdersPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {orders.map((order) => (
-            <button
-              key={order.id}
-              type="button"
-              onClick={() => router.push(`/orders/${order.id}`)}
-              className="w-full rounded-[24px] bg-white p-4 text-left shadow-[0_8px_28px_rgba(0,0,0,0.05)]"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-[16px] font-medium text-black">
-                    Заказ {order.id}
-                  </p>
-                  <p className="mt-1 text-sm text-gray-500">
-                    {formatDate(order.created_at || order.updated_at)}
-                  </p>
-                </div>
+          {orders.map((order) => {
+            const itemsCount = getItemsCount(order.id);
 
-                <span
-                  className={`shrink-0 rounded-full px-3 py-1 text-[11px] font-medium ${getStatusClasses(
-                    order.status
-                  )}`}
-                >
-                  {order.status}
-                </span>
-              </div>
-
-              <div className="mt-4 space-y-2 text-sm text-gray-600">
-                <div className="flex items-center justify-between gap-3">
-                  <span>Сумма</span>
-                  <span className="font-medium text-black">{order.total} ₽</span>
-                </div>
-
-                <div className="flex items-center justify-between gap-3">
-                  <span>Получение</span>
-                  <span className="font-medium text-black">{order.delivery}</span>
-                </div>
-
-                <div className="flex items-center justify-between gap-3">
-                  <span>Оплата</span>
-                  <span className="font-medium text-black">{order.payment}</span>
-                </div>
-              </div>
-
+            return (
               <button
+                key={order.id}
                 type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  copyOrderId(order.id);
-                }}
-                className="mt-4 w-full rounded-2xl bg-[#F5F5F5] py-3 text-sm font-medium text-black"
+                onClick={() => router.push(`/orders/${order.id}`)}
+                className="w-full rounded-[24px] bg-white p-4 text-left shadow-[0_8px_28px_rgba(0,0,0,0.05)]"
               >
-                {copiedOrderId === order.id
-                  ? "Номер заказа скопирован"
-                  : "Скопировать номер заказа"}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[16px] font-medium text-black">
+                      Заказ {order.id}
+                    </p>
+                    <p className="mt-1 text-sm text-gray-500">
+                      {formatDate(order.created_at || order.updated_at)}
+                    </p>
+                  </div>
+
+                  <span
+                    className={`shrink-0 rounded-full px-3 py-1 text-[11px] font-medium ${getStatusClasses(
+                      order.status
+                    )}`}
+                  >
+                    {order.status}
+                  </span>
+                </div>
+
+                <div className="mt-4 space-y-2 text-sm text-gray-600">
+                  <div className="flex items-center justify-between gap-3">
+                    <span>Товаров</span>
+                    <span className="font-medium text-black">{itemsCount}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-3">
+                    <span>Сумма</span>
+                    <span className="font-medium text-black">{order.total} ₽</span>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-3">
+                    <span>Получение</span>
+                    <span className="font-medium text-black">{order.delivery}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-3">
+                    <span>Оплата</span>
+                    <span className="font-medium text-black">{order.payment}</span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    copyOrderId(order.id);
+                  }}
+                  className="mt-4 w-full rounded-2xl bg-[#F5F5F5] py-3 text-sm font-medium text-black"
+                >
+                  {copiedOrderId === order.id
+                    ? "Номер заказа скопирован"
+                    : "Скопировать номер заказа"}
+                </button>
               </button>
-            </button>
-          ))}
+            );
+          })}
         </div>
       )}
 
