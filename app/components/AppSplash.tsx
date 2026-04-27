@@ -5,7 +5,7 @@ export default function AppSplash() {
     <div className="fixed inset-0 z-[999] flex items-center justify-center bg-[#F5F5F5]">
       <div className="text-center">
         <p className="text-[10px] uppercase tracking-[0.24em] text-gray-400">
-          Menswear
+          Fashion
         </p>
 
         <h1 className="mt-3 text-[26px] font-light tracking-[0.28em] text-black">
