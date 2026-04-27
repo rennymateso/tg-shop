@@ -286,7 +286,7 @@ export default function HomePageClient({
       <main className="min-h-screen bg-[#F5F5F5] px-3 pt-[76px] pb-32">
         <div className="text-center">
           <p className="text-[11px] uppercase tracking-[0.28em] text-gray-400">
-            Menswear
+            Fashion
           </p>
 
           <button
