@@ -590,7 +590,7 @@ export default function HomePageClient({
 
                     {p.badge.trim() && (
                       <div
-                        className={`absolute left-3 top-3 rounded-full px-2.5 py-1 text-[10px] font-medium backdrop-blur shadow-sm ${
+                        className={`absolute left-3 top-3 rounded-full px-2 py-[4px] text-[9px] font-medium leading-none backdrop-blur shadow-sm ${
                           p.badge.trim().toLowerCase() === "из-за рубежа"
                             ? "bg-black text-white"
                             : "bg-white/90 text-black"
