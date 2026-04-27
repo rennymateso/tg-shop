@@ -338,7 +338,7 @@ export default function HomePageClient({
           </button>
         </div>
 
-        <div className="mt-4 rounded-[26px] bg-white p-4 shadow-[0_12px_30px_rgba(0,0,0,0.05)]">
+        <div className="mt-4">
           <div className="rounded-[22px] bg-[#F6F6F6] p-1">
             <div className="grid grid-cols-2 gap-1">
               {departments.map((department) => (
@@ -363,7 +363,7 @@ export default function HomePageClient({
             </div>
           </div>
 
-          <div className="mt-4 overflow-x-auto">
+          <div className="mt-3 overflow-x-auto">
             <div className="flex min-w-max gap-2">
               {currentCategories.map((category) => {
                 const isActive = currentCategory === category;
@@ -379,10 +379,10 @@ export default function HomePageClient({
                         setSelectedWomensCategory(category as WomensCategory);
                       }
                     }}
-                    className={`rounded-full border px-4 py-2.5 text-[13px] transition-all duration-200 ${
+                    className={`rounded-full px-4 py-2.5 text-[13px] transition-all duration-200 ${
                       isActive
-                        ? "border-black bg-black text-white"
-                        : "border-[#E8E8E8] bg-white text-[#4B5563]"
+                        ? "bg-black text-white"
+                        : "bg-white text-[#4B5563]"
                     }`}
                   >
                     {category}
@@ -397,10 +397,10 @@ export default function HomePageClient({
               <button
                 type="button"
                 onClick={() => setSelectedBadge("Все")}
-                className={`rounded-full border px-4 py-2.5 text-[13px] transition-all duration-200 ${
+                className={`rounded-full px-4 py-2.5 text-[13px] transition-all duration-200 ${
                   selectedBadge === "Все"
-                    ? "border-black bg-black text-white"
-                    : "border-[#E8E8E8] bg-white text-[#4B5563]"
+                    ? "bg-black text-white"
+                    : "bg-white text-[#4B5563]"
                 }`}
               >
                 Все
@@ -419,10 +419,10 @@ export default function HomePageClient({
                         prev === badge.name ? "Все" : badge.name
                       )
                     }
-                    className={`rounded-full border px-4 py-2.5 text-[13px] transition-all duration-200 ${
+                    className={`rounded-full px-4 py-2.5 text-[13px] transition-all duration-200 ${
                       selectedBadge === badge.name
-                        ? "border-black bg-black text-white"
-                        : "border-[#E8E8E8] bg-white text-[#4B5563]"
+                        ? "bg-black text-white"
+                        : "bg-white text-[#4B5563]"
                     }`}
                   >
                     {badge.name}
@@ -431,32 +431,29 @@ export default function HomePageClient({
             </div>
           </div>
 
-          <div className="mt-4 flex items-center justify-between gap-3 border-t border-[#F0F0F0] pt-4">
+          <div className="mt-4 flex items-center justify-between gap-3">
             <div className="relative min-w-0 flex-1" ref={brandMenuWrapRef}>
               <button
                 type="button"
                 onClick={() => setShowBrandMenu((prev) => !prev)}
-                className="flex w-full items-center justify-between rounded-2xl bg-[#F7F7F7] px-4 py-3 text-left"
+                className="flex items-center gap-1.5 text-[13px] font-medium text-black"
               >
-                <span className="truncate text-[14px] font-medium text-black">
-                  {selectedBrand}
-                </span>
-
+                <span className="truncate">{selectedBrand}</span>
                 <svg
-                  width="16"
-                  height="16"
+                  width="13"
+                  height="13"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
                   strokeWidth="2"
-                  className="text-gray-400"
+                  className="shrink-0 text-gray-400"
                 >
                   <path d="M6 9l6 6 6-6" />
                 </svg>
               </button>
 
               {showBrandMenu && (
-                <div className="absolute left-0 top-14 z-50 max-h-72 w-full overflow-y-auto rounded-2xl border border-gray-100 bg-white p-1.5 shadow-[0_16px_40px_rgba(0,0,0,0.14)]">
+                <div className="absolute left-0 top-8 z-50 max-h-72 w-full overflow-y-auto rounded-2xl bg-white p-1.5 shadow-[0_16px_40px_rgba(0,0,0,0.14)]">
                   <button
                     type="button"
                     onClick={() => {
@@ -497,13 +494,24 @@ export default function HomePageClient({
               <button
                 type="button"
                 onClick={() => setShowSortMenu((prev) => !prev)}
-                className="rounded-2xl bg-[#F7F7F7] px-4 py-3 text-[14px] font-medium text-black"
+                className="flex items-center gap-1.5 text-[13px] font-medium text-black"
               >
-                {selectedSort}
+                <span>{selectedSort}</span>
+                <svg
+                  width="13"
+                  height="13"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  className="text-gray-400"
+                >
+                  <path d="M6 9l6 6 6-6" />
+                </svg>
               </button>
 
               {showSortMenu && (
-                <div className="absolute right-0 top-14 z-30 w-44 rounded-2xl border border-gray-100 bg-white p-1.5 shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
+                <div className="absolute right-0 top-8 z-30 w-44 rounded-2xl bg-white p-1.5 shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
                   {sortOptions.map((option) => (
                     <button
                       key={option}
