@@ -110,11 +110,23 @@ function TruckIcon() {
   );
 }
 
-function PriceText({ value }: { value: number }) {
+function PriceText({
+  value,
+  green = false,
+  old = false,
+}: {
+  value: number;
+  green?: boolean;
+  old?: boolean;
+}) {
   return (
-    <span className="inline-flex items-baseline gap-[2px]">
+    <span
+      className={`inline-flex items-baseline gap-[2px] ${
+        green ? "text-[#16A34A]" : ""
+      } ${old ? "text-[#A0A7B5]" : ""}`}
+    >
       <span>{formatPriceNumber(value)}</span>
-      <span className="text-[0.88em] font-semibold opacity-90">₽</span>
+      <span className="text-[0.82em] font-semibold opacity-90">₽</span>
     </span>
   );
 }
@@ -698,7 +710,7 @@ export default function HomePageClient({
                     </div>
                   </div>
 
-                  <div className="flex min-h-[164px] flex-col px-3 pb-3 pt-2.5">
+                  <div className="flex min-h-[168px] flex-col px-3 pb-3 pt-2.5">
                     <div className="h-[18px] overflow-hidden text-[10px] text-gray-400">
                       <span className="max-w-[110px] break-words uppercase tracking-[0.14em]">
                         {p.brand}
@@ -714,7 +726,7 @@ export default function HomePageClient({
                         {visibleColors.map((color, index) => (
                           <span
                             key={`${p.id}-${color}-${index}`}
-                            className={`block h-3.5 w-3.5 rounded-full ${
+                            className={`block h-3.5 w-3.5 rounded-[3px] ${
                               color === "Белый" ? "border border-gray-300" : ""
                             }`}
                             style={{
@@ -731,25 +743,27 @@ export default function HomePageClient({
                       ) : null}
                     </div>
 
-                    <div className="mt-3 flex items-end gap-2">
+                    <div className="mt-3 flex items-end">
                       <span className="text-[17px] font-bold leading-none tracking-[-0.035em] text-[#16A34A]">
-                        <PriceText value={p.price} />
+                        <PriceText value={p.price} green />
                       </span>
 
-                      {p.oldPrice ? (
-                        <span className="text-[12px] font-medium leading-none text-[#A0A7B5] line-through">
-                          <PriceText value={p.oldPrice} />
-                        </span>
-                      ) : null}
+                      <div className="ml-3 flex items-end gap-2 pb-[1px]">
+                        {p.oldPrice ? (
+                          <span className="text-[12px] font-medium leading-none text-[#A0A7B5] line-through decoration-[1px]">
+                            <PriceText value={p.oldPrice} old />
+                          </span>
+                        ) : null}
 
-                      {discountPercent > 0 && (
-                        <span className="text-[12px] font-semibold leading-none text-[#FF2F7D]">
-                          -{discountPercent}%
-                        </span>
-                      )}
+                        {discountPercent > 0 && (
+                          <span className="text-[12px] font-semibold leading-none text-[#FF2F7D]">
+                            -{discountPercent}%
+                          </span>
+                        )}
+                      </div>
                     </div>
 
-                    <div className="mt-2 flex items-center justify-end gap-1.5 text-[10px] text-gray-400">
+                    <div className="mt-3 flex items-center justify-end gap-1.5 text-[10px] text-gray-400">
                       <TruckIcon />
                       <span>{deliveryLabel}</span>
                     </div>
