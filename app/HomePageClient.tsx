@@ -60,6 +60,21 @@ function getDiscountPercent(oldPrice: number | null, price: number) {
   return Math.round(((oldPrice - price) / oldPrice) * 100);
 }
 
+function getColorsLabel(colors: string[] | undefined) {
+  const count = Array.isArray(colors) ? colors.length : 0;
+
+  if (count <= 0) return "1 цвет";
+  if (count === 1) return "1 цвет";
+  if (count >= 2 && count <= 4) return `${count} цвета`;
+  return `${count} цветов`;
+}
+
+function getDeliveryLabel(badge: string) {
+  return badge.trim().toLowerCase() === "из-за рубежа"
+    ? "Срок доставки: 7–14 дней"
+    : "Срок доставки: 1–3 дня";
+}
+
 export default function HomePageClient({
   initialProducts,
   initialBrands,
@@ -557,6 +572,8 @@ export default function HomePageClient({
               const currentImageIndex = cardImageIndexes[p.id] || 0;
               const currentImage =
                 p.images[currentImageIndex] || p.image || "/products/product-1.jpg";
+              const colorsLabel = getColorsLabel(p.colors);
+              const deliveryLabel = getDeliveryLabel(p.badge);
 
               return (
                 <div
@@ -564,7 +581,7 @@ export default function HomePageClient({
                   onClick={() => router.push(`/product?id=${p.id}`)}
                   onMouseEnter={() => prefetchProduct(p.id)}
                   onTouchStart={() => prefetchProduct(p.id)}
-                  className="group cursor-pointer overflow-hidden rounded-[20px] bg-white shadow-[0_10px_28px_rgba(0,0,0,0.05)] transition-all duration-300 active:scale-[0.985]"
+                  className="group cursor-pointer overflow-hidden rounded-[16px] bg-white shadow-[0_10px_28px_rgba(0,0,0,0.05)] transition-all duration-300 active:scale-[0.985]"
                 >
                   <div
                     className="relative aspect-[3/4] overflow-hidden bg-[#EAEAEA]"
@@ -634,61 +651,42 @@ export default function HomePageClient({
                     </div>
                   </div>
 
-                  <div className="flex min-h-[150px] flex-col p-3">
+                  <div className="flex min-h-[154px] flex-col p-3">
                     <div className="h-[20px] overflow-hidden text-[10px] text-gray-400">
                       <span className="max-w-[110px] break-words uppercase tracking-[0.14em]">
                         {p.brand}
                       </span>
                     </div>
 
-                    <h3 className="mt-1 min-h-[36px] text-[14px] font-medium leading-[1.2] text-black">
+                    <h3 className="mt-1 min-h-[34px] text-[14px] font-medium leading-[1.2] text-black">
                       {p.name}
                     </h3>
 
-                    <div className="mt-auto flex items-center justify-between gap-2 pt-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        {p.oldPrice ? (
-                          <span className="text-[12px] font-normal leading-none text-gray-400 line-through">
-                            {p.oldPrice} ₽
-                          </span>
-                        ) : null}
+                    <p className="mt-1 text-[11px] text-gray-400">
+                      {colorsLabel}
+                    </p>
 
-                        <span className="text-[16px] font-semibold leading-none tracking-[-0.02em] text-[#16A34A]">
-                          {p.price} ₽
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      {p.oldPrice ? (
+                        <span className="text-[12px] font-normal leading-none text-gray-400 line-through">
+                          {p.oldPrice} ₽
                         </span>
+                      ) : null}
 
-                        {discountPercent > 0 && (
-                          <span className="rounded-full bg-[#E8F7EE] px-1.5 py-0.5 text-[10px] font-medium text-[#16A34A]">
-                            -{discountPercent}%
-                          </span>
-                        )}
-                      </div>
+                      <span className="text-[16px] font-semibold leading-none tracking-[-0.02em] text-[#16A34A]">
+                        {p.price} ₽
+                      </span>
 
-                      <button
-                        type="button"
-                        onMouseEnter={() => prefetchProduct(p.id)}
-                        onTouchStart={() => prefetchProduct(p.id)}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          router.push(`/product?id=${p.id}`);
-                        }}
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#F5F5F5] transition-transform duration-200 active:scale-90"
-                      >
-                        <svg
-                          width="17"
-                          height="17"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="black"
-                          strokeWidth="1.7"
-                        >
-                          <path d="M6 6h15l-1.5 9h-12z" />
-                          <path d="M6 6L5 3H2" />
-                          <circle cx="9" cy="20" r="1" />
-                          <circle cx="18" cy="20" r="1" />
-                        </svg>
-                      </button>
+                      {discountPercent > 0 && (
+                        <span className="rounded-full bg-[#E8F7EE] px-1.5 py-0.5 text-[10px] font-medium text-[#16A34A]">
+                          -{discountPercent}%
+                        </span>
+                      )}
                     </div>
+
+                    <p className="mt-2 text-[11px] leading-[1.3] text-gray-500">
+                      {deliveryLabel}
+                    </p>
                   </div>
                 </div>
               );
