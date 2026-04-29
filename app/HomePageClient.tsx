@@ -91,6 +91,12 @@ function getDeliveryLabel(badge: string) {
     : "1–3 дня";
 }
 
+function getDeliveryChipLabel(badge: string) {
+  return badge.trim().toLowerCase() === "из-за рубежа"
+    ? "Из-за рубежа · 7–14 дней"
+    : "В наличии · 1–3 дня";
+}
+
 function TruckIcon() {
   return (
     <svg
@@ -613,6 +619,7 @@ export default function HomePageClient({
                 p.images[currentImageIndex] || p.image || "/products/product-1.jpg";
               const extraColorsLabel = getExtraColorsLabel(p.colors);
               const deliveryLabel = getDeliveryLabel(p.badge);
+              const deliveryChipLabel = getDeliveryChipLabel(p.badge);
               const visibleColors = (p.colors || []).slice(0, 3);
 
               return (
@@ -621,7 +628,7 @@ export default function HomePageClient({
                   onClick={() => router.push(`/product?id=${p.id}`)}
                   onMouseEnter={() => prefetchProduct(p.id)}
                   onTouchStart={() => prefetchProduct(p.id)}
-                  className="group cursor-pointer overflow-hidden rounded-[14px] bg-white shadow-[0_10px_24px_rgba(0,0,0,0.05)] transition-all duration-300 active:scale-[0.985]"
+                  className="group cursor-pointer overflow-hidden rounded-[13px] bg-white shadow-[0_8px_22px_rgba(0,0,0,0.05)] transition-all duration-300 active:scale-[0.985]"
                 >
                   <div
                     className="relative aspect-[3/4] overflow-hidden bg-[#EAEAEA]"
@@ -691,7 +698,7 @@ export default function HomePageClient({
                     </div>
                   </div>
 
-                  <div className="flex min-h-[166px] flex-col px-3 pb-3 pt-2.5">
+                  <div className="flex min-h-[172px] flex-col px-3 pb-3 pt-2.5">
                     <div className="h-[18px] overflow-hidden text-[10px] text-gray-400">
                       <span className="max-w-[110px] break-words uppercase tracking-[0.14em]">
                         {p.brand}
@@ -724,8 +731,8 @@ export default function HomePageClient({
                       ) : null}
                     </div>
 
-                    <div className="mt-3 flex flex-wrap items-center gap-2">
-                      <span className="text-[16px] font-semibold leading-none tracking-[-0.02em] text-[#16A34A]">
+                    <div className="mt-3 flex items-end gap-2">
+                      <span className="text-[17px] font-semibold leading-none tracking-[-0.03em] text-[#16A34A]">
                         {formatPrice(p.price)}
                       </span>
 
@@ -742,9 +749,14 @@ export default function HomePageClient({
                       )}
                     </div>
 
-                    <div className="mt-3 flex items-center justify-end gap-1.5 text-[10px] text-gray-400">
+                    <div className="mt-1.5 flex items-center justify-end gap-1.5 text-[10px] text-gray-400">
                       <TruckIcon />
                       <span>{deliveryLabel}</span>
+                    </div>
+
+                    <div className="mt-3 flex items-center gap-2 rounded-full bg-[#F7F7F7] px-3 py-2 text-[10px] text-gray-500">
+                      <TruckIcon />
+                      <span>{deliveryChipLabel}</span>
                     </div>
                   </div>
                 </div>
