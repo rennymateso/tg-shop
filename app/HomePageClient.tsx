@@ -55,23 +55,25 @@ export type HomeProduct = {
   description: string;
 };
 
+const colorSwatches: Record<string, string> = {
+  Черный: "#111111",
+  Белый: "#F5F5F5",
+  Серый: "#8F8F8F",
+  Синий: "#243B63",
+  Бежевый: "#D8CBB8",
+  Зеленый: "#7C8D74",
+  Коричневый: "#7A5230",
+};
+
 function getDiscountPercent(oldPrice: number | null, price: number) {
   if (!oldPrice || oldPrice <= price) return 0;
   return Math.round(((oldPrice - price) / oldPrice) * 100);
 }
 
-function getExtraColorsLabel(colors: string[] | undefined) {
-  const count = Array.isArray(colors) ? colors.length : 0;
-  const extra = count - 1;
-
-  if (extra <= 0) return "";
-  if (extra === 1) return "ещё 1 цвет";
-  if (extra >= 2 && extra <= 4) return `ещё ${extra} цвета`;
-  return `ещё ${extra} цветов`;
-}
-
-function getDeliveryDaysLabel(badge: string) {
-  return badge.trim().toLowerCase() === "из-за рубежа" ? "7–14 дней" : "1–3 дня";
+function getDeliveryLabel(badge: string) {
+  return badge.trim().toLowerCase() === "из-за рубежа"
+    ? "Доставка из-за рубежа: 7–14 дней"
+    : "Доставка: 1–3 дня";
 }
 
 function TruckIcon() {
@@ -594,8 +596,8 @@ export default function HomePageClient({
               const currentImageIndex = cardImageIndexes[p.id] || 0;
               const currentImage =
                 p.images[currentImageIndex] || p.image || "/products/product-1.jpg";
-              const extraColorsLabel = getExtraColorsLabel(p.colors);
-              const deliveryDaysLabel = getDeliveryDaysLabel(p.badge);
+              const deliveryLabel = getDeliveryLabel(p.badge);
+              const visibleColors = (p.colors || []).slice(0, 5);
 
               return (
                 <div
@@ -606,7 +608,7 @@ export default function HomePageClient({
                   className="group cursor-pointer overflow-hidden rounded-[16px] bg-white shadow-[0_10px_28px_rgba(0,0,0,0.05)] transition-all duration-300 active:scale-[0.985]"
                 >
                   <div
-                    className="relative aspect-[3/4] overflow-hidden rounded-[14px] bg-[#EAEAEA]"
+                    className="relative aspect-[3/4] overflow-hidden bg-[#EAEAEA]"
                     onTouchStart={(e) =>
                       handleCardTouchStart(p.id, e.touches[0]?.clientX ?? 0)
                     }
@@ -673,7 +675,7 @@ export default function HomePageClient({
                     </div>
                   </div>
 
-                  <div className="flex min-h-[154px] flex-col px-3 pb-3 pt-2.5">
+                  <div className="flex min-h-[160px] flex-col p-3">
                     <div className="h-[18px] overflow-hidden text-[10px] text-gray-400">
                       <span className="max-w-[110px] break-words uppercase tracking-[0.14em]">
                         {p.brand}
@@ -684,33 +686,43 @@ export default function HomePageClient({
                       {p.name}
                     </h3>
 
-                    {extraColorsLabel ? (
-                      <p className="mt-1 text-[11px] text-gray-400">
-                        {extraColorsLabel}
-                      </p>
-                    ) : null}
-
-                    <div className="mt-2.5 flex flex-wrap items-center gap-2">
-                      {p.oldPrice ? (
-                        <span className="text-[12px] font-normal leading-none text-gray-400 line-through">
-                          {p.oldPrice} ₽
-                        </span>
-                      ) : null}
-
-                      <span className="text-[16px] font-semibold leading-none tracking-[-0.02em] text-[#16A34A]">
-                        {p.price} ₽
-                      </span>
-
-                      {discountPercent > 0 && (
-                        <span className="rounded-full bg-[#E8F7EE] px-1.5 py-0.5 text-[10px] font-medium text-[#16A34A]">
-                          -{discountPercent}%
-                        </span>
-                      )}
+                    <div className="mt-2 flex items-center gap-2">
+                      {visibleColors.map((color, index) => (
+                        <span
+                          key={`${p.id}-${color}-${index}`}
+                          className={`block h-4 w-4 rounded-full ${
+                            color === "Белый" ? "border border-gray-300" : ""
+                          }`}
+                          style={{
+                            backgroundColor: colorSwatches[color] || "#D1D5DB",
+                          }}
+                        />
+                      ))}
                     </div>
 
-                    <div className="mt-2 flex items-center justify-end gap-1.5 text-[10px] text-gray-400">
+                    <div className="mt-3 flex items-end justify-between gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-[16px] font-semibold leading-none tracking-[-0.02em] text-black">
+                          {p.price} ₽
+                        </span>
+
+                        {p.oldPrice ? (
+                          <span className="text-[12px] font-normal leading-none text-gray-400 line-through">
+                            {p.oldPrice} ₽
+                          </span>
+                        ) : null}
+
+                        {discountPercent > 0 && (
+                          <span className="text-[12px] font-medium leading-none text-[#FF4D67]">
+                            -{discountPercent}%
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="mt-3 flex items-center gap-2 rounded-[14px] bg-[#F6F6F6] px-3 py-2 text-[10px] text-gray-500">
                       <TruckIcon />
-                      <span>{deliveryDaysLabel}</span>
+                      <span>{deliveryLabel}</span>
                     </div>
                   </div>
                 </div>
