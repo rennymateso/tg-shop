@@ -60,19 +60,40 @@ function getDiscountPercent(oldPrice: number | null, price: number) {
   return Math.round(((oldPrice - price) / oldPrice) * 100);
 }
 
-function getColorsLabel(colors: string[] | undefined) {
+function getExtraColorsLabel(colors: string[] | undefined) {
   const count = Array.isArray(colors) ? colors.length : 0;
+  const extra = count - 1;
 
-  if (count <= 0) return "1 цвет";
-  if (count === 1) return "1 цвет";
-  if (count >= 2 && count <= 4) return `${count} цвета`;
-  return `${count} цветов`;
+  if (extra <= 0) return "";
+
+  if (extra === 1) return "ещё 1 цвет";
+  if (extra >= 2 && extra <= 4) return `ещё ${extra} цвета`;
+  return `ещё ${extra} цветов`;
 }
 
-function getDeliveryLabel(badge: string) {
-  return badge.trim().toLowerCase() === "из-за рубежа"
-    ? "Срок доставки: 7–14 дней"
-    : "Срок доставки: 1–3 дня";
+function getDeliveryDaysLabel(badge: string) {
+  return badge.trim().toLowerCase() === "из-за рубежа" ? "7–14 дней" : "1–3 дня";
+}
+
+function TruckIcon() {
+  return (
+    <svg
+      width="11"
+      height="11"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M10 17H6a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h8v10h-1" />
+      <path d="M14 10h3l3 3v4h-1" />
+      <circle cx="7.5" cy="17.5" r="1.5" />
+      <circle cx="17.5" cy="17.5" r="1.5" />
+    </svg>
+  );
 }
 
 export default function HomePageClient({
@@ -572,8 +593,8 @@ export default function HomePageClient({
               const currentImageIndex = cardImageIndexes[p.id] || 0;
               const currentImage =
                 p.images[currentImageIndex] || p.image || "/products/product-1.jpg";
-              const colorsLabel = getColorsLabel(p.colors);
-              const deliveryLabel = getDeliveryLabel(p.badge);
+              const extraColorsLabel = getExtraColorsLabel(p.colors);
+              const deliveryDaysLabel = getDeliveryDaysLabel(p.badge);
 
               return (
                 <div
@@ -584,7 +605,7 @@ export default function HomePageClient({
                   className="group cursor-pointer overflow-hidden rounded-[16px] bg-white shadow-[0_10px_28px_rgba(0,0,0,0.05)] transition-all duration-300 active:scale-[0.985]"
                 >
                   <div
-                    className="relative aspect-[3/4] overflow-hidden bg-[#EAEAEA]"
+                    className="relative aspect-[3/4] overflow-hidden rounded-[14px] bg-[#EAEAEA]"
                     onTouchStart={(e) =>
                       handleCardTouchStart(p.id, e.touches[0]?.clientX ?? 0)
                     }
@@ -651,8 +672,8 @@ export default function HomePageClient({
                     </div>
                   </div>
 
-                  <div className="flex min-h-[154px] flex-col p-3">
-                    <div className="h-[20px] overflow-hidden text-[10px] text-gray-400">
+                  <div className="flex min-h-[154px] flex-col px-3 pb-3 pt-2.5">
+                    <div className="h-[18px] overflow-hidden text-[10px] text-gray-400">
                       <span className="max-w-[110px] break-words uppercase tracking-[0.14em]">
                         {p.brand}
                       </span>
@@ -662,11 +683,13 @@ export default function HomePageClient({
                       {p.name}
                     </h3>
 
-                    <p className="mt-1 text-[11px] text-gray-400">
-                      {colorsLabel}
-                    </p>
+                    {extraColorsLabel ? (
+                      <p className="mt-1 text-[11px] text-gray-400">
+                        {extraColorsLabel}
+                      </p>
+                    ) : null}
 
-                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <div className="mt-2.5 flex flex-wrap items-center gap-2">
                       {p.oldPrice ? (
                         <span className="text-[12px] font-normal leading-none text-gray-400 line-through">
                           {p.oldPrice} ₽
@@ -684,9 +707,10 @@ export default function HomePageClient({
                       )}
                     </div>
 
-                    <p className="mt-2 text-[11px] leading-[1.3] text-gray-500">
-                      {deliveryLabel}
-                    </p>
+                    <div className="mt-2 flex items-center gap-1.5 text-[10px] text-gray-400">
+                      <TruckIcon />
+                      <span>{deliveryDaysLabel}</span>
+                    </div>
                   </div>
                 </div>
               );
