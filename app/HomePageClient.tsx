@@ -65,7 +65,6 @@ function getExtraColorsLabel(colors: string[] | undefined) {
   const extra = count - 1;
 
   if (extra <= 0) return "";
-
   if (extra === 1) return "ещё 1 цвет";
   if (extra >= 2 && extra <= 4) return `ещё ${extra} цвета`;
   return `ещё ${extra} цветов`;
@@ -78,8 +77,8 @@ function getDeliveryDaysLabel(badge: string) {
 function TruckIcon() {
   return (
     <svg
-      width="11"
-      height="11"
+      width="13"
+      height="13"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -125,7 +124,9 @@ export default function HomePageClient({
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [showBrandMenu, setShowBrandMenu] = useState(false);
 
-  const [cardImageIndexes, setCardImageIndexes] = useState<Record<string, number>>({});
+  const [cardImageIndexes, setCardImageIndexes] = useState<Record<string, number>>(
+    {}
+  );
 
   const sortMenuRef = useRef<HTMLDivElement | null>(null);
   const brandMenuWrapRef = useRef<HTMLDivElement | null>(null);
@@ -707,7 +708,7 @@ export default function HomePageClient({
                       )}
                     </div>
 
-                    <div className="mt-2 flex items-center gap-1.5 text-[10px] text-gray-400">
+                    <div className="mt-2 flex items-center justify-end gap-1.5 text-[10px] text-gray-400">
                       <TruckIcon />
                       <span>{deliveryDaysLabel}</span>
                     </div>
