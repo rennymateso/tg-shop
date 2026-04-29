@@ -70,9 +70,9 @@ function getDiscountPercent(oldPrice: number | null, price: number) {
   return Math.round(((oldPrice - price) / oldPrice) * 100);
 }
 
-function formatPrice(value: number | null | undefined) {
+function formatPriceNumber(value: number | null | undefined) {
   if (!value) return "";
-  return `${value.toLocaleString("ru-RU")} ₽`;
+  return value.toLocaleString("ru-RU");
 }
 
 function getExtraColorsLabel(colors: string[] | undefined) {
@@ -86,15 +86,7 @@ function getExtraColorsLabel(colors: string[] | undefined) {
 }
 
 function getDeliveryLabel(badge: string) {
-  return badge.trim().toLowerCase() === "из-за рубежа"
-    ? "7–14 дней"
-    : "1–3 дня";
-}
-
-function getDeliveryChipLabel(badge: string) {
-  return badge.trim().toLowerCase() === "из-за рубежа"
-    ? "Из-за рубежа · 7–14 дней"
-    : "В наличии · 1–3 дня";
+  return badge.trim().toLowerCase() === "из-за рубежа" ? "7–14 дней" : "1–3 дня";
 }
 
 function TruckIcon() {
@@ -115,6 +107,15 @@ function TruckIcon() {
       <circle cx="7.5" cy="17.5" r="1.5" />
       <circle cx="17.5" cy="17.5" r="1.5" />
     </svg>
+  );
+}
+
+function PriceText({ value }: { value: number }) {
+  return (
+    <span className="inline-flex items-baseline gap-[2px]">
+      <span>{formatPriceNumber(value)}</span>
+      <span className="text-[0.88em] font-semibold opacity-90">₽</span>
+    </span>
   );
 }
 
@@ -619,7 +620,6 @@ export default function HomePageClient({
                 p.images[currentImageIndex] || p.image || "/products/product-1.jpg";
               const extraColorsLabel = getExtraColorsLabel(p.colors);
               const deliveryLabel = getDeliveryLabel(p.badge);
-              const deliveryChipLabel = getDeliveryChipLabel(p.badge);
               const visibleColors = (p.colors || []).slice(0, 3);
 
               return (
@@ -698,7 +698,7 @@ export default function HomePageClient({
                     </div>
                   </div>
 
-                  <div className="flex min-h-[172px] flex-col px-3 pb-3 pt-2.5">
+                  <div className="flex min-h-[164px] flex-col px-3 pb-3 pt-2.5">
                     <div className="h-[18px] overflow-hidden text-[10px] text-gray-400">
                       <span className="max-w-[110px] break-words uppercase tracking-[0.14em]">
                         {p.brand}
@@ -732,31 +732,26 @@ export default function HomePageClient({
                     </div>
 
                     <div className="mt-3 flex items-end gap-2">
-                      <span className="text-[17px] font-semibold leading-none tracking-[-0.03em] text-[#16A34A]">
-                        {formatPrice(p.price)}
+                      <span className="text-[17px] font-bold leading-none tracking-[-0.035em] text-[#16A34A]">
+                        <PriceText value={p.price} />
                       </span>
 
                       {p.oldPrice ? (
-                        <span className="text-[12px] font-normal leading-none text-gray-400 line-through">
-                          {formatPrice(p.oldPrice)}
+                        <span className="text-[12px] font-medium leading-none text-[#A0A7B5] line-through">
+                          <PriceText value={p.oldPrice} />
                         </span>
                       ) : null}
 
                       {discountPercent > 0 && (
-                        <span className="text-[12px] font-medium leading-none text-[#FF4D67]">
+                        <span className="text-[12px] font-semibold leading-none text-[#FF2F7D]">
                           -{discountPercent}%
                         </span>
                       )}
                     </div>
 
-                    <div className="mt-1.5 flex items-center justify-end gap-1.5 text-[10px] text-gray-400">
+                    <div className="mt-2 flex items-center justify-end gap-1.5 text-[10px] text-gray-400">
                       <TruckIcon />
                       <span>{deliveryLabel}</span>
-                    </div>
-
-                    <div className="mt-3 flex items-center gap-2 rounded-full bg-[#F7F7F7] px-3 py-2 text-[10px] text-gray-500">
-                      <TruckIcon />
-                      <span>{deliveryChipLabel}</span>
                     </div>
                   </div>
                 </div>
