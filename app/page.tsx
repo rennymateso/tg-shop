@@ -1,6 +1,9 @@
 import { createClient } from "@supabase/supabase-js";
 import HomePageClient, { HomeProduct } from "./HomePageClient";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 type ProductRow = {
   id: string;
   name: string;
