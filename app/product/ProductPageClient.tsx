@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useRef, useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import BottomNav from "../components/BottomNav";
 
 export type Product = {
@@ -38,6 +37,127 @@ function getDiscountPercent(oldPrice: number | null, price: number) {
   return Math.round(((oldPrice - price) / oldPrice) * 100);
 }
 
+function formatPrice(value: number | null | undefined) {
+  if (!value) return "";
+  return value.toLocaleString("ru-RU");
+}
+
+function getDeliveryLabel(badge: string) {
+  return badge.trim().toLowerCase() === "из-за рубежа"
+    ? "Доставка 7–14 дней"
+    : "Доставка 1–2 дня";
+}
+
+function getStockLabel(badge: string) {
+  return badge.trim().toLowerCase() === "из-за рубежа"
+    ? "Из-за рубежа"
+    : "В наличии";
+}
+
+function TruckIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.9"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M10 17H6a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h8v10h-1" />
+      <path d="M14 10h3l3 3v4h-1" />
+      <circle cx="7.5" cy="17.5" r="1.5" />
+      <circle cx="17.5" cy="17.5" r="1.5" />
+    </svg>
+  );
+}
+
+function CottonIcon() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M12 3c-1.7 0-3 1.3-3 3 0 .4.1.8.2 1.2A4.5 4.5 0 0 0 5 11.5C5 14 7 16 9.5 16H10V9.5" />
+      <path d="M12 3c1.7 0 3 1.3 3 3 0 .4-.1.8-.2 1.2A4.5 4.5 0 0 1 19 11.5C19 14 17 16 14.5 16H14V9.5" />
+      <path d="M10 16v3" />
+      <path d="M14 16v3" />
+      <path d="M8 21h8" />
+    </svg>
+  );
+}
+
+function BagIcon() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.9"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M6 7h12l-1 12H7L6 7Z" />
+      <path d="M9 9V7a3 3 0 0 1 6 0v2" />
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="m5 12 4 4L19 6" />
+    </svg>
+  );
+}
+
+function mapSizeSubLabel(type: Product["type"], size: string) {
+  if (type === "bottom") {
+    const map: Record<string, string> = {
+      "30": "46",
+      "31": "46-48",
+      "32": "48",
+      "33": "48-50",
+      "34": "50",
+      "36": "52",
+      "38": "54",
+    };
+    return map[size] || "";
+  }
+
+  const map: Record<string, string> = {
+    S: "46",
+    M: "48",
+    L: "50",
+    XL: "52",
+    XXL: "54",
+  };
+  return map[size] || "";
+}
+
 export default function ProductPageClient({
   initialProduct,
   initialError,
@@ -45,17 +165,15 @@ export default function ProductPageClient({
   initialProduct: Product | null;
   initialError: string;
 }) {
-  const router = useRouter();
-
   const [product] = useState<Product | null>(initialProduct);
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [selectedColor, setSelectedColor] = useState(
     initialProduct?.defaultColor || ""
   );
   const [favorites, setFavorites] = useState<string[]>([]);
-  const [showFullDescription, setShowFullDescription] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [justAdded, setJustAdded] = useState(false);
+  const [quantity, setQuantity] = useState(1);
 
   const touchStartXRef = useRef<number | null>(null);
   const addedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -94,32 +212,11 @@ export default function ProductPageClient({
     window.dispatchEvent(new Event("favorites-updated"));
   };
 
-  const topSizes = [
-    { label: "S", sub: "46" },
-    { label: "M", sub: "48" },
-    { label: "L", sub: "50" },
-    { label: "XL", sub: "52" },
-    { label: "XXL", sub: "54" },
-  ];
-
-  const bottomSizes = [
-    { label: "30", sub: "46" },
-    { label: "31", sub: "46-48" },
-    { label: "32", sub: "48" },
-    { label: "33", sub: "48-50" },
-    { label: "34", sub: "50" },
-    { label: "36", sub: "52" },
-    { label: "38", sub: "54" },
-  ];
-
-  const sizes = product?.type === "bottom" ? bottomSizes : topSizes;
-
-  const article = product ? `ART-${product.id}` : "";
-  const description = product?.description || "";
-  const canOrder = selectedSizes.length > 0 && !!selectedColor;
   const discountPercent = product
     ? getDiscountPercent(product.oldPrice, product.price)
     : 0;
+
+  const canOrder = selectedSizes.length > 0 && !!selectedColor;
 
   const toggleSize = (value: string) => {
     setSelectedSizes((prev) =>
@@ -131,7 +228,6 @@ export default function ProductPageClient({
 
   const selectColor = (value: string) => {
     setSelectedColor(value);
-    setSelectedSizes([]);
     setActiveImageIndex(0);
     setJustAdded(false);
   };
@@ -176,11 +272,8 @@ export default function ProductPageClient({
     const clickX = e.clientX - rect.left;
     const half = rect.width / 2;
 
-    if (clickX >= half) {
-      nextImage();
-    } else {
-      prevImage();
-    }
+    if (clickX >= half) nextImage();
+    else prevImage();
   };
 
   const addToCart = () => {
@@ -190,14 +283,18 @@ export default function ProductPageClient({
       localStorage.getItem("cart") || "[]"
     );
 
-    const newItems: CartItem[] = selectedSizes.map((size) => ({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      size,
-      color: selectedColor,
-      quantity: 1,
-    }));
+    const newItems: CartItem[] = [];
+
+    selectedSizes.forEach((size) => {
+      newItems.push({
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        size,
+        color: selectedColor,
+        quantity,
+      });
+    });
 
     const updatedCart = [...existingCart];
 
@@ -251,32 +348,19 @@ export default function ProductPageClient({
     );
   }
 
-  return (
-    <main className="min-h-screen bg-[#F5F5F5] px-4 pt-[76px] pb-32">
-      <div className="mb-4 flex items-center justify-end">
-        <button
-          onClick={toggleFavorite}
-          aria-label="В избранное"
-          className={`flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-2xl transition-all duration-200 active:scale-[0.99] ${
-            favorites.includes(product.id)
-              ? "bg-black text-white"
-              : "bg-white text-black shadow-[0_4px_16px_rgba(0,0,0,0.04)]"
-          }`}
-        >
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill={favorites.includes(product.id) ? "currentColor" : "none"}
-            stroke="currentColor"
-            strokeWidth="1.8"
-          >
-            <path d="M20.8 4.6c-1.8-1.8-4.7-1.8-6.5 0L12 6.9l-2.3-2.3c-1.8-1.8-4.7-1.8-6.5 0s-1.8 4.7 0 6.5L12 21l8.8-9.9c1.8-1.8 1.8-4.7 0-6.5z" />
-          </svg>
-        </button>
-      </div>
+  const currentColorPreviewList = product.colors.map((c) => {
+    const preview =
+      product.galleryByColor?.[c]?.[0] ||
+      product.colorImages?.[c] ||
+      product.image ||
+      "/products/product-1.jpg";
 
-      <div className="overflow-hidden rounded-[24px] bg-white shadow-[0_10px_30px_rgba(0,0,0,0.05)]">
+    return { color: c, preview };
+  });
+
+  return (
+    <main className="min-h-screen bg-[#F5F5F5] px-4 pt-[18px] pb-32">
+      <div className="overflow-hidden rounded-[34px] bg-white shadow-[0_24px_70px_rgba(15,23,42,0.08)]">
         <div
           className="relative aspect-[3/4] overflow-hidden bg-[#ECECEC]"
           onTouchStart={onTouchStart}
@@ -292,6 +376,30 @@ export default function ProductPageClient({
             }}
           />
 
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleFavorite();
+            }}
+            aria-label="В избранное"
+            className={`absolute right-4 top-4 flex h-[46px] w-[46px] items-center justify-center rounded-full shadow-[0_8px_20px_rgba(0,0,0,0.08)] transition ${
+              favorites.includes(product.id)
+                ? "bg-black text-white"
+                : "bg-white text-black"
+            }`}
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill={favorites.includes(product.id) ? "currentColor" : "none"}
+              stroke="currentColor"
+              strokeWidth="1.8"
+            >
+              <path d="M20.8 4.6c-1.8-1.8-4.7-1.8-6.5 0L12 6.9l-2.3-2.3c-1.8-1.8-4.7-1.8-6.5 0s-1.8 4.7 0 6.5L12 21l8.8-9.9c1.8-1.8 1.8-4.7 0-6.5z" />
+            </svg>
+          </button>
+
           <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-1.5">
             {galleryImages.map((_, index) => (
               <button
@@ -303,8 +411,8 @@ export default function ProductPageClient({
                 }}
                 className={`block rounded-full ${
                   index === activeImageIndex
-                    ? "h-1.5 w-4 bg-white"
-                    : "h-1.5 w-1.5 bg-white/45"
+                    ? "h-2 w-7 bg-white"
+                    : "h-2 w-2 bg-white/45"
                 }`}
                 aria-label={`Фото ${index + 1}`}
               />
@@ -312,109 +420,109 @@ export default function ProductPageClient({
           </div>
         </div>
 
-        <div className="p-5">
-          <div className="mb-2 flex items-center justify-between gap-3">
-            <div className="text-[11px] uppercase tracking-[0.16em] text-gray-400">
-              {product.brand}
+        <div className="-mt-6 rounded-t-[34px] bg-white px-5 pb-5 pt-6">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-[11px] uppercase tracking-[0.18em] text-[#747C8E]">
+                {product.brand}
+              </p>
+              <h1 className="mt-2 text-[22px] font-medium leading-[1.15] text-[#101828]">
+                {product.name}
+              </h1>
+              <p className="mt-2 text-[13px] text-[#98A2B3]">
+                ART-{product.id}
+              </p>
             </div>
 
-            <div className="text-[11px] uppercase tracking-[0.16em] text-gray-400">
-              {article}
-            </div>
-          </div>
-
-          <div className="mb-3 flex items-start justify-between gap-3">
-            <div className="flex items-center gap-2">
-              {product.oldPrice && (
-                <span className="text-[14px] font-normal leading-none text-gray-400 line-through">
-                  {product.oldPrice} ₽
-                </span>
-              )}
-
-              <span className="text-[21px] font-semibold leading-none tracking-[-0.02em] text-[#16A34A]">
-                {product.price} ₽
-              </span>
-
-              {discountPercent > 0 && (
-                <span className="rounded-full bg-[#E8F7EE] px-1.5 py-0.5 text-[10px] font-medium text-[#16A34A]">
-                  -{discountPercent}%
-                </span>
-              )}
-            </div>
-
-            {product.badge ? (
-              <div
-                className={`shrink-0 rounded-full px-3 py-1 text-[10px] font-medium ${
-                  product.badge === "Из-за рубежа"
-                    ? "bg-black text-white"
-                    : "bg-[#F5F5F5] text-black"
-                }`}
-              >
-                {product.badge}
+            <div className="shrink-0 pt-1 text-right">
+              <div className="inline-flex items-center gap-1 rounded-full bg-[#EAF8EC] px-3 py-1.5 text-[12px] font-medium text-[#3C9A4D]">
+                <CheckIcon />
+                <span>{getStockLabel(product.badge)}</span>
               </div>
+
+              <div className="mt-3 flex items-center justify-end gap-1.5 text-[13px] text-[#8B93A8]">
+                <TruckIcon />
+                <span>{getDeliveryLabel(product.badge)}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-5 flex items-center gap-3">
+            <span className="text-[26px] font-semibold leading-none tracking-[-0.03em] text-[#0F172A]">
+              {formatPrice(product.price)} ₽
+            </span>
+
+            {product.oldPrice ? (
+              <span className="text-[15px] text-[#98A2B3] line-through">
+                {formatPrice(product.oldPrice)} ₽
+              </span>
             ) : null}
+
+            {discountPercent > 0 && (
+              <span className="rounded-full bg-[#EDF8EE] px-3 py-1 text-[14px] font-medium text-[#5B9B61]">
+                -{discountPercent}%
+              </span>
+            )}
           </div>
 
-          <div className="mt-5">
-            <p className="mb-2 text-sm text-gray-500">Размер</p>
-            <div className="grid grid-cols-5 gap-1.5">
-              {sizes.map((s) => (
-                <button
-                  key={s.label}
-                  onClick={() => toggleSize(s.label)}
-                  className={`rounded-xl border px-1.5 py-2 text-center transition-all duration-200 active:scale-95 ${
-                    selectedSizes.includes(s.label)
-                      ? "border-black bg-black text-white"
-                      : "border-gray-200 bg-white text-black"
-                  }`}
-                >
-                  <div className="text-[11px] font-medium">{s.label}</div>
-                  <div
-                    className={`mt-0.5 text-[9px] ${
-                      selectedSizes.includes(s.label)
-                        ? "text-white/70"
-                        : "text-gray-400"
-                    }`}
-                  >
-                    {s.sub}
-                  </div>
-                </button>
-              ))}
-            </div>
-
-            <div className="mt-2 text-[12px] text-gray-400">
-              {selectedSizes.length > 0
-                ? `Выбрано размеров: ${selectedSizes.join(", ")}`
-                : "Можно выбрать несколько размеров"}
-            </div>
-          </div>
+          <div className="mt-5 border-t border-[#ECEFF3]" />
 
           <div className="mt-5">
-            <p className="mb-2 text-sm text-gray-500">Цвет</p>
-            <div className="grid grid-cols-4 gap-2">
-              {product.colors.map((c) => {
-                const preview =
-                  product.galleryByColor?.[c]?.[0] ||
-                  product.colorImages?.[c] ||
-                  product.image ||
-                  "/products/product-1.jpg";
+            <p className="mb-3 text-[16px] font-medium text-[#101828]">Размер</p>
 
-                const isSelected = selectedColor === c;
+            <div className="grid grid-cols-5 gap-2">
+              {product.sizes.map((size) => {
+                const selected = selectedSizes.includes(size);
+                const sub = mapSizeSubLabel(product.type, size);
 
                 return (
                   <button
-                    key={c}
-                    onClick={() => selectColor(c)}
-                    className={`overflow-hidden rounded-2xl border bg-white transition-all duration-200 active:scale-95 ${
-                      isSelected
-                        ? "border-black ring-2 ring-black/10"
-                        : "border-gray-200"
+                    key={size}
+                    onClick={() => toggleSize(size)}
+                    className={`rounded-[16px] border px-2 py-3 text-center transition ${
+                      selected
+                        ? "border-[#18233B] bg-white shadow-[inset_0_0_0_1px_#18233B]"
+                        : "border-[#E5E7EB] bg-white"
                     }`}
                   >
-                    <div className="aspect-[3/4] w-full overflow-hidden bg-[#ECECEC]">
+                    <div className="text-[15px] font-medium text-[#101828]">
+                      {size}
+                    </div>
+                    <div className="mt-1 text-[12px] text-[#98A2B3]">{sub}</div>
+                  </button>
+                );
+              })}
+            </div>
+
+            <p className="mt-3 text-[13px] text-[#8B93A8]">
+              Можно выбрать несколько размеров
+            </p>
+          </div>
+
+          <div className="mt-6">
+            <p className="mb-3 text-[16px] font-medium text-[#101828]">
+              Цвет:{" "}
+              <span className="font-normal text-[#667085]">{selectedColor}</span>
+            </p>
+
+            <div className="flex gap-3 overflow-x-auto pb-1">
+              {currentColorPreviewList.map(({ color, preview }) => {
+                const selected = selectedColor === color;
+
+                return (
+                  <button
+                    key={color}
+                    onClick={() => selectColor(color)}
+                    className={`shrink-0 overflow-hidden rounded-[16px] border transition ${
+                      selected
+                        ? "border-[#18233B] shadow-[inset_0_0_0_1px_#18233B]"
+                        : "border-[#E5E7EB]"
+                    }`}
+                  >
+                    <div className="h-[78px] w-[78px] overflow-hidden bg-[#ECECEC]">
                       <img
                         src={preview}
-                        alt={c}
+                        alt={color}
                         className="h-full w-full object-cover"
                         onError={(e) => {
                           e.currentTarget.src = "/products/product-1.jpg";
@@ -425,76 +533,78 @@ export default function ProductPageClient({
                 );
               })}
             </div>
-
-            <div className="mt-2 text-[12px] text-gray-400">
-              {selectedColor ? `Выбран цвет: ${selectedColor}` : "Выберите цвет"}
-            </div>
           </div>
 
-          {product.composition.length > 0 && (
-            <div className="mt-5">
-              <p className="mb-2 text-sm text-gray-500">Состав</p>
-              <div className="flex flex-wrap gap-2">
-                {product.composition.map((item) => (
-                  <span
-                    key={item}
-                    className="rounded-full bg-[#F5F5F5] px-3 py-1.5 text-[12px] text-gray-700"
-                  >
-                    {item}
-                  </span>
-                ))}
+          <div className="mt-6 grid grid-cols-2 gap-4 border-t border-[#ECEFF3] pt-5">
+            <div>
+              <p className="mb-3 text-[16px] font-medium text-[#101828]">Состав</p>
+              <div className="flex items-start gap-3 text-[#667085]">
+                <div className="mt-0.5 text-[#8B93A8]">
+                  <CottonIcon />
+                </div>
+                <div className="text-[15px] leading-6">
+                  {product.composition.length > 0
+                    ? product.composition.join(", ")
+                    : "Состав не указан"}
+                </div>
               </div>
             </div>
-          )}
 
-          <div className="mt-5">
-            <h1 className="text-[24px] font-medium leading-tight text-black">
-              {product.name}
-            </h1>
+            <div>
+              <p className="mb-3 text-[16px] font-medium text-[#101828]">
+                Описание
+              </p>
+              <div className="text-[15px] leading-6 text-[#667085]">
+                {product.description || "Описание отсутствует"}
+              </div>
+            </div>
           </div>
 
-          <div className="mt-5">
-            <p className="text-[14px] leading-6 text-gray-600">
-              {description.length > 110 && !showFullDescription
-                ? `${description.slice(0, 110)}...`
-                : description}
-            </p>
+          <div className="mt-6 border-t border-[#ECEFF3] pt-5">
+            <div className="flex items-end gap-4">
+              <div className="shrink-0">
+                <p className="mb-3 text-[16px] font-medium text-[#101828]">
+                  Количество
+                </p>
 
-            {description.length > 110 && (
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}
+                    className="flex h-[40px] w-[40px] items-center justify-center rounded-[12px] border border-[#E5E7EB] bg-white text-[22px] text-[#667085]"
+                  >
+                    −
+                  </button>
+
+                  <span className="min-w-[18px] text-center text-[20px] font-medium text-[#101828]">
+                    {quantity}
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={() => setQuantity((prev) => prev + 1)}
+                    className="flex h-[40px] w-[40px] items-center justify-center rounded-[12px] border border-[#E5E7EB] bg-white text-[22px] text-[#667085]"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
               <button
-                onClick={() => setShowFullDescription((prev) => !prev)}
-                className="mt-2 text-[13px] text-black underline underline-offset-2"
+                onClick={addToCart}
+                disabled={!canOrder}
+                className={`flex h-[64px] flex-1 items-center justify-center gap-3 rounded-[18px] px-5 text-[18px] font-medium text-white transition ${
+                  !canOrder
+                    ? "bg-[#BFC6D4]"
+                    : justAdded
+                    ? "bg-[#16A34A]"
+                    : "bg-[linear-gradient(135deg,#08205A_0%,#001848_100%)] shadow-[0_16px_36px_rgba(0,24,72,0.28)]"
+                }`}
               >
-                {showFullDescription ? "Свернуть" : "Читать полностью"}
+                <span>{justAdded ? "Добавлено" : "Добавить в корзину"}</span>
+                <BagIcon />
               </button>
-            )}
-          </div>
-
-          <div className="mt-6 flex items-center justify-between rounded-2xl bg-[#F7F7F7] px-4 py-3">
-            <span className="text-sm text-gray-500">Товаров к добавлению</span>
-            <span className="text-[18px] font-semibold tracking-[-0.02em] text-black">
-              {selectedSizes.length * (selectedColor ? 1 : 0)}
-            </span>
-          </div>
-
-          <div className="mt-5">
-            <button
-              onClick={addToCart}
-              disabled={!canOrder}
-              className={`w-full rounded-2xl py-3.5 text-sm font-medium transition-all duration-200 ${
-                !canOrder
-                  ? "bg-gray-200 text-gray-500"
-                  : justAdded
-                  ? "bg-[#16A34A] text-white"
-                  : "bg-black text-white active:scale-[0.99]"
-              }`}
-            >
-              {!canOrder
-                ? "Добавить в корзину"
-                : justAdded
-                ? "Добавлено"
-                : "Добавить в корзину"}
-            </button>
+            </div>
           </div>
         </div>
       </div>
