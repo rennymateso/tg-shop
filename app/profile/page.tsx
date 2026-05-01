@@ -21,17 +21,7 @@ function setCachedCustomer(customer: CustomerProfile | null) {
 
 function OrdersIcon() {
   return (
-    <svg
-      width="28"
-      height="28"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <rect x="5" y="3" width="14" height="18" rx="2" />
       <path d="M9 3.5h6" />
       <path d="M8 9h8" />
@@ -43,17 +33,7 @@ function OrdersIcon() {
 
 function HeartIcon() {
   return (
-    <svg
-      width="28"
-      height="28"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M20.8 4.6c-1.8-1.8-4.7-1.8-6.5 0L12 6.9l-2.3-2.3c-1.8-1.8-4.7-1.8-6.5 0s-1.8 4.7 0 6.5L12 21l8.8-9.9c1.8-1.8 1.8-4.7 0-6.5z" />
     </svg>
   );
@@ -61,17 +41,7 @@ function HeartIcon() {
 
 function CartIcon() {
   return (
-    <svg
-      width="28"
-      height="28"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M6 6h15l-1.5 9h-12z" />
       <path d="M6 6L5 3H2" />
       <circle cx="9" cy="20" r="1.2" />
@@ -82,17 +52,7 @@ function CartIcon() {
 
 function BoxIcon() {
   return (
-    <svg
-      width="28"
-      height="28"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M21 8.5 12 3 3 8.5 12 14l9-5.5Z" />
       <path d="M3 8.5V16l9 5 9-5V8.5" />
       <path d="M12 14v7" />
@@ -102,17 +62,7 @@ function BoxIcon() {
 
 function ReturnIcon() {
   return (
-    <svg
-      width="28"
-      height="28"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M3 10h7V3" />
       <path d="M21 14h-7v7" />
       <path d="M20 10a8 8 0 0 0-14-4l-3 4" />
@@ -123,17 +73,7 @@ function ReturnIcon() {
 
 function SupportIcon() {
   return (
-    <svg
-      width="28"
-      height="28"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M4 13a8 8 0 0 1 16 0" />
       <rect x="2.5" y="12" width="4" height="7" rx="2" />
       <rect x="17.5" y="12" width="4" height="7" rx="2" />
@@ -144,13 +84,7 @@ function SupportIcon() {
 
 function TelegramIcon() {
   return (
-    <svg
-      width="26"
-      height="26"
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      aria-hidden="true"
-    >
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
       <path d="M21.6 4.2c-.3-.2-.8-.2-1.4 0L3.8 10.5c-.7.3-.7.7-.1.9l4.2 1.3 1.6 5c.2.6.3.8.7.8.3 0 .5-.1.8-.4l2.3-2.2 4.7 3.5c.9.5 1.5.3 1.8-.8l2.8-13.1c.2-.8 0-1.2-.3-1.3Zm-12.7 8.3 8.2-5.2c.4-.3.8-.1.4.2l-6.8 6.1-.3 3.1-1.5-4.2Z" />
     </svg>
   );
@@ -158,17 +92,7 @@ function TelegramIcon() {
 
 function ChevronIcon() {
   return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="m9 6 6 6-6 6" />
     </svg>
   );
@@ -213,12 +137,6 @@ export default function ProfilePage() {
 
   const menuItems: MenuCard[] = [
     {
-      title: "Мои заказы",
-      description: "История заказов и статусы",
-      onClick: () => router.push("/orders"),
-      icon: <OrdersIcon />,
-    },
-    {
       title: "Избранное",
       description: "Сохраненные товары",
       onClick: () => router.push("/favorites"),
@@ -256,13 +174,11 @@ export default function ProfilePage() {
 
       if (result.status === "unsupported") {
         setPhoneRequestMessage("Запрос номера недоступен в этом режиме.");
-        setIsRequestingPhone(false);
         return;
       }
 
       if (!result.ok) {
         setPhoneRequestMessage("Вы не поделились номером.");
-        setIsRequestingPhone(false);
         return;
       }
 
@@ -280,8 +196,8 @@ export default function ProfilePage() {
 
   return (
     <main className="min-h-screen bg-[#F5F5F5] px-4 pt-[76px] pb-32">
-      <div className="mb-6 flex items-center justify-center">
-        <h1 className="text-[22px] font-medium tracking-[-0.02em] text-[#111827]">
+      <div className="mb-5 flex items-center justify-center">
+        <h1 className="text-[20px] font-medium tracking-[-0.02em] text-[#111827]">
           Профиль
         </h1>
       </div>
@@ -290,9 +206,9 @@ export default function ProfilePage() {
         <ProfilePageSkeleton />
       ) : (
         <>
-          <div className="mb-5 rounded-[28px] bg-white p-6 shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
-            <div className="flex items-center gap-5">
-              <div className="flex h-[82px] w-[82px] shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#FAFAFA] text-[28px] font-medium text-[#667085]">
+          <div className="mb-4 rounded-[20px] bg-[linear-gradient(145deg,#EEF4FF_0%,#FFFFFF_58%,#EAF1FA_100%)] p-4 shadow-[0_12px_34px_rgba(15,23,42,0.07)]">
+            <div className="flex items-center gap-4">
+              <div className="flex h-[58px] w-[58px] shrink-0 items-center justify-center overflow-hidden rounded-full bg-white text-[22px] font-medium text-[#667085] shadow-[0_8px_18px_rgba(15,23,42,0.07)]">
                 {customer?.photo_url ? (
                   <img
                     src={customer.photo_url}
@@ -304,24 +220,30 @@ export default function ProfilePage() {
                 )}
               </div>
 
-              <div className="min-w-0">
-                <p className="truncate text-[20px] font-medium text-[#0F172A]">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[18px] font-medium text-[#0F172A]">
                   {fullName}
                 </p>
 
-                <p className="mt-2 text-[16px] text-[#667085]">
+                {customer?.telegram_username ? (
+                  <p className="mt-1 truncate text-[13px] text-[#667085]">
+                    @{customer.telegram_username}
+                  </p>
+                ) : null}
+
+                <p className="mt-1 text-[13px] text-[#667085]">
                   {customer?.phone || "Телефон не указан"}
                 </p>
               </div>
             </div>
 
             {!customer?.phone && (
-              <div className="mt-6">
+              <div className="mt-4">
                 <button
                   type="button"
                   onClick={handleRequestPhone}
                   disabled={isRequestingPhone}
-                  className="w-full rounded-[20px] bg-[linear-gradient(135deg,#08205A_0%,#001848_100%)] py-4 text-[17px] font-medium text-white shadow-[0_16px_36px_rgba(0,24,72,0.24)] disabled:opacity-60"
+                  className="w-full rounded-[16px] bg-[linear-gradient(135deg,#08205A_0%,#001848_100%)] py-3.5 text-[15px] font-medium text-white shadow-[0_12px_28px_rgba(0,24,72,0.22)] disabled:opacity-60"
                 >
                   {isRequestingPhone
                     ? "Запрашиваем номер..."
@@ -329,7 +251,7 @@ export default function ProfilePage() {
                 </button>
 
                 {phoneRequestMessage ? (
-                  <p className="mt-3 text-center text-sm text-[#667085]">
+                  <p className="mt-2 text-center text-[13px] text-[#667085]">
                     {phoneRequestMessage}
                   </p>
                 ) : null}
@@ -337,25 +259,47 @@ export default function ProfilePage() {
             )}
           </div>
 
-          <div className="space-y-4">
+          <button
+            onClick={() => router.push("/orders")}
+            className="mb-3 flex w-full items-center gap-4 rounded-[18px] bg-white px-4 py-4 text-left shadow-[0_10px_26px_rgba(15,23,42,0.055)]"
+          >
+            <div className="shrink-0 text-[#0F172A]">
+              <OrdersIcon />
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <p className="text-[16px] font-medium text-[#0F172A]">
+                Мои заказы
+              </p>
+              <p className="mt-1 text-[13px] text-[#7A8397]">
+                История заказов и статусы
+              </p>
+            </div>
+
+            <div className="shrink-0 text-[#B6BDCB]">
+              <ChevronIcon />
+            </div>
+          </button>
+
+          <div className="space-y-2.5">
             {menuItems.map((item) => (
               <button
                 key={item.title}
                 onClick={item.onClick}
-                className="flex w-full items-center gap-4 rounded-[26px] bg-white px-5 py-5 text-left shadow-[0_12px_32px_rgba(15,23,42,0.05)]"
+                className="flex w-full items-center gap-3 rounded-[16px] bg-white px-4 py-3.5 text-left shadow-[0_8px_22px_rgba(15,23,42,0.045)]"
               >
                 <div className="shrink-0 text-[#3E4A68]">{item.icon}</div>
 
                 <div className="min-w-0 flex-1">
-                  <p className="text-[18px] font-medium text-[#0F172A]">
+                  <p className="text-[15px] font-medium text-[#0F172A]">
                     {item.title}
                   </p>
-                  <p className="mt-1 text-[15px] text-[#7A8397]">
+                  <p className="mt-0.5 text-[12px] text-[#7A8397]">
                     {item.description}
                   </p>
                 </div>
 
-                <div className="shrink-0 text-[#C3C8D4]">
+                <div className="shrink-0 text-[#B6BDCB]">
                   <ChevronIcon />
                 </div>
               </button>
@@ -363,40 +307,40 @@ export default function ProfilePage() {
 
             <button
               onClick={() => router.push("/support")}
-              className="flex w-full items-center gap-4 rounded-[26px] bg-[linear-gradient(135deg,#08205A_0%,#001848_100%)] px-5 py-5 text-left text-white shadow-[0_18px_42px_rgba(0,24,72,0.28)]"
+              className="mt-4 flex w-full items-center gap-3 rounded-[16px] bg-[linear-gradient(135deg,#111827_0%,#020617_100%)] px-4 py-4 text-left text-white shadow-[0_14px_34px_rgba(2,6,23,0.22)]"
             >
               <div className="shrink-0 text-white">
                 <SupportIcon />
               </div>
 
               <div className="min-w-0 flex-1">
-                <p className="text-[18px] font-medium">Поддержка</p>
-                <p className="mt-1 text-[15px] text-white/78">
+                <p className="text-[15px] font-medium">Поддержка</p>
+                <p className="mt-0.5 text-[12px] text-white/75">
                   Связаться с нами по вопросам заказа
                 </p>
               </div>
 
-              <div className="shrink-0 text-white/80">
+              <div className="shrink-0 text-white/75">
                 <ChevronIcon />
               </div>
             </button>
 
             <button
               onClick={() => router.push("/channel")}
-              className="flex w-full items-center gap-4 rounded-[26px] bg-[linear-gradient(135deg,#27A4FF_0%,#1687F5_100%)] px-5 py-5 text-left text-white shadow-[0_18px_42px_rgba(34,158,217,0.28)]"
+              className="flex w-full items-center gap-3 rounded-[16px] bg-[linear-gradient(135deg,#2EA8F7_0%,#177FE7_100%)] px-4 py-4 text-left text-white shadow-[0_14px_34px_rgba(34,158,217,0.24)]"
             >
-              <div className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-full bg-white/90 text-[#229ED9]">
+              <div className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full bg-white/90 text-[#229ED9]">
                 <TelegramIcon />
               </div>
 
               <div className="min-w-0 flex-1">
-                <p className="text-[18px] font-medium">Перейти на наш канал</p>
-                <p className="mt-1 text-[15px] text-white/85">
+                <p className="text-[15px] font-medium">Перейти на наш канал</p>
+                <p className="mt-0.5 text-[12px] text-white/82">
                   Новости, поступления и обновления
                 </p>
               </div>
 
-              <div className="shrink-0 text-white/85">
+              <div className="shrink-0 text-white/80">
                 <ChevronIcon />
               </div>
             </button>
