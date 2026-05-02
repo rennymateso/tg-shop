@@ -47,12 +47,12 @@ export type HomeProduct = {
   images: string[];
   colorImages?: Record<string, string>;
   galleryByColor?: Record<string, string[]>;
-  defaultColor: string;
-  type: "top" | "bottom";
-  category: "Футболки" | "Поло" | "Джинсы" | "Брюки" | "Костюмы";
+  defaultColor?: string;
+  type?: "top" | "bottom";
+  category: string;
   colors: string[];
   sizes: string[];
-  description: string;
+  description?: string;
 };
 
 const colorSwatches: Record<string, string> = {
@@ -65,17 +65,109 @@ const colorSwatches: Record<string, string> = {
   Коричневый: "#7A5230",
 };
 
-const categoryImages: Record<string, string> = {
-  Все: "/products/product-1.jpg",
-  Футболки: "/products/product-1.jpg",
-  Поло: "/products/product-2.jpg",
-  Джинсы: "/products/product-3.jpg",
-  Брюки: "/products/product-4.jpg",
-  Костюмы: "/products/product-5.jpg",
-  Платья: "/products/product-1.jpg",
-  Рубашки: "/products/product-2.jpg",
-  Юбки: "/products/product-3.jpg",
-};
+function CategoryIcon({ name }: { name: string }) {
+  const common = {
+    width: 26,
+    height: 26,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.8,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+  };
+
+  if (name === "Все") {
+    return (
+      <svg {...common}>
+        <rect x="4" y="4" width="6" height="6" rx="1.5" />
+        <rect x="14" y="4" width="6" height="6" rx="1.5" />
+        <rect x="4" y="14" width="6" height="6" rx="1.5" />
+        <rect x="14" y="14" width="6" height="6" rx="1.5" />
+      </svg>
+    );
+  }
+
+  if (name === "Футболки") {
+    return (
+      <svg {...common}>
+        <path d="M8 4 5 6.5 3 10l3 2 1-1v9h10v-9l1 1 3-2-2-3.5L16 4h-2a2 2 0 0 1-4 0H8Z" />
+      </svg>
+    );
+  }
+
+  if (name === "Поло") {
+    return (
+      <svg {...common}>
+        <path d="M8 4h8l3 3v13H5V7l3-3Z" />
+        <path d="M9 4 12 7l3-3" />
+        <path d="M12 7v5" />
+      </svg>
+    );
+  }
+
+  if (name === "Джинсы") {
+    return (
+      <svg {...common}>
+        <path d="M7 4h10l1 16h-5l-1-9-1 9H6L7 4Z" />
+        <path d="M7.5 7h9" />
+      </svg>
+    );
+  }
+
+  if (name === "Брюки") {
+    return (
+      <svg {...common}>
+        <path d="M8 4h8l1 16h-4l-1-10-1 10H7L8 4Z" />
+        <path d="M8 7h8" />
+      </svg>
+    );
+  }
+
+  if (name === "Костюмы") {
+    return (
+      <svg {...common}>
+        <path d="M8 5h8l2 4v11h-5l-1-6-1 6H6V9l2-4Z" />
+        <path d="M7 12h10" />
+        <path d="M8 20h8" />
+      </svg>
+    );
+  }
+
+  if (name === "Платья") {
+    return (
+      <svg {...common}>
+        <path d="M9 4h6l1 5 3 11H5L8 9l1-5Z" />
+        <path d="M9 4a3 3 0 0 0 6 0" />
+      </svg>
+    );
+  }
+
+  if (name === "Рубашки") {
+    return (
+      <svg {...common}>
+        <path d="M8 4h8l3 3v13H5V7l3-3Z" />
+        <path d="M9 4 12 7l3-3" />
+        <path d="M12 7v13" />
+      </svg>
+    );
+  }
+
+  if (name === "Юбки") {
+    return (
+      <svg {...common}>
+        <path d="M8 5h8l3 15H5L8 5Z" />
+        <path d="M8 8h8" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg {...common}>
+      <circle cx="12" cy="12" r="8" />
+    </svg>
+  );
+}
 
 function getDiscountPercent(oldPrice: number | null, price: number) {
   if (!oldPrice || oldPrice <= price) return 0;
@@ -89,8 +181,8 @@ function formatPrice(value: number | null | undefined) {
 
 function getDeliveryLabel(badge: string) {
   return badge.trim().toLowerCase() === "из-за рубежа"
-    ? "7–14 дней"
-    : "1–3 дня";
+    ? "Доставка 7–14 дней"
+    : "Доставка 1–3 дня";
 }
 
 function getVisibleSizesLabel(sizes: string[]) {
@@ -133,17 +225,6 @@ function ChevronDownIcon() {
   );
 }
 
-function GridIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <rect x="4" y="4" width="6" height="6" rx="1.5" />
-      <rect x="14" y="4" width="6" height="6" rx="1.5" />
-      <rect x="4" y="14" width="6" height="6" rx="1.5" />
-      <rect x="14" y="14" width="6" height="6" rx="1.5" />
-    </svg>
-  );
-}
-
 export default function HomePageClient({
   initialProducts,
   initialBrands,
@@ -162,13 +243,10 @@ export default function HomePageClient({
   const [selectedSort, setSelectedSort] = useState<SortOption>("По популярности");
   const [selectedAvailability, setSelectedAvailability] = useState("Все товары");
   const [search, setSearch] = useState("");
-  const [activeBanner] = useState(0);
   const [showSplash, setShowSplash] = useState(true);
-
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [showBrandMenu, setShowBrandMenu] = useState(false);
   const [showAvailabilityMenu, setShowAvailabilityMenu] = useState(false);
-
   const [cardImageIndexes, setCardImageIndexes] = useState<Record<string, number>>({});
 
   const sortMenuRef = useRef<HTMLDivElement | null>(null);
@@ -224,7 +302,7 @@ export default function HomePageClient({
 
   const toggleFavorite = (id: string) => {
     const updated = favorites.includes(id)
-      ? favorites.filter((i) => i !== id)
+      ? favorites.filter((item) => item !== id)
       : [...favorites, id];
 
     setFavorites(updated);
@@ -246,50 +324,10 @@ export default function HomePageClient({
     router.push("/");
   };
 
-  const prefetchProduct = (productId: string) => {
-    router.prefetch(`/product?id=${productId}`);
-  };
-
-  const nextCardImage = (productId: string, totalImages: number) => {
-    if (totalImages <= 1) return;
-
-    setCardImageIndexes((prev) => {
-      const currentIndex = prev[productId] || 0;
-      const nextIndex = currentIndex >= totalImages - 1 ? 0 : currentIndex + 1;
-      return { ...prev, [productId]: nextIndex };
-    });
-  };
-
-  const prevCardImage = (productId: string, totalImages: number) => {
-    if (totalImages <= 1) return;
-
-    setCardImageIndexes((prev) => {
-      const currentIndex = prev[productId] || 0;
-      const nextIndex = currentIndex <= 0 ? totalImages - 1 : currentIndex - 1;
-      return { ...prev, [productId]: nextIndex };
-    });
-  };
-
-  const handleCardTouchStart = (productId: string, clientX: number) => {
-    touchStartMapRef.current[productId] = clientX;
-  };
-
-  const handleCardTouchEnd = (productId: string, clientX: number, totalImages: number) => {
-    const startX = touchStartMapRef.current[productId];
-    if (startX == null) return;
-
-    const diff = startX - clientX;
-
-    if (Math.abs(diff) > 40) {
-      if (diff > 0) nextCardImage(productId, totalImages);
-      else prevCardImage(productId, totalImages);
-    }
-
-    touchStartMapRef.current[productId] = null;
-  };
-
   const currentCategory =
-    selectedDepartment === "Мужчинам" ? selectedMensCategory : selectedWomensCategory;
+    selectedDepartment === "Мужчинам"
+      ? selectedMensCategory
+      : selectedWomensCategory;
 
   const currentCategories =
     selectedDepartment === "Мужчинам" ? mensCategories : womensCategories;
@@ -301,8 +339,11 @@ export default function HomePageClient({
 
   const filteredProducts = useMemo(() => {
     const result = departmentProducts.filter((item) => {
-      const matchesCategory = currentCategory === "Все" || item.category === currentCategory;
-      const matchesBrand = selectedBrand === "Все бренды" || item.brand === selectedBrand;
+      const matchesCategory =
+        currentCategory === "Все" || item.category === currentCategory;
+
+      const matchesBrand =
+        selectedBrand === "Все бренды" || item.brand === selectedBrand;
 
       const matchesSearch =
         item.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -315,14 +356,25 @@ export default function HomePageClient({
       return matchesCategory && matchesBrand && matchesSearch && matchesAvailability;
     });
 
-    if (selectedSort === "Сначала дешевле") return [...result].sort((a, b) => a.price - b.price);
-    if (selectedSort === "Сначала дороже") return [...result].sort((a, b) => b.price - a.price);
+    if (selectedSort === "Сначала дешевле") {
+      return [...result].sort((a, b) => a.price - b.price);
+    }
+
+    if (selectedSort === "Сначала дороже") {
+      return [...result].sort((a, b) => b.price - a.price);
+    }
+
     if (selectedSort === "Скидки") {
       return [...result].sort(
-        (a, b) => getDiscountPercent(b.oldPrice, b.price) - getDiscountPercent(a.oldPrice, a.price)
+        (a, b) =>
+          getDiscountPercent(b.oldPrice, b.price) -
+          getDiscountPercent(a.oldPrice, a.price)
       );
     }
-    if (selectedSort === "Новинки") return [...result].filter((item) => item.badge === "Новинка");
+
+    if (selectedSort === "Новинки") {
+      return [...result].filter((item) => item.badge === "Новинка");
+    }
 
     return result;
   }, [
@@ -334,17 +386,58 @@ export default function HomePageClient({
     search,
   ]);
 
+  const nextCardImage = (productId: string, totalImages: number) => {
+    if (totalImages <= 1) return;
+
+    setCardImageIndexes((prev) => {
+      const currentIndex = prev[productId] || 0;
+      const nextIndex = currentIndex >= totalImages - 1 ? 0 : currentIndex + 1;
+
+      return { ...prev, [productId]: nextIndex };
+    });
+  };
+
+  const prevCardImage = (productId: string, totalImages: number) => {
+    if (totalImages <= 1) return;
+
+    setCardImageIndexes((prev) => {
+      const currentIndex = prev[productId] || 0;
+      const nextIndex = currentIndex <= 0 ? totalImages - 1 : currentIndex - 1;
+
+      return { ...prev, [productId]: nextIndex };
+    });
+  };
+
+  const handleCardTouchStart = (productId: string, clientX: number) => {
+    touchStartMapRef.current[productId] = clientX;
+  };
+
+  const handleCardTouchEnd = (
+    productId: string,
+    clientX: number,
+    totalImages: number
+  ) => {
+    const startX = touchStartMapRef.current[productId];
+
+    if (startX == null) return;
+
+    const diff = startX - clientX;
+
+    if (Math.abs(diff) > 40) {
+      if (diff > 0) nextCardImage(productId, totalImages);
+      else prevCardImage(productId, totalImages);
+    }
+
+    touchStartMapRef.current[productId] = null;
+  };
+
   return (
     <>
       {showSplash && <AppSplash />}
 
       <main className="min-h-screen bg-[#F5F5F5] px-3 pt-[76px] pb-32">
         <div className="mb-4 flex items-center justify-center">
-          <button
-            type="button"
-            onClick={resetPage}
-            className="text-center"
-          >
+          <button type="button" onClick={resetPage} className="text-center">
             <p className="text-[18px] font-semibold tracking-[0.13em] text-black">
               MONTREAUX
             </p>
@@ -399,6 +492,7 @@ export default function HomePageClient({
             <div className="flex min-w-max gap-3 pr-6">
               {currentCategories.map((category) => {
                 const isActive = currentCategory === category;
+
                 return (
                   <button
                     key={category}
@@ -413,21 +507,13 @@ export default function HomePageClient({
                     className="w-[64px] shrink-0"
                   >
                     <div
-                      className={`flex h-[56px] w-[64px] items-center justify-center overflow-hidden rounded-[15px] transition ${
+                      className={`flex h-[56px] w-[64px] items-center justify-center rounded-[15px] transition ${
                         isActive
                           ? "bg-black text-white shadow-[0_10px_22px_rgba(0,0,0,0.16)]"
                           : "bg-[#F6F6F6] text-black"
                       }`}
                     >
-                      {category === "Все" ? (
-                        <GridIcon />
-                      ) : (
-                        <img
-                          src={categoryImages[category] || "/products/product-1.jpg"}
-                          alt={category}
-                          className="h-full w-full object-cover"
-                        />
-                      )}
+                      <CategoryIcon name={category} />
                     </div>
 
                     <p
@@ -447,12 +533,12 @@ export default function HomePageClient({
         <div className="mt-3 overflow-hidden rounded-[20px] bg-white shadow-[0_12px_34px_rgba(15,23,42,0.06)]">
           <button
             type="button"
-            onClick={() => router.push(banners[activeBanner].link)}
+            onClick={() => router.push(banners[0].link)}
             className="relative block h-[176px] w-full overflow-hidden"
           >
             <img
-              src={banners[activeBanner].image}
-              alt={banners[activeBanner].alt}
+              src={banners[0].image}
+              alt={banners[0].alt}
               className="h-full w-full object-cover"
             />
 
@@ -463,9 +549,9 @@ export default function HomePageClient({
               <h2 className="mt-1 text-[24px] font-semibold leading-[1.05] tracking-[-0.03em] text-white">
                 Весна / Лето 2025
               </h2>
-              <button className="mt-4 rounded-[10px] bg-white px-4 py-2 text-[12px] font-medium text-black">
+              <span className="mt-4 inline-flex rounded-[10px] bg-white px-4 py-2 text-[12px] font-medium text-black">
                 Смотреть
-              </button>
+              </span>
             </div>
           </button>
         </div>
@@ -507,9 +593,7 @@ export default function HomePageClient({
                     setShowBrandMenu(false);
                   }}
                   className={`w-full rounded-xl px-3 py-2 text-left text-[13px] ${
-                    selectedBrand === "Все бренды"
-                      ? "bg-black text-white"
-                      : "text-gray-700"
+                    selectedBrand === "Все бренды" ? "bg-black text-white" : "text-gray-700"
                   }`}
                 >
                   Все бренды
@@ -524,9 +608,7 @@ export default function HomePageClient({
                       setShowBrandMenu(false);
                     }}
                     className={`w-full rounded-xl px-3 py-2 text-left text-[13px] ${
-                      selectedBrand === brand.name
-                        ? "bg-black text-white"
-                        : "text-gray-700"
+                      selectedBrand === brand.name ? "bg-black text-white" : "text-gray-700"
                     }`}
                   >
                     {brand.name}
@@ -557,9 +639,7 @@ export default function HomePageClient({
                       setShowSortMenu(false);
                     }}
                     className={`w-full rounded-xl px-3 py-2 text-left text-[13px] ${
-                      selectedSort === option
-                        ? "bg-black text-white"
-                        : "text-gray-700"
+                      selectedSort === option ? "bg-black text-white" : "text-gray-700"
                     }`}
                   >
                     {option}
@@ -589,9 +669,7 @@ export default function HomePageClient({
                       setShowAvailabilityMenu(false);
                     }}
                     className={`w-full rounded-xl px-3 py-2 text-left text-[13px] ${
-                      selectedAvailability === option
-                        ? "bg-black text-white"
-                        : "text-gray-700"
+                      selectedAvailability === option ? "bg-black text-white" : "text-gray-700"
                     }`}
                   >
                     {option}
@@ -632,8 +710,7 @@ export default function HomePageClient({
                 <div
                   key={p.id}
                   onClick={() => router.push(`/product?id=${p.id}`)}
-                  onMouseEnter={() => prefetchProduct(p.id)}
-                  onTouchStart={() => prefetchProduct(p.id)}
+                  onMouseEnter={() => router.prefetch(`/product?id=${p.id}`)}
                   className="group cursor-pointer overflow-hidden rounded-[16px] bg-white shadow-[0_10px_28px_rgba(15,23,42,0.06)] transition active:scale-[0.985]"
                 >
                   <div
