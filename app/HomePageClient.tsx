@@ -14,7 +14,7 @@ const sortOptions = ["По популярности", "Сначала дешев
 const banners = [
   {
     image: "/banner.jpg",
-    alt: "Баннер",
+    alt: "Новая коллекция",
     link: "/",
   },
 ] as const;
@@ -65,6 +65,18 @@ const colorSwatches: Record<string, string> = {
   Коричневый: "#7A5230",
 };
 
+const categoryImages: Record<string, string> = {
+  Все: "/products/product-1.jpg",
+  Футболки: "/products/product-1.jpg",
+  Поло: "/products/product-2.jpg",
+  Джинсы: "/products/product-3.jpg",
+  Брюки: "/products/product-4.jpg",
+  Костюмы: "/products/product-5.jpg",
+  Платья: "/products/product-1.jpg",
+  Рубашки: "/products/product-2.jpg",
+  Юбки: "/products/product-3.jpg",
+};
+
 function getDiscountPercent(oldPrice: number | null, price: number) {
   if (!oldPrice || oldPrice <= price) return 0;
   return Math.round(((oldPrice - price) / oldPrice) * 100);
@@ -77,8 +89,8 @@ function formatPrice(value: number | null | undefined) {
 
 function getDeliveryLabel(badge: string) {
   return badge.trim().toLowerCase() === "из-за рубежа"
-    ? "Доставка 7–14 дней"
-    : "Доставка 1–3 дня";
+    ? "7–14 дней"
+    : "1–3 дня";
 }
 
 function getVisibleSizesLabel(sizes: string[]) {
@@ -94,17 +106,7 @@ function getExtraColorsCount(colors: string[]) {
 
 function TruckIcon() {
   return (
-    <svg
-      width="12"
-      height="12"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.9"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
       <path d="M10 17H6a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h8v10h-1" />
       <path d="M14 10h3l3 3v4h-1" />
       <circle cx="7.5" cy="17.5" r="1.5" />
@@ -115,17 +117,7 @@ function TruckIcon() {
 
 function FilterIcon() {
   return (
-    <svg
-      width="13"
-      height="13"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M4 6h16" />
       <path d="M7 12h10" />
       <path d="M10 18h4" />
@@ -135,18 +127,19 @@ function FilterIcon() {
 
 function ChevronDownIcon() {
   return (
-    <svg
-      width="13"
-      height="13"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="m6 9 6 6 6-6" />
+    </svg>
+  );
+}
+
+function GridIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <rect x="4" y="4" width="6" height="6" rx="1.5" />
+      <rect x="14" y="4" width="6" height="6" rx="1.5" />
+      <rect x="4" y="14" width="6" height="6" rx="1.5" />
+      <rect x="14" y="14" width="6" height="6" rx="1.5" />
     </svg>
   );
 }
@@ -162,15 +155,11 @@ export default function HomePageClient({
   const router = useRouter();
 
   const [favorites, setFavorites] = useState<string[]>([]);
-  const [selectedDepartment, setSelectedDepartment] =
-    useState<Department>("Мужчинам");
-  const [selectedMensCategory, setSelectedMensCategory] =
-    useState<MensCategory>("Все");
-  const [selectedWomensCategory, setSelectedWomensCategory] =
-    useState<WomensCategory>("Все");
+  const [selectedDepartment, setSelectedDepartment] = useState<Department>("Мужчинам");
+  const [selectedMensCategory, setSelectedMensCategory] = useState<MensCategory>("Все");
+  const [selectedWomensCategory, setSelectedWomensCategory] = useState<WomensCategory>("Все");
   const [selectedBrand, setSelectedBrand] = useState("Все бренды");
-  const [selectedSort, setSelectedSort] =
-    useState<SortOption>("По популярности");
+  const [selectedSort, setSelectedSort] = useState<SortOption>("По популярности");
   const [selectedAvailability, setSelectedAvailability] = useState("Все товары");
   const [search, setSearch] = useState("");
   const [activeBanner] = useState(0);
@@ -180,9 +169,7 @@ export default function HomePageClient({
   const [showBrandMenu, setShowBrandMenu] = useState(false);
   const [showAvailabilityMenu, setShowAvailabilityMenu] = useState(false);
 
-  const [cardImageIndexes, setCardImageIndexes] = useState<Record<string, number>>(
-    {}
-  );
+  const [cardImageIndexes, setCardImageIndexes] = useState<Record<string, number>>({});
 
   const sortMenuRef = useRef<HTMLDivElement | null>(null);
   const brandMenuWrapRef = useRef<HTMLDivElement | null>(null);
@@ -218,32 +205,21 @@ export default function HomePageClient({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        sortMenuRef.current &&
-        !sortMenuRef.current.contains(event.target as Node)
-      ) {
+      if (sortMenuRef.current && !sortMenuRef.current.contains(event.target as Node)) {
         setShowSortMenu(false);
       }
 
-      if (
-        brandMenuWrapRef.current &&
-        !brandMenuWrapRef.current.contains(event.target as Node)
-      ) {
+      if (brandMenuWrapRef.current && !brandMenuWrapRef.current.contains(event.target as Node)) {
         setShowBrandMenu(false);
       }
 
-      if (
-        availabilityMenuRef.current &&
-        !availabilityMenuRef.current.contains(event.target as Node)
-      ) {
+      if (availabilityMenuRef.current && !availabilityMenuRef.current.contains(event.target as Node)) {
         setShowAvailabilityMenu(false);
       }
     };
 
     document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const toggleFavorite = (id: string) => {
@@ -280,11 +256,7 @@ export default function HomePageClient({
     setCardImageIndexes((prev) => {
       const currentIndex = prev[productId] || 0;
       const nextIndex = currentIndex >= totalImages - 1 ? 0 : currentIndex + 1;
-
-      return {
-        ...prev,
-        [productId]: nextIndex,
-      };
+      return { ...prev, [productId]: nextIndex };
     });
   };
 
@@ -294,11 +266,7 @@ export default function HomePageClient({
     setCardImageIndexes((prev) => {
       const currentIndex = prev[productId] || 0;
       const nextIndex = currentIndex <= 0 ? totalImages - 1 : currentIndex - 1;
-
-      return {
-        ...prev,
-        [productId]: nextIndex,
-      };
+      return { ...prev, [productId]: nextIndex };
     });
   };
 
@@ -306,51 +274,35 @@ export default function HomePageClient({
     touchStartMapRef.current[productId] = clientX;
   };
 
-  const handleCardTouchEnd = (
-    productId: string,
-    clientX: number,
-    totalImages: number
-  ) => {
+  const handleCardTouchEnd = (productId: string, clientX: number, totalImages: number) => {
     const startX = touchStartMapRef.current[productId];
-
     if (startX == null) return;
 
     const diff = startX - clientX;
 
     if (Math.abs(diff) > 40) {
-      if (diff > 0) {
-        nextCardImage(productId, totalImages);
-      } else {
-        prevCardImage(productId, totalImages);
-      }
+      if (diff > 0) nextCardImage(productId, totalImages);
+      else prevCardImage(productId, totalImages);
     }
 
     touchStartMapRef.current[productId] = null;
   };
 
   const currentCategory =
-    selectedDepartment === "Мужчинам"
-      ? selectedMensCategory
-      : selectedWomensCategory;
+    selectedDepartment === "Мужчинам" ? selectedMensCategory : selectedWomensCategory;
 
   const currentCategories =
     selectedDepartment === "Мужчинам" ? mensCategories : womensCategories;
 
   const departmentProducts = useMemo(() => {
-    if (selectedDepartment === "Женщинам") {
-      return [];
-    }
-
+    if (selectedDepartment === "Женщинам") return [];
     return initialProducts;
   }, [initialProducts, selectedDepartment]);
 
   const filteredProducts = useMemo(() => {
     const result = departmentProducts.filter((item) => {
-      const matchesCategory =
-        currentCategory === "Все" || item.category === currentCategory;
-
-      const matchesBrand =
-        selectedBrand === "Все бренды" || item.brand === selectedBrand;
+      const matchesCategory = currentCategory === "Все" || item.category === currentCategory;
+      const matchesBrand = selectedBrand === "Все бренды" || item.brand === selectedBrand;
 
       const matchesSearch =
         item.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -358,31 +310,19 @@ export default function HomePageClient({
         item.category.toLowerCase().includes(search.toLowerCase());
 
       const matchesAvailability =
-        selectedAvailability === "Все товары" ||
-        item.badge === selectedAvailability;
+        selectedAvailability === "Все товары" || item.badge === selectedAvailability;
 
       return matchesCategory && matchesBrand && matchesSearch && matchesAvailability;
     });
 
-    if (selectedSort === "Сначала дешевле") {
-      return [...result].sort((a, b) => a.price - b.price);
-    }
-
-    if (selectedSort === "Сначала дороже") {
-      return [...result].sort((a, b) => b.price - a.price);
-    }
-
+    if (selectedSort === "Сначала дешевле") return [...result].sort((a, b) => a.price - b.price);
+    if (selectedSort === "Сначала дороже") return [...result].sort((a, b) => b.price - a.price);
     if (selectedSort === "Скидки") {
       return [...result].sort(
-        (a, b) =>
-          getDiscountPercent(b.oldPrice, b.price) -
-          getDiscountPercent(a.oldPrice, a.price)
+        (a, b) => getDiscountPercent(b.oldPrice, b.price) - getDiscountPercent(a.oldPrice, a.price)
       );
     }
-
-    if (selectedSort === "Новинки") {
-      return [...result].filter((item) => item.badge === "Новинка");
-    }
+    if (selectedSort === "Новинки") return [...result].filter((item) => item.badge === "Новинка");
 
     return result;
   }, [
@@ -399,32 +339,25 @@ export default function HomePageClient({
       {showSplash && <AppSplash />}
 
       <main className="min-h-screen bg-[#F5F5F5] px-3 pt-[76px] pb-32">
-        <div className="text-center">
-          <p className="text-[11px] uppercase tracking-[0.28em] text-gray-400">
-            Fashion
-          </p>
-
+        <div className="mb-4 flex items-center justify-center">
           <button
             type="button"
             onClick={resetPage}
-            className="mt-2 text-[30px] font-light tracking-[0.35em] text-black"
+            className="text-center"
           >
-            MONTREAUX
+            <p className="text-[18px] font-semibold tracking-[0.13em] text-black">
+              MONTREAUX
+            </p>
+            <p className="mt-0.5 text-[8px] uppercase tracking-[0.32em] text-gray-400">
+              Fashion
+            </p>
           </button>
         </div>
 
-        <div className="mt-4">
-          <div className="rounded-[20px] bg-white px-4 py-3 shadow-[0_8px_24px_rgba(0,0,0,0.04)]">
+        <div className="rounded-[22px] bg-white p-3 shadow-[0_12px_34px_rgba(15,23,42,0.055)]">
+          <div className="rounded-[17px] bg-[#F5F5F5] px-3.5 py-3">
             <div className="flex items-center gap-3">
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#9CA3AF"
-                strokeWidth="1.8"
-                className="shrink-0"
-              >
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="1.8">
                 <circle cx="11" cy="11" r="7" />
                 <path d="M20 20L17 17" />
               </svg>
@@ -433,28 +366,12 @@ export default function HomePageClient({
                 placeholder="Поиск товаров..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full bg-transparent text-sm outline-none placeholder:text-gray-400"
+                className="w-full bg-transparent text-[13px] outline-none placeholder:text-gray-400"
               />
             </div>
           </div>
-        </div>
 
-        <div className="mt-4 overflow-hidden rounded-[22px] bg-white shadow-[0_10px_28px_rgba(0,0,0,0.05)]">
-          <button
-            type="button"
-            onClick={() => router.push(banners[activeBanner].link)}
-            className="relative block w-full"
-          >
-            <img
-              src={banners[activeBanner].image}
-              alt={banners[activeBanner].alt}
-              className="block h-[150px] w-full object-cover"
-            />
-          </button>
-        </div>
-
-        <div className="mt-4">
-          <div className="rounded-[18px] bg-[#ECECEC] p-1">
+          <div className="mt-3 rounded-[16px] bg-[#F2F2F2] p-1">
             <div className="grid grid-cols-2 gap-1">
               {departments.map((department) => (
                 <button
@@ -466,10 +383,10 @@ export default function HomePageClient({
                     setSelectedAvailability("Все товары");
                     setSearch("");
                   }}
-                  className={`rounded-[14px] px-4 py-3 text-[14px] font-medium transition-all duration-200 ${
+                  className={`rounded-[13px] px-4 py-2.5 text-[13px] font-medium transition-all ${
                     selectedDepartment === department
-                      ? "bg-black text-white shadow-[0_8px_18px_rgba(0,0,0,0.12)]"
-                      : "bg-transparent text-[#525252]"
+                      ? "bg-black text-white shadow-[0_8px_18px_rgba(0,0,0,0.13)]"
+                      : "text-[#525252]"
                   }`}
                 >
                   {department}
@@ -479,10 +396,9 @@ export default function HomePageClient({
           </div>
 
           <div className="mt-3 overflow-x-auto">
-            <div className="flex min-w-max gap-2 pr-10">
+            <div className="flex min-w-max gap-3 pr-6">
               {currentCategories.map((category) => {
                 const isActive = currentCategory === category;
-
                 return (
                   <button
                     key={category}
@@ -494,150 +410,195 @@ export default function HomePageClient({
                         setSelectedWomensCategory(category as WomensCategory);
                       }
                     }}
-                    className={`rounded-full px-4 py-2.5 text-[13px] transition-all duration-200 ${
-                      isActive
-                        ? "border border-black bg-white text-black"
-                        : "border border-transparent bg-white text-[#737373]"
-                    }`}
+                    className="w-[64px] shrink-0"
                   >
-                    {category}
+                    <div
+                      className={`flex h-[56px] w-[64px] items-center justify-center overflow-hidden rounded-[15px] transition ${
+                        isActive
+                          ? "bg-black text-white shadow-[0_10px_22px_rgba(0,0,0,0.16)]"
+                          : "bg-[#F6F6F6] text-black"
+                      }`}
+                    >
+                      {category === "Все" ? (
+                        <GridIcon />
+                      ) : (
+                        <img
+                          src={categoryImages[category] || "/products/product-1.jpg"}
+                          alt={category}
+                          className="h-full w-full object-cover"
+                        />
+                      )}
+                    </div>
+
+                    <p
+                      className={`mt-1.5 truncate text-center text-[11px] ${
+                        isActive ? "font-medium text-black" : "text-[#525252]"
+                      }`}
+                    >
+                      {category}
+                    </p>
                   </button>
                 );
               })}
             </div>
           </div>
+        </div>
 
-          <div className="mt-3 grid grid-cols-[1fr_1fr] gap-2">
-            <div className="relative" ref={brandMenuWrapRef}>
-              <button
-                type="button"
-                onClick={() => setShowBrandMenu((prev) => !prev)}
-                className="flex w-full items-center justify-between rounded-[16px] bg-white px-3.5 py-3 text-left text-[13px] shadow-[0_6px_18px_rgba(0,0,0,0.04)]"
-              >
-                <span className="min-w-0">
-                  <span className="block text-[10px] uppercase tracking-[0.12em] text-gray-400">
-                    Бренд
-                  </span>
-                  <span className="block truncate font-medium text-black">
-                    {selectedBrand}
-                  </span>
-                </span>
-                <ChevronDownIcon />
+        <div className="mt-3 overflow-hidden rounded-[20px] bg-white shadow-[0_12px_34px_rgba(15,23,42,0.06)]">
+          <button
+            type="button"
+            onClick={() => router.push(banners[activeBanner].link)}
+            className="relative block h-[176px] w-full overflow-hidden"
+          >
+            <img
+              src={banners[activeBanner].image}
+              alt={banners[activeBanner].alt}
+              className="h-full w-full object-cover"
+            />
+
+            <div className="absolute inset-0 bg-gradient-to-r from-black/58 via-black/24 to-transparent" />
+
+            <div className="absolute left-4 top-4 max-w-[190px] text-left">
+              <p className="text-[11px] text-white/75">Новая коллекция</p>
+              <h2 className="mt-1 text-[24px] font-semibold leading-[1.05] tracking-[-0.03em] text-white">
+                Весна / Лето 2025
+              </h2>
+              <button className="mt-4 rounded-[10px] bg-white px-4 py-2 text-[12px] font-medium text-black">
+                Смотреть
               </button>
+            </div>
+          </button>
+        </div>
 
-              {showBrandMenu && (
-                <div className="absolute left-0 top-[58px] z-50 max-h-72 w-full overflow-y-auto rounded-2xl bg-white p-1.5 shadow-[0_16px_40px_rgba(0,0,0,0.14)]">
+        <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+          {["Все товары", "В наличии", "Из-за рубежа"].map((option) => (
+            <button
+              key={option}
+              type="button"
+              onClick={() => setSelectedAvailability(option)}
+              className={`shrink-0 rounded-full px-4 py-2.5 text-[12px] font-medium transition ${
+                selectedAvailability === option
+                  ? "border border-black bg-white text-black"
+                  : "bg-white text-[#525252]"
+              }`}
+            >
+              {option}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-3 grid grid-cols-[1fr_1fr_auto] gap-2">
+          <div className="relative" ref={brandMenuWrapRef}>
+            <button
+              type="button"
+              onClick={() => setShowBrandMenu((prev) => !prev)}
+              className="flex h-[42px] w-full items-center justify-between rounded-[13px] bg-white px-3 text-[12px] font-medium text-black shadow-[0_6px_18px_rgba(0,0,0,0.04)]"
+            >
+              <span className="truncate">{selectedBrand}</span>
+              <ChevronDownIcon />
+            </button>
+
+            {showBrandMenu && (
+              <div className="absolute left-0 top-[48px] z-50 max-h-72 w-full overflow-y-auto rounded-2xl bg-white p-1.5 shadow-[0_16px_40px_rgba(0,0,0,0.14)]">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedBrand("Все бренды");
+                    setShowBrandMenu(false);
+                  }}
+                  className={`w-full rounded-xl px-3 py-2 text-left text-[13px] ${
+                    selectedBrand === "Все бренды"
+                      ? "bg-black text-white"
+                      : "text-gray-700"
+                  }`}
+                >
+                  Все бренды
+                </button>
+
+                {initialBrands.map((brand) => (
                   <button
+                    key={brand.id}
                     type="button"
                     onClick={() => {
-                      setSelectedBrand("Все бренды");
+                      setSelectedBrand(brand.name);
                       setShowBrandMenu(false);
                     }}
                     className={`w-full rounded-xl px-3 py-2 text-left text-[13px] ${
-                      selectedBrand === "Все бренды"
+                      selectedBrand === brand.name
                         ? "bg-black text-white"
-                        : "text-gray-700 hover:bg-gray-50"
+                        : "text-gray-700"
                     }`}
                   >
-                    Все бренды
+                    {brand.name}
                   </button>
-
-                  {initialBrands.map((brand) => (
-                    <button
-                      key={brand.id}
-                      type="button"
-                      onClick={() => {
-                        setSelectedBrand(brand.name);
-                        setShowBrandMenu(false);
-                      }}
-                      className={`w-full rounded-xl px-3 py-2 text-left text-[13px] ${
-                        selectedBrand === brand.name
-                          ? "bg-black text-white"
-                          : "text-gray-700 hover:bg-gray-50"
-                      }`}
-                    >
-                      {brand.name}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="relative" ref={sortMenuRef}>
-              <button
-                type="button"
-                onClick={() => setShowSortMenu((prev) => !prev)}
-                className="flex w-full items-center justify-between rounded-[16px] bg-white px-3.5 py-3 text-left text-[13px] shadow-[0_6px_18px_rgba(0,0,0,0.04)]"
-              >
-                <span className="min-w-0">
-                  <span className="block text-[10px] uppercase tracking-[0.12em] text-gray-400">
-                    Сортировка
-                  </span>
-                  <span className="block truncate font-medium text-black">
-                    {selectedSort}
-                  </span>
-                </span>
-                <ChevronDownIcon />
-              </button>
-
-              {showSortMenu && (
-                <div className="absolute right-0 top-[58px] z-50 w-full rounded-2xl bg-white p-1.5 shadow-[0_10px_30px_rgba(0,0,0,0.10)]">
-                  {sortOptions.map((option) => (
-                    <button
-                      key={option}
-                      type="button"
-                      onClick={() => {
-                        setSelectedSort(option);
-                        setShowSortMenu(false);
-                      }}
-                      className={`w-full rounded-xl px-3 py-2 text-left text-[13px] ${
-                        selectedSort === option
-                          ? "bg-black text-white"
-                          : "text-gray-700 hover:bg-gray-50"
-                      }`}
-                    >
-                      {option}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
-          <div className="mt-2">
-            <div className="relative" ref={availabilityMenuRef}>
-              <button
-                type="button"
-                onClick={() => setShowAvailabilityMenu((prev) => !prev)}
-                className="inline-flex items-center gap-2 rounded-full bg-white px-3.5 py-2 text-[12px] font-medium text-[#525252] shadow-[0_6px_18px_rgba(0,0,0,0.04)]"
-              >
-                <FilterIcon />
-                <span>{selectedAvailability}</span>
-                <ChevronDownIcon />
-              </button>
+          <div className="relative" ref={sortMenuRef}>
+            <button
+              type="button"
+              onClick={() => setShowSortMenu((prev) => !prev)}
+              className="flex h-[42px] w-full items-center justify-between rounded-[13px] bg-white px-3 text-[12px] font-medium text-black shadow-[0_6px_18px_rgba(0,0,0,0.04)]"
+            >
+              <span className="truncate">{selectedSort}</span>
+              <ChevronDownIcon />
+            </button>
 
-              {showAvailabilityMenu && (
-                <div className="absolute left-0 top-11 z-50 w-52 rounded-2xl bg-white p-1.5 shadow-[0_16px_40px_rgba(0,0,0,0.14)]">
-                  {["Все товары", "В наличии", "Из-за рубежа"].map((option) => (
-                    <button
-                      key={option}
-                      type="button"
-                      onClick={() => {
-                        setSelectedAvailability(option);
-                        setShowAvailabilityMenu(false);
-                      }}
-                      className={`w-full rounded-xl px-3 py-2 text-left text-[13px] ${
-                        selectedAvailability === option
-                          ? "bg-black text-white"
-                          : "text-gray-700 hover:bg-gray-50"
-                      }`}
-                    >
-                      {option}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            {showSortMenu && (
+              <div className="absolute right-0 top-[48px] z-50 w-full rounded-2xl bg-white p-1.5 shadow-[0_10px_30px_rgba(0,0,0,0.10)]">
+                {sortOptions.map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => {
+                      setSelectedSort(option);
+                      setShowSortMenu(false);
+                    }}
+                    className={`w-full rounded-xl px-3 py-2 text-left text-[13px] ${
+                      selectedSort === option
+                        ? "bg-black text-white"
+                        : "text-gray-700"
+                    }`}
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="relative" ref={availabilityMenuRef}>
+            <button
+              type="button"
+              onClick={() => setShowAvailabilityMenu((prev) => !prev)}
+              className="flex h-[42px] w-[44px] items-center justify-center rounded-[13px] bg-white text-black shadow-[0_6px_18px_rgba(0,0,0,0.04)]"
+            >
+              <FilterIcon />
+            </button>
+
+            {showAvailabilityMenu && (
+              <div className="absolute right-0 top-[48px] z-50 w-52 rounded-2xl bg-white p-1.5 shadow-[0_16px_40px_rgba(0,0,0,0.14)]">
+                {["Все товары", "В наличии", "Из-за рубежа"].map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => {
+                      setSelectedAvailability(option);
+                      setShowAvailabilityMenu(false);
+                    }}
+                    className={`w-full rounded-xl px-3 py-2 text-left text-[13px] ${
+                      selectedAvailability === option
+                        ? "bg-black text-white"
+                        : "text-gray-700"
+                    }`}
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -673,7 +634,7 @@ export default function HomePageClient({
                   onClick={() => router.push(`/product?id=${p.id}`)}
                   onMouseEnter={() => prefetchProduct(p.id)}
                   onTouchStart={() => prefetchProduct(p.id)}
-                  className="group cursor-pointer overflow-hidden rounded-[14px] bg-white shadow-[0_8px_22px_rgba(0,0,0,0.045)] transition-all duration-300 active:scale-[0.985]"
+                  className="group cursor-pointer overflow-hidden rounded-[16px] bg-white shadow-[0_10px_28px_rgba(15,23,42,0.06)] transition active:scale-[0.985]"
                 >
                   <div
                     className="relative aspect-[3/4] overflow-hidden bg-[#EAEAEA]"
@@ -698,7 +659,7 @@ export default function HomePageClient({
                     />
 
                     {discountPercent > 0 && (
-                      <div className="absolute left-2.5 top-2.5 rounded-full bg-white/90 px-2 py-1 text-[10px] font-semibold text-[#FF2F7D] backdrop-blur">
+                      <div className="absolute left-2.5 top-2.5 rounded-full bg-black px-2 py-1 text-[10px] font-semibold text-white">
                         -{discountPercent}%
                       </div>
                     )}
@@ -709,7 +670,7 @@ export default function HomePageClient({
                         e.stopPropagation();
                         toggleFavorite(p.id);
                       }}
-                      className="absolute right-2.5 top-2.5 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-white/82 text-black/80 backdrop-blur shadow-sm transition-transform duration-200 active:scale-90"
+                      className="absolute right-2.5 top-2.5 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-white/86 text-black/80 backdrop-blur shadow-sm active:scale-90"
                     >
                       <svg
                         width="16"
@@ -730,7 +691,7 @@ export default function HomePageClient({
                     )}
                   </div>
 
-                  <div className="flex min-h-[162px] flex-col px-3 pb-3 pt-2.5">
+                  <div className="flex min-h-[166px] flex-col px-3 pb-3 pt-2.5">
                     <div className="h-[16px] overflow-hidden text-[10px] text-gray-400">
                       <span className="max-w-[110px] break-words uppercase tracking-[0.14em]">
                         {p.brand}
@@ -771,12 +732,12 @@ export default function HomePageClient({
 
                     <div className="mt-3">
                       <div className="flex items-end gap-2">
-                        <span className="text-[17px] font-bold leading-none tracking-[-0.035em] text-[#16A34A]">
+                        <span className="text-[17px] font-bold leading-none tracking-[-0.035em] text-black">
                           {formatPrice(p.price)} ₽
                         </span>
 
                         {p.oldPrice ? (
-                          <span className="text-[12px] font-medium leading-none text-[#A0A7B5] line-through decoration-[1px]">
+                          <span className="text-[12px] font-medium leading-none text-[#A0A7B5] line-through">
                             {formatPrice(p.oldPrice)} ₽
                           </span>
                         ) : null}
