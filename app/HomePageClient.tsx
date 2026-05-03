@@ -705,14 +705,13 @@ export default function HomePageClient({
               const visibleColors = (p.colors || []).slice(0, 3);
               const extraColorsCount = getExtraColorsCount(p.colors || []);
               const sizesLabel = getVisibleSizesLabel(p.sizes || []);
-              const isForeign = p.badge.trim().toLowerCase() === "из-за рубежа";
 
               return (
                 <article
                   key={p.id}
                   onClick={() => router.push(`/product?id=${p.id}`)}
                   onMouseEnter={() => router.prefetch(`/product?id=${p.id}`)}
-                  className="group cursor-pointer overflow-hidden rounded-[18px] bg-white shadow-[0_14px_34px_rgba(15,23,42,0.075)] transition active:scale-[0.985]"
+                  className="group cursor-pointer overflow-hidden rounded-[20px] bg-[#F8F8F8] shadow-[0_16px_40px_rgba(15,23,42,0.08)] transition active:scale-[0.985]"
                 >
                   <div
                     className="relative aspect-[3/4] overflow-hidden bg-[#ECECEC]"
@@ -736,25 +735,11 @@ export default function HomePageClient({
                       }}
                     />
 
-                    <div className="absolute left-2.5 top-2.5 flex flex-col gap-1.5">
-                      {discountPercent > 0 ? (
-                        <span className="w-fit rounded-full bg-black px-2 py-1 text-[10px] font-semibold leading-none text-white shadow-sm">
-                          -{discountPercent}%
-                        </span>
-                      ) : null}
-
-                      {p.badge && !discountPercent ? (
-                        <span
-                          className={`w-fit rounded-full px-2 py-1 text-[10px] font-medium leading-none shadow-sm ${
-                            isForeign
-                              ? "bg-black text-white"
-                              : "bg-white/90 text-black backdrop-blur"
-                          }`}
-                        >
-                          {p.badge}
-                        </span>
-                      ) : null}
-                    </div>
+                    {discountPercent > 0 && (
+                      <div className="absolute left-2.5 top-2.5 rounded-full bg-black px-2.5 py-1 text-[11px] font-semibold leading-none text-white">
+                        -{discountPercent}%
+                      </div>
+                    )}
 
                     <button
                       type="button"
@@ -762,8 +747,7 @@ export default function HomePageClient({
                         e.stopPropagation();
                         toggleFavorite(p.id);
                       }}
-                      className="absolute right-2.5 top-2.5 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-white/88 text-black/75 backdrop-blur shadow-sm active:scale-90"
-                      aria-label="В избранное"
+                      className="absolute right-2.5 top-2.5 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-white/86 text-black/80 backdrop-blur shadow-sm active:scale-90"
                     >
                       <svg
                         width="15"
@@ -778,18 +762,18 @@ export default function HomePageClient({
                     </button>
 
                     {imageCount > 1 && (
-                      <div className="absolute bottom-2.5 right-2.5 rounded-full bg-black/55 px-2 py-1 text-[10px] font-medium text-white backdrop-blur">
+                      <div className="absolute bottom-2.5 right-2.5 rounded-full bg-white/78 px-2 py-1 text-[10px] font-medium text-black backdrop-blur">
                         {currentImageIndex + 1}/{imageCount}
                       </div>
                     )}
                   </div>
 
-                  <div className="flex min-h-[176px] flex-col px-3 pb-3 pt-3">
+                  <div className="relative z-10 -mt-3 rounded-t-[20px] bg-white px-3.5 pb-3.5 pt-3 shadow-[0_-10px_24px_rgba(255,255,255,0.75)]">
                     <p className="truncate text-[10px] font-medium uppercase tracking-[0.16em] text-gray-400">
                       {p.brand}
                     </p>
 
-                    <h3 className="mt-1 line-clamp-2 min-h-[34px] text-[14px] font-medium leading-[1.2] text-[#111111]">
+                    <h3 className="mt-1 line-clamp-2 min-h-[34px] text-[14px] font-medium leading-[1.2] text-black">
                       {p.name}
                     </h3>
 
@@ -798,8 +782,8 @@ export default function HomePageClient({
                         {visibleColors.map((color, index) => (
                           <span
                             key={`${p.id}-${color}-${index}`}
-                            className={`block h-3.5 w-3.5 rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06)] ${
-                              color === "Белый" ? "border border-gray-300" : ""
+                            className={`block h-3.5 w-3.5 rounded-full border shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] ${
+                              color === "Белый" ? "border-gray-300" : "border-transparent"
                             }`}
                             style={{
                               backgroundColor: colorSwatches[color] || "#D1D5DB",
@@ -823,12 +807,12 @@ export default function HomePageClient({
 
                     <div className="mt-3">
                       <div className="flex flex-wrap items-end gap-x-2 gap-y-1">
-                        <span className="text-[18px] font-semibold leading-none tracking-[-0.04em] text-[#111111]">
+                        <span className="text-[18px] font-semibold leading-none tracking-[-0.04em] text-black">
                           {formatPrice(p.price)} ₽
                         </span>
 
                         {p.oldPrice ? (
-                          <span className="text-[12px] font-medium leading-none text-[#A0A7B5] line-through decoration-[1px]">
+                          <span className="text-[12px] font-medium leading-none text-gray-400 line-through decoration-[1px]">
                             {formatPrice(p.oldPrice)} ₽
                           </span>
                         ) : null}
