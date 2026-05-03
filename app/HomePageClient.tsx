@@ -193,12 +193,21 @@ function getVisibleSizesLabel(sizes: string[]) {
 
 function getExtraColorsCount(colors: string[]) {
   if (!Array.isArray(colors)) return 0;
-  return Math.max(colors.length - 3, 0);
+  return Math.max(colors.length - 4, 0);
 }
 
 function TruckIcon() {
   return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.9"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M10 17H6a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h8v10h-1" />
       <path d="M14 10h3l3 3v4h-1" />
       <circle cx="7.5" cy="17.5" r="1.5" />
@@ -209,7 +218,16 @@ function TruckIcon() {
 
 function FilterIcon() {
   return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M4 6h16" />
       <path d="M7 12h10" />
       <path d="M10 18h4" />
@@ -219,7 +237,16 @@ function FilterIcon() {
 
 function ChevronDownIcon() {
   return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="m6 9 6 6 6-6" />
     </svg>
   );
@@ -236,11 +263,15 @@ export default function HomePageClient({
   const router = useRouter();
 
   const [favorites, setFavorites] = useState<string[]>([]);
-  const [selectedDepartment, setSelectedDepartment] = useState<Department>("Мужчинам");
-  const [selectedMensCategory, setSelectedMensCategory] = useState<MensCategory>("Все");
-  const [selectedWomensCategory, setSelectedWomensCategory] = useState<WomensCategory>("Все");
+  const [selectedDepartment, setSelectedDepartment] =
+    useState<Department>("Мужчинам");
+  const [selectedMensCategory, setSelectedMensCategory] =
+    useState<MensCategory>("Все");
+  const [selectedWomensCategory, setSelectedWomensCategory] =
+    useState<WomensCategory>("Все");
   const [selectedBrand, setSelectedBrand] = useState("Все бренды");
-  const [selectedSort, setSelectedSort] = useState<SortOption>("По популярности");
+  const [selectedSort, setSelectedSort] =
+    useState<SortOption>("По популярности");
   const [selectedAvailability, setSelectedAvailability] = useState("Все товары");
   const [search, setSearch] = useState("");
   const [showSplash, setShowSplash] = useState(true);
@@ -283,15 +314,24 @@ export default function HomePageClient({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (sortMenuRef.current && !sortMenuRef.current.contains(event.target as Node)) {
+      if (
+        sortMenuRef.current &&
+        !sortMenuRef.current.contains(event.target as Node)
+      ) {
         setShowSortMenu(false);
       }
 
-      if (brandMenuWrapRef.current && !brandMenuWrapRef.current.contains(event.target as Node)) {
+      if (
+        brandMenuWrapRef.current &&
+        !brandMenuWrapRef.current.contains(event.target as Node)
+      ) {
         setShowBrandMenu(false);
       }
 
-      if (availabilityMenuRef.current && !availabilityMenuRef.current.contains(event.target as Node)) {
+      if (
+        availabilityMenuRef.current &&
+        !availabilityMenuRef.current.contains(event.target as Node)
+      ) {
         setShowAvailabilityMenu(false);
       }
     };
@@ -351,7 +391,8 @@ export default function HomePageClient({
         item.category.toLowerCase().includes(search.toLowerCase());
 
       const matchesAvailability =
-        selectedAvailability === "Все товары" || item.badge === selectedAvailability;
+        selectedAvailability === "Все товары" ||
+        item.badge === selectedAvailability;
 
       return matchesCategory && matchesBrand && matchesSearch && matchesAvailability;
     });
@@ -450,7 +491,14 @@ export default function HomePageClient({
         <div className="rounded-[22px] bg-white p-3 shadow-[0_12px_34px_rgba(15,23,42,0.055)]">
           <div className="rounded-[17px] bg-[#F5F5F5] px-3.5 py-3">
             <div className="flex items-center gap-3">
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="1.8">
+              <svg
+                width="17"
+                height="17"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#9CA3AF"
+                strokeWidth="1.8"
+              >
                 <circle cx="11" cy="11" r="7" />
                 <path d="M20 20L17 17" />
               </svg>
@@ -593,7 +641,9 @@ export default function HomePageClient({
                     setShowBrandMenu(false);
                   }}
                   className={`w-full rounded-xl px-3 py-2 text-left text-[13px] ${
-                    selectedBrand === "Все бренды" ? "bg-black text-white" : "text-gray-700"
+                    selectedBrand === "Все бренды"
+                      ? "bg-black text-white"
+                      : "text-gray-700"
                   }`}
                 >
                   Все бренды
@@ -608,7 +658,9 @@ export default function HomePageClient({
                       setShowBrandMenu(false);
                     }}
                     className={`w-full rounded-xl px-3 py-2 text-left text-[13px] ${
-                      selectedBrand === brand.name ? "bg-black text-white" : "text-gray-700"
+                      selectedBrand === brand.name
+                        ? "bg-black text-white"
+                        : "text-gray-700"
                     }`}
                   >
                     {brand.name}
@@ -639,7 +691,9 @@ export default function HomePageClient({
                       setShowSortMenu(false);
                     }}
                     className={`w-full rounded-xl px-3 py-2 text-left text-[13px] ${
-                      selectedSort === option ? "bg-black text-white" : "text-gray-700"
+                      selectedSort === option
+                        ? "bg-black text-white"
+                        : "text-gray-700"
                     }`}
                   >
                     {option}
@@ -669,7 +723,9 @@ export default function HomePageClient({
                       setShowAvailabilityMenu(false);
                     }}
                     className={`w-full rounded-xl px-3 py-2 text-left text-[13px] ${
-                      selectedAvailability === option ? "bg-black text-white" : "text-gray-700"
+                      selectedAvailability === option
+                        ? "bg-black text-white"
+                        : "text-gray-700"
                     }`}
                   >
                     {option}
@@ -702,7 +758,7 @@ export default function HomePageClient({
               const currentImageIndex = cardImageIndexes[p.id] || 0;
               const currentImage =
                 p.images[currentImageIndex] || p.image || "/products/product-1.jpg";
-              const visibleColors = (p.colors || []).slice(0, 3);
+              const visibleColors = (p.colors || []).slice(0, 4);
               const extraColorsCount = getExtraColorsCount(p.colors || []);
               const sizesLabel = getVisibleSizesLabel(p.sizes || []);
 
@@ -711,7 +767,7 @@ export default function HomePageClient({
                   key={p.id}
                   onClick={() => router.push(`/product?id=${p.id}`)}
                   onMouseEnter={() => router.prefetch(`/product?id=${p.id}`)}
-                  className="group cursor-pointer overflow-hidden rounded-[20px] bg-[#F8F8F8] shadow-[0_16px_40px_rgba(15,23,42,0.08)] transition active:scale-[0.985]"
+                  className="group cursor-pointer overflow-hidden rounded-[20px] bg-white shadow-[0_14px_34px_rgba(15,23,42,0.08)] transition active:scale-[0.985]"
                 >
                   <div
                     className="relative aspect-[3/4] overflow-hidden bg-[#ECECEC]"
@@ -736,7 +792,7 @@ export default function HomePageClient({
                     />
 
                     {discountPercent > 0 && (
-                      <div className="absolute left-2.5 top-2.5 rounded-full bg-black px-2.5 py-1 text-[11px] font-semibold leading-none text-white">
+                      <div className="absolute left-2.5 bottom-3 rounded-[8px] bg-black px-2 py-1 text-[11px] font-semibold leading-none text-white">
                         -{discountPercent}%
                       </div>
                     )}
@@ -747,7 +803,8 @@ export default function HomePageClient({
                         e.stopPropagation();
                         toggleFavorite(p.id);
                       }}
-                      className="absolute right-2.5 top-2.5 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-white/86 text-black/80 backdrop-blur shadow-sm active:scale-90"
+                      className="absolute right-2.5 top-2.5 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-white/88 text-black/80 backdrop-blur shadow-sm active:scale-90"
+                      aria-label="В избранное"
                     >
                       <svg
                         width="15"
@@ -762,14 +819,34 @@ export default function HomePageClient({
                     </button>
 
                     {imageCount > 1 && (
-                      <div className="absolute bottom-2.5 right-2.5 rounded-full bg-white/78 px-2 py-1 text-[10px] font-medium text-black backdrop-blur">
+                      <div className="absolute bottom-3 right-2.5 rounded-full bg-white/78 px-2 py-1 text-[10px] font-medium text-black backdrop-blur">
                         {currentImageIndex + 1}/{imageCount}
                       </div>
                     )}
                   </div>
 
-                  <div className="relative z-10 -mt-3 rounded-t-[20px] bg-white px-3.5 pb-3.5 pt-3 shadow-[0_-10px_24px_rgba(255,255,255,0.75)]">
-                    <p className="truncate text-[10px] font-medium uppercase tracking-[0.16em] text-gray-400">
+                  <div className="px-3 pb-3 pt-2.5">
+                    <div className="mb-2 flex min-h-[18px] items-center gap-1.5">
+                      {visibleColors.map((color, index) => (
+                        <span
+                          key={`${p.id}-${color}-${index}`}
+                          className={`block h-3.5 w-3.5 rounded-full border shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] ${
+                            color === "Белый" ? "border-gray-300" : "border-transparent"
+                          }`}
+                          style={{
+                            backgroundColor: colorSwatches[color] || "#D1D5DB",
+                          }}
+                        />
+                      ))}
+
+                      {extraColorsCount > 0 && (
+                        <span className="text-[11px] font-medium text-gray-500">
+                          +{extraColorsCount}
+                        </span>
+                      )}
+                    </div>
+
+                    <p className="truncate text-[10px] font-medium uppercase tracking-[0.14em] text-gray-400">
                       {p.brand}
                     </p>
 
@@ -777,51 +854,27 @@ export default function HomePageClient({
                       {p.name}
                     </h3>
 
-                    <div className="mt-2 flex min-h-[18px] items-center gap-2">
-                      <div className="flex items-center gap-1.5">
-                        {visibleColors.map((color, index) => (
-                          <span
-                            key={`${p.id}-${color}-${index}`}
-                            className={`block h-3.5 w-3.5 rounded-full border shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] ${
-                              color === "Белый" ? "border-gray-300" : "border-transparent"
-                            }`}
-                            style={{
-                              backgroundColor: colorSwatches[color] || "#D1D5DB",
-                            }}
-                          />
-                        ))}
+                    {sizesLabel ? (
+                      <p className="mt-1 truncate text-[11px] font-medium text-gray-400">
+                        {sizesLabel}
+                      </p>
+                    ) : null}
 
-                        {extraColorsCount > 0 && (
-                          <span className="text-[11px] font-medium text-gray-400">
-                            +{extraColorsCount}
-                          </span>
-                        )}
-                      </div>
+                    <div className="mt-2 flex flex-wrap items-end gap-x-2 gap-y-1">
+                      <span className="text-[18px] font-bold leading-none tracking-[-0.04em] text-black">
+                        {formatPrice(p.price)} ₽
+                      </span>
 
-                      {sizesLabel ? (
-                        <span className="truncate text-[11px] font-medium text-gray-400">
-                          · {sizesLabel}
+                      {p.oldPrice ? (
+                        <span className="text-[12px] font-medium leading-none text-gray-400 line-through decoration-[1px]">
+                          {formatPrice(p.oldPrice)} ₽
                         </span>
                       ) : null}
                     </div>
 
-                    <div className="mt-3">
-                      <div className="flex flex-wrap items-end gap-x-2 gap-y-1">
-                        <span className="text-[18px] font-semibold leading-none tracking-[-0.04em] text-black">
-                          {formatPrice(p.price)} ₽
-                        </span>
-
-                        {p.oldPrice ? (
-                          <span className="text-[12px] font-medium leading-none text-gray-400 line-through decoration-[1px]">
-                            {formatPrice(p.oldPrice)} ₽
-                          </span>
-                        ) : null}
-                      </div>
-
-                      <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-[#F6F6F6] px-2.5 py-1.5 text-[10.5px] font-medium text-[#5F6673]">
-                        <TruckIcon />
-                        <span>{getDeliveryLabel(p.badge)}</span>
-                      </div>
+                    <div className="mt-2 flex items-center gap-1.5 text-[11.5px] font-medium text-[#5F6673]">
+                      <TruckIcon />
+                      <span>{getDeliveryLabel(p.badge)}</span>
                     </div>
                   </div>
                 </article>
