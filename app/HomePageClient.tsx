@@ -14,7 +14,7 @@ const sortOptions = ["По популярности", "Сначала дешев
 const banners = [
   {
     image: "/banner.jpg",
-    alt: "Новая коллекция",
+    alt: "Весна Лето 2026",
     link: "/",
   },
 ] as const;
@@ -67,12 +67,12 @@ const colorSwatches: Record<string, string> = {
 
 function CategoryIcon({ name }: { name: string }) {
   const common = {
-    width: 26,
-    height: 26,
+    width: 22,
+    height: 22,
     viewBox: "0 0 24 24",
     fill: "none",
     stroke: "currentColor",
-    strokeWidth: 1.8,
+    strokeWidth: 1.9,
     strokeLinecap: "round" as const,
     strokeLinejoin: "round" as const,
   };
@@ -165,6 +165,59 @@ function CategoryIcon({ name }: { name: string }) {
   return (
     <svg {...common}>
       <circle cx="12" cy="12" r="8" />
+    </svg>
+  );
+}
+
+function MenuIcon() {
+  return (
+    <svg
+      width="21"
+      height="21"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+    >
+      <path d="M4 7h16" />
+      <path d="M4 12h12" />
+      <path d="M4 17h8" />
+    </svg>
+  );
+}
+
+function BagIcon() {
+  return (
+    <svg
+      width="21"
+      height="21"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M6 8h12l-1 12H7L6 8Z" />
+      <path d="M9 8a3 3 0 0 1 6 0" />
+    </svg>
+  );
+}
+
+function SearchIcon() {
+  return (
+    <svg
+      width="15"
+      height="15"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.9"
+      strokeLinecap="round"
+    >
+      <circle cx="11" cy="11" r="7" />
+      <path d="M20 20L17 17" />
     </svg>
   );
 }
@@ -487,68 +540,81 @@ export default function HomePageClient({
     <>
       {showSplash && <AppSplash />}
 
-      <main className="min-h-screen bg-[#F5F5F5] px-3 pt-[76px] pb-32">
-        <div className="mb-4 flex items-center justify-center">
+      <main className="min-h-screen bg-[#070807] px-3 pt-[76px] pb-32 text-white">
+        <div className="mb-4 flex items-center justify-between">
+          <button
+            type="button"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-white/7 text-white/80"
+            aria-label="Меню"
+          >
+            <MenuIcon />
+          </button>
+
           <button type="button" onClick={resetPage} className="text-center">
-            <p className="text-[18px] font-semibold tracking-[0.13em] text-black">
+            <p className="text-[16px] font-semibold tracking-[0.24em] text-white">
               MONTREAUX
             </p>
-            <p className="mt-0.5 text-[8px] uppercase tracking-[0.32em] text-gray-400">
+            <p className="mt-1 text-[8px] uppercase tracking-[0.35em] text-[#B7A37D]">
               Fashion
             </p>
           </button>
+
+          <button
+            type="button"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-[#152317] text-[#D8C8A2]"
+            aria-label="Корзина"
+            onClick={() => router.push("/cart")}
+          >
+            <BagIcon />
+          </button>
         </div>
 
-        <div className="rounded-[22px] bg-white p-3 shadow-[0_12px_34px_rgba(15,23,42,0.055)]">
-          <div className="rounded-[17px] bg-[#F5F5F5] px-3.5 py-3">
-            <div className="flex items-center gap-3">
-              <svg
-                width="17"
-                height="17"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#9CA3AF"
-                strokeWidth="1.8"
-              >
-                <circle cx="11" cy="11" r="7" />
-                <path d="M20 20L17 17" />
-              </svg>
+        <div className="rounded-[26px] bg-[#0F1611] p-3 shadow-[0_18px_44px_rgba(0,0,0,0.35)]">
+          <div className="rounded-[18px] border border-white/6 bg-[#172018] px-3.5 py-3">
+            <div className="flex items-center gap-2.5 text-white/55">
+              <SearchIcon />
 
               <input
                 placeholder="Поиск товаров..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full bg-transparent text-[13px] outline-none placeholder:text-gray-400"
+                className="w-full bg-transparent text-[13px] text-white outline-none placeholder:text-white/40"
               />
+
+              <button
+                type="button"
+                className="text-[#9EBD82]"
+                aria-label="Поиск"
+              >
+                <SearchIcon />
+              </button>
             </div>
           </div>
 
-          <div className="mt-3 rounded-[16px] bg-[#F2F2F2] p-1">
-            <div className="grid grid-cols-2 gap-1">
-              {departments.map((department) => (
-                <button
-                  key={department}
-                  type="button"
-                  onClick={() => {
-                    setSelectedDepartment(department);
-                    setSelectedBrand("Все бренды");
-                    setSelectedAvailability("Все товары");
-                    setSearch("");
-                  }}
-                  className={`rounded-[13px] px-4 py-2.5 text-[13px] font-medium transition-all ${
-                    selectedDepartment === department
-                      ? "bg-black text-white shadow-[0_8px_18px_rgba(0,0,0,0.13)]"
-                      : "text-[#525252]"
-                  }`}
-                >
-                  {department}
-                </button>
-              ))}
-            </div>
+          <div className="mt-3 grid grid-cols-2 gap-2 rounded-[18px] bg-black/28 p-1.5">
+            {departments.map((department) => (
+              <button
+                key={department}
+                type="button"
+                onClick={() => {
+                  setSelectedDepartment(department);
+                  setSelectedBrand("Все бренды");
+                  setSelectedAvailability("Все товары");
+                  setSearch("");
+                }}
+                className={`rounded-[15px] px-4 py-3 text-[13px] font-medium transition-all ${
+                  selectedDepartment === department
+                    ? "bg-[#395C3C] text-white shadow-[0_10px_22px_rgba(57,92,60,0.28)]"
+                    : "text-white/55"
+                }`}
+              >
+                {department}
+              </button>
+            ))}
           </div>
 
           <div className="mt-3 overflow-x-auto">
-            <div className="flex min-w-max gap-3 pr-6">
+            <div className="flex min-w-max gap-2.5 pr-6">
               {currentCategories.map((category) => {
                 const isActive = currentCategory === category;
 
@@ -563,21 +629,21 @@ export default function HomePageClient({
                         setSelectedWomensCategory(category as WomensCategory);
                       }
                     }}
-                    className="w-[64px] shrink-0"
+                    className="w-[58px] shrink-0"
                   >
                     <div
-                      className={`flex h-[56px] w-[64px] items-center justify-center rounded-[15px] transition ${
+                      className={`flex h-[52px] w-[58px] items-center justify-center rounded-[16px] border transition ${
                         isActive
-                          ? "bg-black text-white shadow-[0_10px_22px_rgba(0,0,0,0.16)]"
-                          : "bg-[#F6F6F6] text-black"
+                          ? "border-[#9EBD82]/60 bg-[#395C3C] text-[#E6F2DB]"
+                          : "border-white/7 bg-[#172018] text-[#B7A37D]"
                       }`}
                     >
                       <CategoryIcon name={category} />
                     </div>
 
                     <p
-                      className={`mt-1.5 truncate text-center text-[11px] ${
-                        isActive ? "font-medium text-black" : "text-[#525252]"
+                      className={`mt-1.5 truncate text-center text-[10px] ${
+                        isActive ? "font-medium text-white" : "text-white/50"
                       }`}
                     >
                       {category}
@@ -589,26 +655,30 @@ export default function HomePageClient({
           </div>
         </div>
 
-        <div className="mt-3 overflow-hidden rounded-[20px] bg-white shadow-[0_12px_34px_rgba(15,23,42,0.06)]">
+        <div className="mt-3 overflow-hidden rounded-[24px] bg-[#111] shadow-[0_18px_44px_rgba(0,0,0,0.35)]">
           <button
             type="button"
             onClick={() => router.push(banners[0].link)}
-            className="relative block h-[176px] w-full overflow-hidden"
+            className="relative block h-[188px] w-full overflow-hidden"
           >
             <img
               src={banners[0].image}
               alt={banners[0].alt}
-              className="h-full w-full object-cover"
+              className="h-full w-full object-cover opacity-90"
             />
 
-            <div className="absolute inset-0 bg-gradient-to-r from-black/58 via-black/24 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/76 via-black/42 to-transparent" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_85%_15%,rgba(158,189,130,0.18),transparent_38%)]" />
 
             <div className="absolute left-4 top-4 max-w-[190px] text-left">
-              <p className="text-[11px] text-white/75">Новая коллекция</p>
-              <h2 className="mt-1 text-[24px] font-semibold leading-[1.05] tracking-[-0.03em] text-white">
-                Весна / Лето 2025
+              <p className="text-[10px] uppercase tracking-[0.16em] text-[#B7A37D]">
+                Новая коллекция
+              </p>
+              <h2 className="mt-1 text-[25px] font-semibold leading-[1.05] tracking-[-0.04em] text-white">
+                Весна Лето 2026
               </h2>
-              <span className="mt-4 inline-flex rounded-[10px] bg-white px-4 py-2 text-[12px] font-medium text-black">
+              <p className="mt-2 text-[11px] text-white/58">до -50%</p>
+              <span className="mt-5 inline-flex rounded-[12px] bg-[#F4EFE2] px-4 py-2 text-[12px] font-medium text-black">
                 Смотреть
               </span>
             </div>
@@ -623,8 +693,8 @@ export default function HomePageClient({
               onClick={() => setSelectedAvailability(option)}
               className={`shrink-0 rounded-full px-4 py-2.5 text-[12px] font-medium transition ${
                 selectedAvailability === option
-                  ? "border border-black bg-white text-black"
-                  : "bg-white text-[#525252]"
+                  ? "bg-[#F4EFE2] text-black"
+                  : "bg-[#111811] text-white/65"
               }`}
             >
               {option}
@@ -637,14 +707,14 @@ export default function HomePageClient({
             <button
               type="button"
               onClick={() => setShowBrandMenu((prev) => !prev)}
-              className="flex h-[42px] w-full items-center justify-between rounded-[13px] bg-white px-3 text-[12px] font-medium text-black shadow-[0_6px_18px_rgba(0,0,0,0.04)]"
+              className="flex h-[42px] w-full items-center justify-between rounded-[14px] border border-white/6 bg-[#111811] px-3 text-[12px] font-medium text-white/82"
             >
               <span className="truncate">{selectedBrand}</span>
               <ChevronDownIcon />
             </button>
 
             {showBrandMenu && (
-              <div className="absolute left-0 top-[48px] z-50 max-h-72 w-full overflow-y-auto rounded-2xl bg-white p-1.5 shadow-[0_16px_40px_rgba(0,0,0,0.14)]">
+              <div className="absolute left-0 top-[48px] z-50 max-h-72 w-full overflow-y-auto rounded-2xl bg-[#111811] p-1.5 shadow-[0_16px_40px_rgba(0,0,0,0.5)]">
                 <button
                   type="button"
                   onClick={() => {
@@ -653,8 +723,8 @@ export default function HomePageClient({
                   }}
                   className={`w-full rounded-xl px-3 py-2 text-left text-[13px] ${
                     selectedBrand === "Все бренды"
-                      ? "bg-black text-white"
-                      : "text-gray-700"
+                      ? "bg-[#395C3C] text-white"
+                      : "text-white/70"
                   }`}
                 >
                   Все бренды
@@ -670,8 +740,8 @@ export default function HomePageClient({
                     }}
                     className={`w-full rounded-xl px-3 py-2 text-left text-[13px] ${
                       selectedBrand === brand.name
-                        ? "bg-black text-white"
-                        : "text-gray-700"
+                        ? "bg-[#395C3C] text-white"
+                        : "text-white/70"
                     }`}
                   >
                     {brand.name}
@@ -685,14 +755,14 @@ export default function HomePageClient({
             <button
               type="button"
               onClick={() => setShowSortMenu((prev) => !prev)}
-              className="flex h-[42px] w-full items-center justify-between rounded-[13px] bg-white px-3 text-[12px] font-medium text-black shadow-[0_6px_18px_rgba(0,0,0,0.04)]"
+              className="flex h-[42px] w-full items-center justify-between rounded-[14px] border border-white/6 bg-[#111811] px-3 text-[12px] font-medium text-white/82"
             >
               <span className="truncate">{selectedSort}</span>
               <ChevronDownIcon />
             </button>
 
             {showSortMenu && (
-              <div className="absolute right-0 top-[48px] z-50 w-full rounded-2xl bg-white p-1.5 shadow-[0_10px_30px_rgba(0,0,0,0.10)]">
+              <div className="absolute right-0 top-[48px] z-50 w-full rounded-2xl bg-[#111811] p-1.5 shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
                 {sortOptions.map((option) => (
                   <button
                     key={option}
@@ -703,8 +773,8 @@ export default function HomePageClient({
                     }}
                     className={`w-full rounded-xl px-3 py-2 text-left text-[13px] ${
                       selectedSort === option
-                        ? "bg-black text-white"
-                        : "text-gray-700"
+                        ? "bg-[#395C3C] text-white"
+                        : "text-white/70"
                     }`}
                   >
                     {option}
@@ -718,13 +788,13 @@ export default function HomePageClient({
             <button
               type="button"
               onClick={() => setShowAvailabilityMenu((prev) => !prev)}
-              className="flex h-[42px] w-[44px] items-center justify-center rounded-[13px] bg-white text-black shadow-[0_6px_18px_rgba(0,0,0,0.04)]"
+              className="flex h-[42px] w-[44px] items-center justify-center rounded-[14px] border border-white/6 bg-[#111811] text-[#B7A37D]"
             >
               <FilterIcon />
             </button>
 
             {showAvailabilityMenu && (
-              <div className="absolute right-0 top-[48px] z-50 w-52 rounded-2xl bg-white p-1.5 shadow-[0_16px_40px_rgba(0,0,0,0.14)]">
+              <div className="absolute right-0 top-[48px] z-50 w-52 rounded-2xl bg-[#111811] p-1.5 shadow-[0_16px_40px_rgba(0,0,0,0.5)]">
                 {["Все товары", "В наличии", "Из-за рубежа"].map((option) => (
                   <button
                     key={option}
@@ -735,8 +805,8 @@ export default function HomePageClient({
                     }}
                     className={`w-full rounded-xl px-3 py-2 text-left text-[13px] ${
                       selectedAvailability === option
-                        ? "bg-black text-white"
-                        : "text-gray-700"
+                        ? "bg-[#395C3C] text-white"
+                        : "text-white/70"
                     }`}
                   >
                     {option}
@@ -748,14 +818,14 @@ export default function HomePageClient({
         </div>
 
         {filteredProducts.length === 0 ? (
-          <div className="mt-4 rounded-[22px] bg-white p-7 text-center shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
-            <p className="text-[16px] font-medium text-black">
+          <div className="mt-4 rounded-[22px] bg-[#111811] p-7 text-center shadow-[0_8px_28px_rgba(0,0,0,0.22)]">
+            <p className="text-[16px] font-medium text-white">
               {selectedDepartment === "Женщинам"
                 ? "Женский раздел пока в разработке"
                 : "Ничего не найдено"}
             </p>
 
-            <p className="mt-2 text-sm text-gray-400">
+            <p className="mt-2 text-sm text-white/45">
               {selectedDepartment === "Женщинам"
                 ? "Скоро здесь появятся товары"
                 : "Попробуйте изменить фильтры"}
@@ -777,10 +847,10 @@ export default function HomePageClient({
                   key={p.id}
                   onClick={() => router.push(`/product?id=${p.id}`)}
                   onMouseEnter={() => router.prefetch(`/product?id=${p.id}`)}
-                  className="group cursor-pointer overflow-hidden rounded-[18px] bg-white shadow-[0_10px_26px_rgba(15,23,42,0.065)] transition active:scale-[0.985]"
+                  className="group cursor-pointer overflow-hidden rounded-[18px] bg-[#111811] shadow-[0_12px_32px_rgba(0,0,0,0.28)] transition active:scale-[0.985]"
                 >
                   <div
-                    className="relative aspect-[3/4] overflow-hidden bg-[#ECECEC]"
+                    className="relative aspect-[3/4] overflow-hidden bg-[#0C0F0C]"
                     onTouchStart={(e) =>
                       handleCardTouchStart(p.id, e.touches[0]?.clientX ?? 0)
                     }
@@ -802,7 +872,7 @@ export default function HomePageClient({
                     />
 
                     {discountPercent > 0 && (
-                      <div className="absolute left-2.5 bottom-3 rounded-[8px] bg-black px-2 py-1 text-[11px] font-semibold leading-none text-white">
+                      <div className="absolute left-2.5 bottom-3 rounded-[8px] bg-black/80 px-2 py-1 text-[11px] font-semibold leading-none text-white">
                         -{discountPercent}%
                       </div>
                     )}
@@ -827,11 +897,11 @@ export default function HomePageClient({
                   </div>
 
                   <div className="px-3 pb-3 pt-2.5">
-                    <p className="truncate text-[10px] font-medium uppercase tracking-[0.14em] text-gray-400">
+                    <p className="truncate text-[10px] font-medium uppercase tracking-[0.14em] text-[#B7A37D]/70">
                       {p.brand}
                     </p>
 
-                    <h3 className="mt-1 line-clamp-2 min-h-[34px] text-[14px] font-medium leading-[1.2] text-black">
+                    <h3 className="mt-1 line-clamp-2 min-h-[34px] text-[14px] font-medium leading-[1.2] text-white">
                       {p.name}
                     </h3>
 
@@ -839,8 +909,8 @@ export default function HomePageClient({
                       {visibleColors.map((color, index) => (
                         <span
                           key={`${p.id}-${color}-${index}`}
-                          className={`block h-3.5 w-3.5 rounded-full border shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] ${
-                            color === "Белый" ? "border-gray-300" : "border-transparent"
+                          className={`block h-3.5 w-3.5 rounded-full border shadow-[inset_0_0_0_1px_rgba(0,0,0,0.12)] ${
+                            color === "Белый" ? "border-white/45" : "border-white/10"
                           }`}
                           style={{
                             backgroundColor: colorSwatches[color] || "#D1D5DB",
@@ -849,25 +919,25 @@ export default function HomePageClient({
                       ))}
 
                       {extraColorsCount > 0 && (
-                        <span className="text-[11px] font-medium text-gray-500">
+                        <span className="text-[11px] font-medium text-white/45">
                           +{extraColorsCount}
                         </span>
                       )}
                     </div>
 
                     <div className="mt-2 flex flex-wrap items-end gap-x-2 gap-y-1">
-                      <span className="text-[18px] font-bold leading-none tracking-[-0.04em] text-black">
+                      <span className="text-[18px] font-bold leading-none tracking-[-0.04em] text-white">
                         {formatPrice(p.price)} ₽
                       </span>
 
                       {p.oldPrice ? (
-                        <span className="text-[12px] font-medium leading-none text-gray-400 line-through decoration-[1px]">
+                        <span className="text-[12px] font-medium leading-none text-white/35 line-through decoration-[1px]">
                           {formatPrice(p.oldPrice)} ₽
                         </span>
                       ) : null}
                     </div>
 
-                    <div className="mt-2 flex items-center gap-1.5 text-[10px] font-medium text-[#6B7280]">
+                    <div className="mt-2 flex items-center gap-1.5 text-[10px] font-medium text-white/50">
                       <TruckIcon />
                       <span>{getDeliveryLabel(p.badge)}</span>
                     </div>
