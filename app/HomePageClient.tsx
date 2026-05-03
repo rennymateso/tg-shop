@@ -185,15 +185,9 @@ function getDeliveryLabel(badge: string) {
     : "Доставка 1–3 дня";
 }
 
-function getVisibleSizesLabel(sizes: string[]) {
-  if (!Array.isArray(sizes) || sizes.length === 0) return "";
-  if (sizes.length <= 4) return sizes.join(" · ");
-  return `${sizes.length} размеров`;
-}
-
 function getExtraColorsCount(colors: string[]) {
   if (!Array.isArray(colors)) return 0;
-  return Math.max(colors.length - 4, 0);
+  return Math.max(colors.length - 3, 0);
 }
 
 function TruckIcon() {
@@ -248,6 +242,23 @@ function ChevronDownIcon() {
       strokeLinejoin="round"
     >
       <path d="m6 9 6 6 6-6" />
+    </svg>
+  );
+}
+
+function HeartIcon({ active }: { active: boolean }) {
+  return (
+    <svg
+      width="19"
+      height="19"
+      viewBox="0 0 24 24"
+      fill={active ? "currentColor" : "none"}
+      stroke="currentColor"
+      strokeWidth="1.65"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M20.8 4.6c-1.8-1.8-4.7-1.8-6.5 0L12 6.9l-2.3-2.3c-1.8-1.8-4.7-1.8-6.5 0s-1.8 4.7 0 6.5L12 21l8.8-9.9c1.8-1.8 1.8-4.7 0-6.5z" />
     </svg>
   );
 }
@@ -758,16 +769,15 @@ export default function HomePageClient({
               const currentImageIndex = cardImageIndexes[p.id] || 0;
               const currentImage =
                 p.images[currentImageIndex] || p.image || "/products/product-1.jpg";
-              const visibleColors = (p.colors || []).slice(0, 4);
+              const visibleColors = (p.colors || []).slice(0, 3);
               const extraColorsCount = getExtraColorsCount(p.colors || []);
-              const sizesLabel = getVisibleSizesLabel(p.sizes || []);
 
               return (
                 <article
                   key={p.id}
                   onClick={() => router.push(`/product?id=${p.id}`)}
                   onMouseEnter={() => router.prefetch(`/product?id=${p.id}`)}
-                  className="group cursor-pointer overflow-hidden rounded-[20px] bg-white shadow-[0_14px_34px_rgba(15,23,42,0.08)] transition active:scale-[0.985]"
+                  className="group cursor-pointer overflow-hidden rounded-[18px] bg-white shadow-[0_10px_26px_rgba(15,23,42,0.065)] transition active:scale-[0.985]"
                 >
                   <div
                     className="relative aspect-[3/4] overflow-hidden bg-[#ECECEC]"
@@ -803,30 +813,29 @@ export default function HomePageClient({
                         e.stopPropagation();
                         toggleFavorite(p.id);
                       }}
-                      className="absolute right-2.5 top-2.5 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-white/88 text-black/80 backdrop-blur shadow-sm active:scale-90"
+                      className="absolute right-2.5 top-2.5 z-20 text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.35)] active:scale-90"
                       aria-label="В избранное"
                     >
-                      <svg
-                        width="15"
-                        height="15"
-                        viewBox="0 0 24 24"
-                        fill={favorites.includes(p.id) ? "black" : "none"}
-                        stroke="black"
-                        strokeWidth="1.55"
-                      >
-                        <path d="M20.8 4.6c-1.8-1.8-4.7-1.8-6.5 0L12 6.9l-2.3-2.3c-1.8-1.8-4.7-1.8-6.5 0s-1.8 4.7 0 6.5L12 21l8.8-9.9c1.8-1.8 1.8-4.7 0-6.5z" />
-                      </svg>
+                      <HeartIcon active={favorites.includes(p.id)} />
                     </button>
 
                     {imageCount > 1 && (
-                      <div className="absolute bottom-3 right-2.5 rounded-full bg-white/78 px-2 py-1 text-[10px] font-medium text-black backdrop-blur">
+                      <div className="absolute bottom-3 right-2.5 rounded-full bg-black/24 px-2 py-1 text-[10px] font-medium text-white backdrop-blur-sm">
                         {currentImageIndex + 1}/{imageCount}
                       </div>
                     )}
                   </div>
 
                   <div className="px-3 pb-3 pt-2.5">
-                    <div className="mb-2 flex min-h-[18px] items-center gap-1.5">
+                    <p className="truncate text-[10px] font-medium uppercase tracking-[0.14em] text-gray-400">
+                      {p.brand}
+                    </p>
+
+                    <h3 className="mt-1 line-clamp-2 min-h-[34px] text-[14px] font-medium leading-[1.2] text-black">
+                      {p.name}
+                    </h3>
+
+                    <div className="mt-2 flex min-h-[18px] items-center gap-1.5">
                       {visibleColors.map((color, index) => (
                         <span
                           key={`${p.id}-${color}-${index}`}
@@ -846,20 +855,6 @@ export default function HomePageClient({
                       )}
                     </div>
 
-                    <p className="truncate text-[10px] font-medium uppercase tracking-[0.14em] text-gray-400">
-                      {p.brand}
-                    </p>
-
-                    <h3 className="mt-1 line-clamp-2 min-h-[34px] text-[14px] font-medium leading-[1.2] text-black">
-                      {p.name}
-                    </h3>
-
-                    {sizesLabel ? (
-                      <p className="mt-1 truncate text-[11px] font-medium text-gray-400">
-                        {sizesLabel}
-                      </p>
-                    ) : null}
-
                     <div className="mt-2 flex flex-wrap items-end gap-x-2 gap-y-1">
                       <span className="text-[18px] font-bold leading-none tracking-[-0.04em] text-black">
                         {formatPrice(p.price)} ₽
@@ -872,7 +867,7 @@ export default function HomePageClient({
                       ) : null}
                     </div>
 
-                    <div className="mt-2 flex items-center gap-1.5 text-[11.5px] font-medium text-[#5F6673]">
+                    <div className="mt-2 flex items-center gap-1.5 text-[10px] font-medium text-[#6B7280]">
                       <TruckIcon />
                       <span>{getDeliveryLabel(p.badge)}</span>
                     </div>
