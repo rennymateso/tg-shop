@@ -188,7 +188,7 @@ function getDeliveryLabel(badge: string) {
 function getVisibleSizesLabel(sizes: string[]) {
   if (!Array.isArray(sizes) || sizes.length === 0) return "";
   if (sizes.length <= 4) return sizes.join(" · ");
-  return `${sizes[0]}–${sizes[sizes.length - 1]}`;
+  return `${sizes.length} размеров`;
 }
 
 function getExtraColorsCount(colors: string[]) {
@@ -705,16 +705,17 @@ export default function HomePageClient({
               const visibleColors = (p.colors || []).slice(0, 3);
               const extraColorsCount = getExtraColorsCount(p.colors || []);
               const sizesLabel = getVisibleSizesLabel(p.sizes || []);
+              const isForeign = p.badge.trim().toLowerCase() === "из-за рубежа";
 
               return (
-                <div
+                <article
                   key={p.id}
                   onClick={() => router.push(`/product?id=${p.id}`)}
                   onMouseEnter={() => router.prefetch(`/product?id=${p.id}`)}
-                  className="group cursor-pointer overflow-hidden rounded-[16px] bg-white shadow-[0_10px_28px_rgba(15,23,42,0.06)] transition active:scale-[0.985]"
+                  className="group cursor-pointer overflow-hidden rounded-[18px] bg-white shadow-[0_14px_34px_rgba(15,23,42,0.075)] transition active:scale-[0.985]"
                 >
                   <div
-                    className="relative aspect-[3/4] overflow-hidden bg-[#EAEAEA]"
+                    className="relative aspect-[3/4] overflow-hidden bg-[#ECECEC]"
                     onTouchStart={(e) =>
                       handleCardTouchStart(p.id, e.touches[0]?.clientX ?? 0)
                     }
@@ -729,17 +730,31 @@ export default function HomePageClient({
                     <img
                       src={currentImage}
                       alt={p.name}
-                      className="h-full w-full object-cover"
+                      className="h-full w-full object-cover transition duration-300 group-active:scale-[1.02]"
                       onError={(e) => {
                         e.currentTarget.src = "/products/product-1.jpg";
                       }}
                     />
 
-                    {discountPercent > 0 && (
-                      <div className="absolute left-2.5 top-2.5 rounded-full bg-black px-2 py-1 text-[10px] font-semibold text-white">
-                        -{discountPercent}%
-                      </div>
-                    )}
+                    <div className="absolute left-2.5 top-2.5 flex flex-col gap-1.5">
+                      {discountPercent > 0 ? (
+                        <span className="w-fit rounded-full bg-black px-2 py-1 text-[10px] font-semibold leading-none text-white shadow-sm">
+                          -{discountPercent}%
+                        </span>
+                      ) : null}
+
+                      {p.badge && !discountPercent ? (
+                        <span
+                          className={`w-fit rounded-full px-2 py-1 text-[10px] font-medium leading-none shadow-sm ${
+                            isForeign
+                              ? "bg-black text-white"
+                              : "bg-white/90 text-black backdrop-blur"
+                          }`}
+                        >
+                          {p.badge}
+                        </span>
+                      ) : null}
+                    </div>
 
                     <button
                       type="button"
@@ -747,44 +762,43 @@ export default function HomePageClient({
                         e.stopPropagation();
                         toggleFavorite(p.id);
                       }}
-                      className="absolute right-2.5 top-2.5 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-white/86 text-black/80 backdrop-blur shadow-sm active:scale-90"
+                      className="absolute right-2.5 top-2.5 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-white/88 text-black/75 backdrop-blur shadow-sm active:scale-90"
+                      aria-label="В избранное"
                     >
                       <svg
-                        width="16"
-                        height="16"
+                        width="15"
+                        height="15"
                         viewBox="0 0 24 24"
                         fill={favorites.includes(p.id) ? "black" : "none"}
                         stroke="black"
-                        strokeWidth="1.5"
+                        strokeWidth="1.55"
                       >
                         <path d="M20.8 4.6c-1.8-1.8-4.7-1.8-6.5 0L12 6.9l-2.3-2.3c-1.8-1.8-4.7-1.8-6.5 0s-1.8 4.7 0 6.5L12 21l8.8-9.9c1.8-1.8 1.8-4.7 0-6.5z" />
                       </svg>
                     </button>
 
                     {imageCount > 1 && (
-                      <div className="absolute bottom-2.5 right-2.5 rounded-full bg-black/55 px-2 py-1 text-[10px] text-white backdrop-blur">
+                      <div className="absolute bottom-2.5 right-2.5 rounded-full bg-black/55 px-2 py-1 text-[10px] font-medium text-white backdrop-blur">
                         {currentImageIndex + 1}/{imageCount}
                       </div>
                     )}
                   </div>
 
-                  <div className="flex min-h-[166px] flex-col px-3 pb-3 pt-2.5">
-                    <div className="h-[16px] overflow-hidden text-[10px] text-gray-400">
-                      <span className="max-w-[110px] break-words uppercase tracking-[0.14em]">
-                        {p.brand}
-                      </span>
-                    </div>
+                  <div className="flex min-h-[176px] flex-col px-3 pb-3 pt-3">
+                    <p className="truncate text-[10px] font-medium uppercase tracking-[0.16em] text-gray-400">
+                      {p.brand}
+                    </p>
 
-                    <h3 className="mt-1 line-clamp-2 min-h-[34px] text-[14px] font-medium leading-[1.2] text-black">
+                    <h3 className="mt-1 line-clamp-2 min-h-[34px] text-[14px] font-medium leading-[1.2] text-[#111111]">
                       {p.name}
                     </h3>
 
-                    <div className="mt-2 flex items-center gap-2">
+                    <div className="mt-2 flex min-h-[18px] items-center gap-2">
                       <div className="flex items-center gap-1.5">
                         {visibleColors.map((color, index) => (
                           <span
                             key={`${p.id}-${color}-${index}`}
-                            className={`block h-3.5 w-3.5 rounded-full ${
+                            className={`block h-3.5 w-3.5 rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06)] ${
                               color === "Белый" ? "border border-gray-300" : ""
                             }`}
                             style={{
@@ -801,32 +815,32 @@ export default function HomePageClient({
                       </div>
 
                       {sizesLabel ? (
-                        <span className="truncate text-[11px] text-gray-400">
+                        <span className="truncate text-[11px] font-medium text-gray-400">
                           · {sizesLabel}
                         </span>
                       ) : null}
                     </div>
 
                     <div className="mt-3">
-                      <div className="flex items-end gap-2">
-                        <span className="text-[17px] font-bold leading-none tracking-[-0.035em] text-black">
+                      <div className="flex flex-wrap items-end gap-x-2 gap-y-1">
+                        <span className="text-[18px] font-semibold leading-none tracking-[-0.04em] text-[#111111]">
                           {formatPrice(p.price)} ₽
                         </span>
 
                         {p.oldPrice ? (
-                          <span className="text-[12px] font-medium leading-none text-[#A0A7B5] line-through">
+                          <span className="text-[12px] font-medium leading-none text-[#A0A7B5] line-through decoration-[1px]">
                             {formatPrice(p.oldPrice)} ₽
                           </span>
                         ) : null}
                       </div>
 
-                      <div className="mt-2 flex items-center gap-1.5 text-[11px] font-medium text-[#6B7280]">
+                      <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-[#F6F6F6] px-2.5 py-1.5 text-[10.5px] font-medium text-[#5F6673]">
                         <TruckIcon />
                         <span>{getDeliveryLabel(p.badge)}</span>
                       </div>
                     </div>
                   </div>
-                </div>
+                </article>
               );
             })}
           </div>
