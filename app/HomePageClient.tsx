@@ -125,6 +125,34 @@ function CategoryIcon({ name }: { name: string }) {
     );
   }
 
+  if (name === "Платья") {
+    return (
+      <svg {...common}>
+        <path d="M9 4h6l1 5 3 11H5L8 9l1-5Z" />
+        <path d="M9 4a3 3 0 0 0 6 0" />
+      </svg>
+    );
+  }
+
+  if (name === "Рубашки") {
+    return (
+      <svg {...common}>
+        <path d="M8 4h8l3 3v13H5V7l3-3Z" />
+        <path d="M9 4 12 7l3-3" />
+        <path d="M12 7v13" />
+      </svg>
+    );
+  }
+
+  if (name === "Юбки") {
+    return (
+      <svg {...common}>
+        <path d="M8 5h8l3 15H5L8 5Z" />
+        <path d="M8 8h8" />
+      </svg>
+    );
+  }
+
   return (
     <svg {...common}>
       <circle cx="12" cy="12" r="8" />
@@ -159,7 +187,7 @@ function TruckIcon() {
 
 function HeartIcon({ active }: { active: boolean }) {
   return (
-    <svg width="25" height="25" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M20.8 4.6c-1.8-1.8-4.7-1.8-6.5 0L12 6.9l-2.3-2.3c-1.8-1.8-4.7-1.8-6.5 0s-1.8 4.7 0 6.5L12 21l8.8-9.9c1.8-1.8 1.8-4.7 0-6.5z" />
     </svg>
   );
@@ -214,10 +242,12 @@ export default function HomePageClient({
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [showBrandMenu, setShowBrandMenu] = useState(false);
   const [showAvailabilityMenu, setShowAvailabilityMenu] = useState(false);
+  const [cardImageIndexes, setCardImageIndexes] = useState<Record<string, number>>({});
 
   const sortMenuRef = useRef<HTMLDivElement | null>(null);
   const brandMenuWrapRef = useRef<HTMLDivElement | null>(null);
   const availabilityMenuRef = useRef<HTMLDivElement | null>(null);
+  const touchStartMapRef = useRef<Record<string, number | null>>({});
 
   useEffect(() => {
     const webApp = getTelegramWebApp();
@@ -348,6 +378,51 @@ export default function HomePageClient({
     selectedAvailability,
     search,
   ]);
+
+  const nextCardImage = (productId: string, totalImages: number) => {
+    if (totalImages <= 1) return;
+
+    setCardImageIndexes((prev) => {
+      const currentIndex = prev[productId] || 0;
+      const nextIndex = currentIndex >= totalImages - 1 ? 0 : currentIndex + 1;
+
+      return { ...prev, [productId]: nextIndex };
+    });
+  };
+
+  const prevCardImage = (productId: string, totalImages: number) => {
+    if (totalImages <= 1) return;
+
+    setCardImageIndexes((prev) => {
+      const currentIndex = prev[productId] || 0;
+      const nextIndex = currentIndex <= 0 ? totalImages - 1 : currentIndex - 1;
+
+      return { ...prev, [productId]: nextIndex };
+    });
+  };
+
+  const handleCardTouchStart = (productId: string, clientX: number) => {
+    touchStartMapRef.current[productId] = clientX;
+  };
+
+  const handleCardTouchEnd = (
+    productId: string,
+    clientX: number,
+    totalImages: number
+  ) => {
+    const startX = touchStartMapRef.current[productId];
+
+    if (startX == null) return;
+
+    const diff = startX - clientX;
+
+    if (Math.abs(diff) > 40) {
+      if (diff > 0) nextCardImage(productId, totalImages);
+      else prevCardImage(productId, totalImages);
+    }
+
+    touchStartMapRef.current[productId] = null;
+  };
 
   return (
     <>
@@ -605,22 +680,38 @@ export default function HomePageClient({
             </p>
           </div>
         ) : (
-          <div className="mt-4 grid grid-cols-2 gap-[5px]">
+          <div className="mt-4 grid grid-cols-2 gap-[6px]">
             {filteredProducts.map((p) => {
               const discountPercent = getDiscountPercent(p.oldPrice, p.price);
-              const currentImage = p.image || p.images?.[0] || "/products/product-1.jpg";
+              const imageCount = p.images?.length || 1;
+              const currentImageIndex = cardImageIndexes[p.id] || 0;
+              const currentImage =
+                p.images?.[currentImageIndex] ||
+                p.image ||
+                "/products/product-1.jpg";
               const visibleColors = (p.colors || []).slice(0, 4);
               const extraColorsCount = getExtraColorsCount(p.colors || []);
-              const defaultColor = p.defaultColor || p.colors?.[0] || "";
 
               return (
                 <article
                   key={p.id}
                   onClick={() => router.push(`/product?id=${p.id}`)}
                   onMouseEnter={() => router.prefetch(`/product?id=${p.id}`)}
-                  className="cursor-pointer overflow-hidden rounded-[18px] bg-white shadow-[0_7px_20px_rgba(0,0,0,0.075)]"
+                  className="cursor-pointer overflow-hidden rounded-[18px] bg-white shadow-[0_6px_18px_rgba(0,0,0,0.06)]"
                 >
-                  <div className="relative aspect-[0.78] overflow-hidden bg-[#EDEDED]">
+                  <div
+                    className="relative aspect-square overflow-hidden bg-[#EFEFEF]"
+                    onTouchStart={(e) =>
+                      handleCardTouchStart(p.id, e.touches[0]?.clientX ?? 0)
+                    }
+                    onTouchEnd={(e) =>
+                      handleCardTouchEnd(
+                        p.id,
+                        e.changedTouches[0]?.clientX ?? 0,
+                        imageCount
+                      )
+                    }
+                  >
                     <img
                       src={currentImage}
                       alt={p.name}
@@ -631,7 +722,7 @@ export default function HomePageClient({
                     />
 
                     {discountPercent > 0 && (
-                      <div className="absolute left-[9px] top-[9px] rounded-[6px] bg-[#F2381D] px-[6px] py-[4px] text-[11px] font-semibold leading-none text-white">
+                      <div className="absolute bottom-[10px] left-0 bg-[#F2381D] px-[7px] py-[4px] text-[9px] font-semibold leading-none text-white">
                         -{discountPercent}%
                       </div>
                     )}
@@ -642,34 +733,28 @@ export default function HomePageClient({
                         e.stopPropagation();
                         toggleFavorite(p.id);
                       }}
-                      className="absolute right-[12px] top-[12px] z-20 text-black active:scale-90"
+                      className="absolute right-[10px] top-[10px] z-20 text-black"
                       aria-label="В избранное"
                     >
                       <HeartIcon active={favorites.includes(p.id)} />
                     </button>
                   </div>
 
-                  <div className="px-[11px] pb-[12px] pt-[11px]">
-                    <p className="truncate text-[12px] font-semibold leading-[1.1] tracking-[-0.015em] text-black">
+                  <div className="px-[11px] pb-[12px] pt-[10px]">
+                    <p className="truncate text-[9px] font-medium uppercase tracking-[0.13em] text-[#9B9B9B]">
                       {p.brand}
                     </p>
 
-                    <h3 className="mt-[5px] line-clamp-1 text-[14px] font-medium leading-[1.12] tracking-[-0.015em] text-black">
+                    <h3 className="mt-[4px] line-clamp-2 min-h-[30px] text-[14px] font-medium leading-[1.1] tracking-[-0.015em] text-black">
                       {p.name}
                     </h3>
 
-                    {defaultColor ? (
-                      <p className="mt-[5px] truncate text-[13px] font-medium leading-[1.12] text-[#74451F]">
-                        {defaultColor}
-                      </p>
-                    ) : null}
-
-                    <div className="mt-[12px] flex min-h-[24px] items-center gap-[10px]">
+                    <div className="mt-[9px] flex items-center gap-[5px]">
                       {visibleColors.map((color, index) => (
                         <span
                           key={`${p.id}-${color}-${index}`}
-                          className={`block h-[22px] w-[22px] rounded-full border ${
-                            color === "Белый" ? "border-[#BDBDBD]" : "border-black/10"
+                          className={`block h-[13px] w-[13px] rounded-full border ${
+                            color === "Белый" ? "border-[#CFCFCF]" : "border-black/10"
                           }`}
                           style={{
                             backgroundColor: colorSwatches[color] || "#D1D5DB",
@@ -678,25 +763,25 @@ export default function HomePageClient({
                       ))}
 
                       {extraColorsCount > 0 && (
-                        <span className="flex h-[22px] min-w-[28px] items-center justify-center rounded-full border border-[#D8D8D8] bg-white px-[6px] text-[12px] font-semibold leading-none text-black">
+                        <span className="text-[10px] font-medium text-[#707070]">
                           +{extraColorsCount}
                         </span>
                       )}
                     </div>
 
-                    <div className="mt-[14px] flex items-end gap-[11px]">
+                    <div className="mt-[11px] flex items-end gap-[7px]">
                       {p.oldPrice ? (
-                        <span className="text-[15px] font-medium leading-none tracking-[-0.03em] text-[#5F5F5F] line-through decoration-[1.5px]">
+                        <span className="text-[12px] font-medium leading-none text-[#A3A3A3] line-through">
                           {formatPrice(p.oldPrice)} ₽
                         </span>
                       ) : null}
 
-                      <span className="text-[22px] font-bold leading-none tracking-[-0.045em] text-[#3E9F35]">
+                      <span className="text-[18px] font-semibold leading-none tracking-[-0.03em] text-[#37A536]">
                         {formatPrice(p.price)} ₽
                       </span>
                     </div>
 
-                    <div className="mt-[14px] flex items-center gap-[6px] text-[11px] font-medium leading-none tracking-[-0.01em] text-[#4A4A4A]">
+                    <div className="mt-[10px] flex items-center gap-[5px] text-[9px] font-medium text-[#666]">
                       <TruckIcon />
                       <span>Доставка 7–14 дней</span>
                     </div>
