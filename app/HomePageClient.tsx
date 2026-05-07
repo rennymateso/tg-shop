@@ -618,7 +618,7 @@ export default function HomePageClient({
                   key={p.id}
                   onClick={() => router.push(`/product?id=${p.id}`)}
                   onMouseEnter={() => router.prefetch(`/product?id=${p.id}`)}
-                  className="cursor-pointer overflow-hidden rounded-[18px] bg-white shadow-[0_7px_20px_rgba(0,0,0,0.075)] active:scale-[0.985]"
+                  className="cursor-pointer overflow-hidden rounded-[18px] bg-white shadow-[0_7px_20px_rgba(0,0,0,0.075)]"
                 >
                   <div className="relative aspect-[0.78] overflow-hidden bg-[#EDEDED]">
                     <img
@@ -631,7 +631,7 @@ export default function HomePageClient({
                     />
 
                     {discountPercent > 0 && (
-                      <div className="absolute left-[10px] top-[10px] rounded-[7px] bg-[#F2381D] px-[7px] py-[5px] text-[13px] font-semibold leading-none text-white">
+                      <div className="absolute left-[9px] top-[9px] rounded-[6px] bg-[#F2381D] px-[6px] py-[4px] text-[11px] font-semibold leading-none text-white">
                         -{discountPercent}%
                       </div>
                     )}
@@ -650,7 +650,7 @@ export default function HomePageClient({
                   </div>
 
                   <div className="px-[11px] pb-[12px] pt-[11px]">
-                    <p className="truncate text-[14px] font-semibold leading-[1.15] tracking-[-0.02em] text-black">
+                    <p className="truncate text-[12px] font-semibold leading-[1.1] tracking-[-0.015em] text-black">
                       {p.brand}
                     </p>
 
@@ -696,7 +696,7 @@ export default function HomePageClient({
                       </span>
                     </div>
 
-                    <div className="mt-[15px] flex items-center gap-[8px] text-[13px] font-medium leading-none tracking-[-0.015em] text-[#4A4A4A]">
+                    <div className="mt-[14px] flex items-center gap-[6px] text-[11px] font-medium leading-none tracking-[-0.01em] text-[#4A4A4A]">
                       <TruckIcon />
                       <span>Доставка 7–14 дней</span>
                     </div>
