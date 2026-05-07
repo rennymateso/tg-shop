@@ -56,12 +56,12 @@ export type HomeProduct = {
 };
 
 const colorSwatches: Record<string, string> = {
-  Черный: "#111111",
-  Белый: "#F8F8F8",
-  Серый: "#8F8F8F",
-  Синий: "#243B63",
-  Бежевый: "#D8CBB8",
-  Зеленый: "#7C8D74",
+  Черный: "#050505",
+  Белый: "#FFFFFF",
+  Серый: "#7D7D78",
+  Синий: "#0D1830",
+  Бежевый: "#D8C4A9",
+  Зеленый: "#6F7659",
   Коричневый: "#7A5230",
 };
 
@@ -106,16 +106,7 @@ function CategoryIcon({ name }: { name: string }) {
     );
   }
 
-  if (name === "Джинсы") {
-    return (
-      <svg {...common}>
-        <path d="M7 4h10l1 16h-5l-1-9-1 9H6L7 4Z" />
-        <path d="M7.5 7h9" />
-      </svg>
-    );
-  }
-
-  if (name === "Брюки") {
+  if (name === "Джинсы" || name === "Брюки") {
     return (
       <svg {...common}>
         <path d="M8 4h8l1 16h-4l-1-10-1 10H7L8 4Z" />
@@ -134,65 +125,9 @@ function CategoryIcon({ name }: { name: string }) {
     );
   }
 
-  if (name === "Платья") {
-    return (
-      <svg {...common}>
-        <path d="M9 4h6l1 5 3 11H5L8 9l1-5Z" />
-        <path d="M9 4a3 3 0 0 0 6 0" />
-      </svg>
-    );
-  }
-
-  if (name === "Рубашки") {
-    return (
-      <svg {...common}>
-        <path d="M8 4h8l3 3v13H5V7l3-3Z" />
-        <path d="M9 4 12 7l3-3" />
-        <path d="M12 7v13" />
-      </svg>
-    );
-  }
-
-  if (name === "Юбки") {
-    return (
-      <svg {...common}>
-        <path d="M8 5h8l3 15H5L8 5Z" />
-        <path d="M8 8h8" />
-      </svg>
-    );
-  }
-
   return (
     <svg {...common}>
       <circle cx="12" cy="12" r="8" />
-    </svg>
-  );
-}
-
-function MenuIcon() {
-  return (
-    <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-      <path d="M4 7h16" />
-      <path d="M4 12h12" />
-      <path d="M4 17h8" />
-    </svg>
-  );
-}
-
-function BagIcon() {
-  return (
-    <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M6 8h12l-1 12H7L6 8Z" />
-      <path d="M9 8a3 3 0 0 1 6 0" />
-    </svg>
-  );
-}
-
-function SearchIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round">
-      <circle cx="11" cy="11" r="7" />
-      <path d="M20 20L17 17" />
     </svg>
   );
 }
@@ -207,22 +142,34 @@ function formatPrice(value: number | null | undefined) {
   return value.toLocaleString("ru-RU");
 }
 
-function getDeliveryLabel() {
-  return "Доставка 7–14 дней";
-}
-
 function getExtraColorsCount(colors: string[]) {
-  if (!Array.isArray(colors)) return 0;
-  return Math.max(colors.length - 4, 0);
+  return Math.max((colors || []).length - 4, 0);
 }
 
 function TruckIcon() {
   return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M10 17H6a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h8v10h-1" />
       <path d="M14 10h3l3 3v4h-1" />
       <circle cx="7.5" cy="17.5" r="1.5" />
       <circle cx="17.5" cy="17.5" r="1.5" />
+    </svg>
+  );
+}
+
+function HeartIcon({ active }: { active: boolean }) {
+  return (
+    <svg width="25" height="25" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20.8 4.6c-1.8-1.8-4.7-1.8-6.5 0L12 6.9l-2.3-2.3c-1.8-1.8-4.7-1.8-6.5 0s-1.8 4.7 0 6.5L12 21l8.8-9.9c1.8-1.8 1.8-4.7 0-6.5z" />
+    </svg>
+  );
+}
+
+function SearchIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round">
+      <circle cx="11" cy="11" r="7" />
+      <path d="M20 20L17 17" />
     </svg>
   );
 }
@@ -241,14 +188,6 @@ function ChevronDownIcon() {
   return (
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="m6 9 6 6 6-6" />
-    </svg>
-  );
-}
-
-function HeartIcon({ active }: { active: boolean }) {
-  return (
-    <svg width="21" height="21" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M20.8 4.6c-1.8-1.8-4.7-1.8-6.5 0L12 6.9l-2.3-2.3c-1.8-1.8-4.7-1.8-6.5 0s-1.8 4.7 0 6.5L12 21l8.8-9.9c1.8-1.8 1.8-4.7 0-6.5z" />
     </svg>
   );
 }
@@ -275,12 +214,10 @@ export default function HomePageClient({
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [showBrandMenu, setShowBrandMenu] = useState(false);
   const [showAvailabilityMenu, setShowAvailabilityMenu] = useState(false);
-  const [cardImageIndexes, setCardImageIndexes] = useState<Record<string, number>>({});
 
   const sortMenuRef = useRef<HTMLDivElement | null>(null);
   const brandMenuWrapRef = useRef<HTMLDivElement | null>(null);
   const availabilityMenuRef = useRef<HTMLDivElement | null>(null);
-  const touchStartMapRef = useRef<Record<string, number | null>>({});
 
   useEffect(() => {
     const webApp = getTelegramWebApp();
@@ -412,122 +349,62 @@ export default function HomePageClient({
     search,
   ]);
 
-  const nextCardImage = (productId: string, totalImages: number) => {
-    if (totalImages <= 1) return;
-
-    setCardImageIndexes((prev) => {
-      const currentIndex = prev[productId] || 0;
-      const nextIndex = currentIndex >= totalImages - 1 ? 0 : currentIndex + 1;
-
-      return { ...prev, [productId]: nextIndex };
-    });
-  };
-
-  const prevCardImage = (productId: string, totalImages: number) => {
-    if (totalImages <= 1) return;
-
-    setCardImageIndexes((prev) => {
-      const currentIndex = prev[productId] || 0;
-      const nextIndex = currentIndex <= 0 ? totalImages - 1 : currentIndex - 1;
-
-      return { ...prev, [productId]: nextIndex };
-    });
-  };
-
-  const handleCardTouchStart = (productId: string, clientX: number) => {
-    touchStartMapRef.current[productId] = clientX;
-  };
-
-  const handleCardTouchEnd = (
-    productId: string,
-    clientX: number,
-    totalImages: number
-  ) => {
-    const startX = touchStartMapRef.current[productId];
-
-    if (startX == null) return;
-
-    const diff = startX - clientX;
-
-    if (Math.abs(diff) > 40) {
-      if (diff > 0) nextCardImage(productId, totalImages);
-      else prevCardImage(productId, totalImages);
-    }
-
-    touchStartMapRef.current[productId] = null;
-  };
-
   return (
     <>
       {showSplash && <AppSplash />}
 
       <main className="min-h-screen bg-[#F5F5F5] px-3 pt-[76px] pb-32 text-black">
-        <div className="mb-4 flex items-center justify-between">
-          <button
-            type="button"
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-black shadow-[0_8px_22px_rgba(0,0,0,0.06)]"
-            aria-label="Меню"
-          >
-            <MenuIcon />
-          </button>
-
+        <div className="mb-4 flex items-center justify-center">
           <button type="button" onClick={resetPage} className="text-center">
-            <p className="text-[16px] font-semibold tracking-[0.24em] text-black">
+            <p className="text-[18px] font-semibold tracking-[0.13em] text-black">
               MONTREAUX
             </p>
-            <p className="mt-1 text-[8px] uppercase tracking-[0.35em] text-gray-400">
+            <p className="mt-0.5 text-[8px] uppercase tracking-[0.32em] text-gray-400">
               Fashion
             </p>
           </button>
-
-          <button
-            type="button"
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-black shadow-[0_8px_22px_rgba(0,0,0,0.06)]"
-            aria-label="Корзина"
-            onClick={() => router.push("/cart")}
-          >
-            <BagIcon />
-          </button>
         </div>
 
-        <div className="rounded-[26px] bg-white p-3 shadow-[0_18px_44px_rgba(15,23,42,0.08)]">
-          <div className="rounded-[18px] bg-[#F3F3F3] px-3.5 py-3">
-            <div className="flex items-center gap-2.5 text-gray-400">
+        <div className="rounded-[22px] bg-white p-3 shadow-[0_12px_34px_rgba(15,23,42,0.055)]">
+          <div className="rounded-[17px] bg-[#F5F5F5] px-3.5 py-3">
+            <div className="flex items-center gap-3 text-gray-400">
               <SearchIcon />
 
               <input
                 placeholder="Поиск товаров..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full bg-transparent text-[13px] text-black outline-none placeholder:text-gray-400"
+                className="w-full bg-transparent text-[13px] outline-none placeholder:text-gray-400"
               />
             </div>
           </div>
 
-          <div className="mt-3 grid grid-cols-2 gap-2 rounded-[18px] bg-[#F2F2F2] p-1.5">
-            {departments.map((department) => (
-              <button
-                key={department}
-                type="button"
-                onClick={() => {
-                  setSelectedDepartment(department);
-                  setSelectedBrand("Все бренды");
-                  setSelectedAvailability("Все товары");
-                  setSearch("");
-                }}
-                className={`rounded-[15px] px-4 py-3 text-[13px] font-medium transition-all ${
-                  selectedDepartment === department
-                    ? "bg-black text-white shadow-[0_10px_22px_rgba(0,0,0,0.14)]"
-                    : "text-gray-500"
-                }`}
-              >
-                {department}
-              </button>
-            ))}
+          <div className="mt-3 rounded-[16px] bg-[#F2F2F2] p-1">
+            <div className="grid grid-cols-2 gap-1">
+              {departments.map((department) => (
+                <button
+                  key={department}
+                  type="button"
+                  onClick={() => {
+                    setSelectedDepartment(department);
+                    setSelectedBrand("Все бренды");
+                    setSelectedAvailability("Все товары");
+                    setSearch("");
+                  }}
+                  className={`rounded-[13px] px-4 py-2.5 text-[13px] font-medium transition-all ${
+                    selectedDepartment === department
+                      ? "bg-black text-white shadow-[0_8px_18px_rgba(0,0,0,0.13)]"
+                      : "text-[#525252]"
+                  }`}
+                >
+                  {department}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="mt-3 overflow-x-auto">
-            <div className="flex min-w-max gap-2.5 pr-6">
+            <div className="flex min-w-max gap-3 pr-6">
               {currentCategories.map((category) => {
                 const isActive = currentCategory === category;
 
@@ -542,12 +419,12 @@ export default function HomePageClient({
                         setSelectedWomensCategory(category as WomensCategory);
                       }
                     }}
-                    className="w-[58px] shrink-0"
+                    className="w-[64px] shrink-0"
                   >
                     <div
-                      className={`flex h-[52px] w-[58px] items-center justify-center rounded-[16px] transition ${
+                      className={`flex h-[56px] w-[64px] items-center justify-center rounded-[15px] transition ${
                         isActive
-                          ? "bg-black text-white shadow-[0_10px_22px_rgba(0,0,0,0.14)]"
+                          ? "bg-black text-white shadow-[0_10px_22px_rgba(0,0,0,0.16)]"
                           : "bg-[#F6F6F6] text-black"
                       }`}
                     >
@@ -555,8 +432,8 @@ export default function HomePageClient({
                     </div>
 
                     <p
-                      className={`mt-1.5 truncate text-center text-[10px] ${
-                        isActive ? "font-medium text-black" : "text-gray-500"
+                      className={`mt-1.5 truncate text-center text-[11px] ${
+                        isActive ? "font-medium text-black" : "text-[#525252]"
                       }`}
                     >
                       {category}
@@ -568,11 +445,11 @@ export default function HomePageClient({
           </div>
         </div>
 
-        <div className="mt-3 overflow-hidden rounded-[24px] bg-white shadow-[0_18px_44px_rgba(15,23,42,0.08)]">
+        <div className="mt-3 overflow-hidden rounded-[20px] bg-white shadow-[0_12px_34px_rgba(15,23,42,0.06)]">
           <button
             type="button"
             onClick={() => router.push(banners[0].link)}
-            className="relative block h-[188px] w-full overflow-hidden"
+            className="relative block h-[176px] w-full overflow-hidden"
           >
             <img
               src={banners[0].image}
@@ -580,17 +457,14 @@ export default function HomePageClient({
               className="h-full w-full object-cover"
             />
 
-            <div className="absolute inset-0 bg-gradient-to-r from-black/58 via-black/20 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/58 via-black/24 to-transparent" />
 
             <div className="absolute left-4 top-4 max-w-[190px] text-left">
-              <p className="text-[10px] uppercase tracking-[0.16em] text-white/70">
-                Новая коллекция
-              </p>
-              <h2 className="mt-1 text-[25px] font-semibold leading-[1.05] tracking-[-0.04em] text-white">
+              <p className="text-[11px] text-white/75">Новая коллекция</p>
+              <h2 className="mt-1 text-[24px] font-semibold leading-[1.05] tracking-[-0.03em] text-white">
                 Весна Лето 2026
               </h2>
-              <p className="mt-2 text-[11px] text-white/70">до -50%</p>
-              <span className="mt-5 inline-flex rounded-[12px] bg-white px-4 py-2 text-[12px] font-medium text-black">
+              <span className="mt-4 inline-flex rounded-[10px] bg-white px-4 py-2 text-[12px] font-medium text-black">
                 Смотреть
               </span>
             </div>
@@ -606,7 +480,7 @@ export default function HomePageClient({
               className={`shrink-0 rounded-full px-4 py-2.5 text-[12px] font-medium transition ${
                 selectedAvailability === option
                   ? "border border-black bg-white text-black"
-                  : "bg-white text-gray-500"
+                  : "bg-white text-[#525252]"
               }`}
             >
               {option}
@@ -619,7 +493,7 @@ export default function HomePageClient({
             <button
               type="button"
               onClick={() => setShowBrandMenu((prev) => !prev)}
-              className="flex h-[42px] w-full items-center justify-between rounded-[14px] bg-white px-3 text-[12px] font-medium text-black shadow-[0_8px_22px_rgba(0,0,0,0.05)]"
+              className="flex h-[42px] w-full items-center justify-between rounded-[13px] bg-white px-3 text-[12px] font-medium text-black shadow-[0_6px_18px_rgba(0,0,0,0.04)]"
             >
               <span className="truncate">{selectedBrand}</span>
               <ChevronDownIcon />
@@ -663,7 +537,7 @@ export default function HomePageClient({
             <button
               type="button"
               onClick={() => setShowSortMenu((prev) => !prev)}
-              className="flex h-[42px] w-full items-center justify-between rounded-[14px] bg-white px-3 text-[12px] font-medium text-black shadow-[0_8px_22px_rgba(0,0,0,0.05)]"
+              className="flex h-[42px] w-full items-center justify-between rounded-[13px] bg-white px-3 text-[12px] font-medium text-black shadow-[0_6px_18px_rgba(0,0,0,0.04)]"
             >
               <span className="truncate">{selectedSort}</span>
               <ChevronDownIcon />
@@ -694,7 +568,7 @@ export default function HomePageClient({
             <button
               type="button"
               onClick={() => setShowAvailabilityMenu((prev) => !prev)}
-              className="flex h-[42px] w-[44px] items-center justify-center rounded-[14px] bg-white text-black shadow-[0_8px_22px_rgba(0,0,0,0.05)]"
+              className="flex h-[42px] w-[44px] items-center justify-center rounded-[13px] bg-white text-black shadow-[0_6px_18px_rgba(0,0,0,0.04)]"
             >
               <FilterIcon />
             </button>
@@ -726,19 +600,15 @@ export default function HomePageClient({
             <p className="text-[16px] font-medium text-black">
               {selectedDepartment === "Женщинам" ? "Женский раздел пока в разработке" : "Ничего не найдено"}
             </p>
-
             <p className="mt-2 text-sm text-gray-400">
               {selectedDepartment === "Женщинам" ? "Скоро здесь появятся товары" : "Попробуйте изменить фильтры"}
             </p>
           </div>
         ) : (
-          <div className="mt-4 grid grid-cols-2 gap-3">
+          <div className="mt-4 grid grid-cols-2 gap-[5px]">
             {filteredProducts.map((p) => {
               const discountPercent = getDiscountPercent(p.oldPrice, p.price);
-              const imageCount = p.images?.length || 1;
-              const currentImageIndex = cardImageIndexes[p.id] || 0;
-              const currentImage =
-                p.images[currentImageIndex] || p.image || "/products/product-1.jpg";
+              const currentImage = p.image || p.images?.[0] || "/products/product-1.jpg";
               const visibleColors = (p.colors || []).slice(0, 4);
               const extraColorsCount = getExtraColorsCount(p.colors || []);
               const defaultColor = p.defaultColor || p.colors?.[0] || "";
@@ -748,26 +618,20 @@ export default function HomePageClient({
                   key={p.id}
                   onClick={() => router.push(`/product?id=${p.id}`)}
                   onMouseEnter={() => router.prefetch(`/product?id=${p.id}`)}
-                  className="group cursor-pointer overflow-hidden rounded-[15px] bg-white shadow-[0_8px_24px_rgba(0,0,0,0.075)] transition active:scale-[0.985]"
+                  className="cursor-pointer overflow-hidden rounded-[18px] bg-white shadow-[0_7px_20px_rgba(0,0,0,0.075)] active:scale-[0.985]"
                 >
-                  <div
-                    className="relative aspect-[3/4] overflow-hidden bg-[#ECECEC]"
-                    onTouchStart={(e) => handleCardTouchStart(p.id, e.touches[0]?.clientX ?? 0)}
-                    onTouchEnd={(e) =>
-                      handleCardTouchEnd(p.id, e.changedTouches[0]?.clientX ?? 0, imageCount)
-                    }
-                  >
+                  <div className="relative aspect-[0.78] overflow-hidden bg-[#EDEDED]">
                     <img
                       src={currentImage}
                       alt={p.name}
-                      className="h-full w-full object-cover transition duration-300 group-active:scale-[1.02]"
+                      className="h-full w-full object-cover"
                       onError={(e) => {
                         e.currentTarget.src = "/products/product-1.jpg";
                       }}
                     />
 
                     {discountPercent > 0 && (
-                      <div className="absolute left-2 top-2 rounded-[6px] bg-[#F23B1D] px-2 py-1 text-[11px] font-semibold leading-none text-white">
+                      <div className="absolute left-[10px] top-[10px] rounded-[7px] bg-[#F2381D] px-[7px] py-[5px] text-[13px] font-semibold leading-none text-white">
                         -{discountPercent}%
                       </div>
                     )}
@@ -778,40 +642,34 @@ export default function HomePageClient({
                         e.stopPropagation();
                         toggleFavorite(p.id);
                       }}
-                      className="absolute right-2.5 top-2.5 z-20 text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.35)] active:scale-90"
+                      className="absolute right-[12px] top-[12px] z-20 text-black active:scale-90"
                       aria-label="В избранное"
                     >
                       <HeartIcon active={favorites.includes(p.id)} />
                     </button>
-
-                    {imageCount > 1 && (
-                      <div className="absolute bottom-2.5 right-2.5 rounded-full bg-black/24 px-2 py-1 text-[10px] font-medium text-white backdrop-blur-sm">
-                        {currentImageIndex + 1}/{imageCount}
-                      </div>
-                    )}
                   </div>
 
-                  <div className="px-2.5 pb-3 pt-2.5">
-                    <p className="truncate text-[13px] font-medium leading-[1.15] text-black">
+                  <div className="px-[11px] pb-[12px] pt-[11px]">
+                    <p className="truncate text-[14px] font-semibold leading-[1.15] tracking-[-0.02em] text-black">
                       {p.brand}
                     </p>
 
-                    <h3 className="mt-0.5 line-clamp-1 text-[13px] font-normal leading-[1.2] text-black">
+                    <h3 className="mt-[5px] line-clamp-1 text-[14px] font-medium leading-[1.12] tracking-[-0.015em] text-black">
                       {p.name}
                     </h3>
 
                     {defaultColor ? (
-                      <p className="mt-0.5 truncate text-[12px] leading-[1.2] text-[#7A5230]">
+                      <p className="mt-[5px] truncate text-[13px] font-medium leading-[1.12] text-[#74451F]">
                         {defaultColor}
                       </p>
                     ) : null}
 
-                    <div className="mt-2 flex min-h-[19px] items-center gap-1.5">
+                    <div className="mt-[12px] flex min-h-[24px] items-center gap-[10px]">
                       {visibleColors.map((color, index) => (
                         <span
                           key={`${p.id}-${color}-${index}`}
-                          className={`block h-4 w-4 rounded-full border ${
-                            color === "Белый" ? "border-gray-300" : "border-black/10"
+                          className={`block h-[22px] w-[22px] rounded-full border ${
+                            color === "Белый" ? "border-[#BDBDBD]" : "border-black/10"
                           }`}
                           style={{
                             backgroundColor: colorSwatches[color] || "#D1D5DB",
@@ -820,27 +678,27 @@ export default function HomePageClient({
                       ))}
 
                       {extraColorsCount > 0 && (
-                        <span className="ml-0.5 rounded-full border border-black/10 bg-white px-1.5 py-0.5 text-[10px] font-medium leading-none text-gray-500">
+                        <span className="flex h-[22px] min-w-[28px] items-center justify-center rounded-full border border-[#D8D8D8] bg-white px-[6px] text-[12px] font-semibold leading-none text-black">
                           +{extraColorsCount}
                         </span>
                       )}
                     </div>
 
-                    <div className="mt-2 flex flex-wrap items-end gap-x-2 gap-y-1">
+                    <div className="mt-[14px] flex items-end gap-[11px]">
                       {p.oldPrice ? (
-                        <span className="text-[12px] font-medium leading-none text-gray-500 line-through decoration-[1px]">
+                        <span className="text-[15px] font-medium leading-none tracking-[-0.03em] text-[#5F5F5F] line-through decoration-[1.5px]">
                           {formatPrice(p.oldPrice)} ₽
                         </span>
                       ) : null}
 
-                      <span className="text-[17px] font-bold leading-none tracking-[-0.035em] text-[#3F9B35]">
+                      <span className="text-[22px] font-bold leading-none tracking-[-0.045em] text-[#3E9F35]">
                         {formatPrice(p.price)} ₽
                       </span>
                     </div>
 
-                    <div className="mt-2 flex items-center gap-1.5 text-[10.5px] font-medium text-[#4B5563]">
+                    <div className="mt-[15px] flex items-center gap-[8px] text-[13px] font-medium leading-none tracking-[-0.015em] text-[#4A4A4A]">
                       <TruckIcon />
-                      <span>{getDeliveryLabel()}</span>
+                      <span>Доставка 7–14 дней</span>
                     </div>
                   </div>
                 </article>
