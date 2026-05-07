@@ -125,6 +125,34 @@ function CategoryIcon({ name }: { name: string }) {
     );
   }
 
+  if (name === "Платья") {
+    return (
+      <svg {...common}>
+        <path d="M9 4h6l1 5 3 11H5L8 9l1-5Z" />
+        <path d="M9 4a3 3 0 0 0 6 0" />
+      </svg>
+    );
+  }
+
+  if (name === "Рубашки") {
+    return (
+      <svg {...common}>
+        <path d="M8 4h8l3 3v13H5V7l3-3Z" />
+        <path d="M9 4 12 7l3-3" />
+        <path d="M12 7v13" />
+      </svg>
+    );
+  }
+
+  if (name === "Юбки") {
+    return (
+      <svg {...common}>
+        <path d="M8 5h8l3 15H5L8 5Z" />
+        <path d="M8 8h8" />
+      </svg>
+    );
+  }
+
   return (
     <svg {...common}>
       <circle cx="12" cy="12" r="8" />
@@ -672,7 +700,7 @@ export default function HomePageClient({
                   className="cursor-pointer overflow-hidden bg-white shadow-[0_6px_18px_rgba(0,0,0,0.06)]"
                 >
                   <div
-                    className="relative aspect-square overflow-hidden bg-[#F1F1F1]"
+                    className="relative aspect-square overflow-hidden bg-transparent"
                     onTouchStart={(e) =>
                       handleCardTouchStart(p.id, e.touches[0]?.clientX ?? 0)
                     }
@@ -687,7 +715,7 @@ export default function HomePageClient({
                     <img
                       src={currentImage}
                       alt={p.name}
-                      className="h-full w-full object-contain"
+                      className="h-full w-full object-cover"
                       onError={(e) => {
                         e.currentTarget.src = "/products/product-1.jpg";
                       }}
