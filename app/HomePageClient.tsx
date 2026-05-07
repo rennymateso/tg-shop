@@ -220,6 +220,25 @@ function ChevronDownIcon() {
   );
 }
 
+function CartIcon() {
+  return (
+    <svg
+      width="15"
+      height="15"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="9" cy="21" r="1" />
+      <circle cx="20" cy="21" r="1" />
+      <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+    </svg>
+  );
+}
+
 export default function HomePageClient({
   initialProducts,
   initialBrands,
@@ -697,10 +716,10 @@ export default function HomePageClient({
                   key={p.id}
                   onClick={() => router.push(`/product?id=${p.id}`)}
                   onMouseEnter={() => router.prefetch(`/product?id=${p.id}`)}
-                  className="cursor-pointer overflow-hidden bg-white shadow-[0_6px_18px_rgba(0,0,0,0.06)]"
+                  className="cursor-pointer overflow-hidden rounded-[8px] bg-white shadow-[0_6px_18px_rgba(0,0,0,0.06)]"
                 >
                   <div
-                    className="relative aspect-square overflow-hidden bg-transparent"
+                    className="relative aspect-square overflow-hidden bg-[#F5F5F5]"
                     onTouchStart={(e) =>
                       handleCardTouchStart(p.id, e.touches[0]?.clientX ?? 0)
                     }
@@ -715,7 +734,7 @@ export default function HomePageClient({
                     <img
                       src={currentImage}
                       alt={p.name}
-                      className="h-full w-full object-cover"
+                      className="h-full w-full object-contain"
                       onError={(e) => {
                         e.currentTarget.src = "/products/product-1.jpg";
                       }}
@@ -774,16 +793,29 @@ export default function HomePageClient({
                       )}
                     </div>
 
-                    <div className="mt-[11px] flex items-end gap-[7px]">
-                      {p.oldPrice ? (
-                        <span className="text-[12px] font-medium leading-none text-[#A3A3A3] line-through">
-                          {formatPrice(p.oldPrice)} ₽
-                        </span>
-                      ) : null}
+                    <div className="mt-[11px] flex items-end justify-between">
+                      <div className="flex items-end gap-[7px]">
+                        {p.oldPrice ? (
+                          <span className="text-[12px] font-medium leading-none text-[#A3A3A3] line-through">
+                            {formatPrice(p.oldPrice)} ₽
+                          </span>
+                        ) : null}
 
-                      <span className="text-[18px] font-semibold leading-none tracking-[-0.03em] text-[#37A536]">
-                        {formatPrice(p.price)} ₽
-                      </span>
+                        <span className="text-[18px] font-semibold leading-none tracking-[-0.03em] text-[#37A536]">
+                          {formatPrice(p.price)} ₽
+                        </span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                        }}
+                        className="flex h-[30px] w-[30px] items-center justify-center rounded-full bg-black text-white"
+                        aria-label="Добавить в корзину"
+                      >
+                        <CartIcon />
+                      </button>
                     </div>
 
                     <div className="mt-[10px] flex items-center gap-[5px] text-[9px] font-medium text-[#666]">
