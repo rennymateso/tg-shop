@@ -222,19 +222,9 @@ function ChevronDownIcon() {
 
 function CartIcon() {
   return (
-    <svg
-      width="15"
-      height="15"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="9" cy="21" r="1" />
-      <circle cx="20" cy="21" r="1" />
-      <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6 8h12l-1 12H7L6 8Z" />
+      <path d="M9 8a3 3 0 0 1 6 0" />
     </svg>
   );
 }
@@ -699,7 +689,7 @@ export default function HomePageClient({
             </p>
           </div>
         ) : (
-          <div className="mt-4 grid grid-cols-2 gap-[6px]">
+          <div className="mt-4 grid grid-cols-2 gap-[8px]">
             {filteredProducts.map((p) => {
               const discountPercent = getDiscountPercent(p.oldPrice, p.price);
               const imageCount = p.images?.length || 1;
@@ -710,16 +700,17 @@ export default function HomePageClient({
                 "/products/product-1.jpg";
               const visibleColors = (p.colors || []).slice(0, 4);
               const extraColorsCount = getExtraColorsCount(p.colors || []);
+              const isForeign = p.badge?.trim().toLowerCase() === "из-за рубежа";
 
               return (
                 <article
                   key={p.id}
                   onClick={() => router.push(`/product?id=${p.id}`)}
                   onMouseEnter={() => router.prefetch(`/product?id=${p.id}`)}
-                  className="cursor-pointer overflow-hidden rounded-[8px] bg-white shadow-[0_6px_18px_rgba(0,0,0,0.06)]"
+                  className="cursor-pointer overflow-hidden rounded-[12px] bg-white shadow-[0_8px_22px_rgba(0,0,0,0.07)]"
                 >
                   <div
-                    className="relative aspect-square overflow-hidden bg-[#F5F5F5]"
+                    className="relative aspect-[4/5] overflow-hidden bg-white"
                     onTouchStart={(e) =>
                       handleCardTouchStart(p.id, e.touches[0]?.clientX ?? 0)
                     }
@@ -740,6 +731,12 @@ export default function HomePageClient({
                       }}
                     />
 
+                    {isForeign && (
+                      <div className="absolute left-[7px] top-[7px] rounded-[3px] bg-black/45 px-[6px] py-[4px] text-[8px] font-semibold uppercase leading-none tracking-[-0.01em] text-white backdrop-blur-sm">
+                        Из-за рубежа
+                      </div>
+                    )}
+
                     {discountPercent > 0 && (
                       <div
                         className="absolute bottom-0 left-0 bg-[#F2381D] pb-[4px] pl-[7px] pr-[15px] pt-[4px] text-[9px] font-semibold leading-none text-white"
@@ -757,10 +754,21 @@ export default function HomePageClient({
                         e.stopPropagation();
                         toggleFavorite(p.id);
                       }}
-                      className="absolute right-[10px] top-[10px] z-20 text-black"
+                      className="absolute right-[10px] top-[10px] z-20 text-black drop-shadow-[0_1px_5px_rgba(255,255,255,0.85)]"
                       aria-label="В избранное"
                     >
                       <HeartIcon active={favorites.includes(p.id)} />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                      }}
+                      className="absolute bottom-[8px] right-[8px] z-20 flex h-[46px] w-[46px] items-center justify-center rounded-[14px] bg-[#6D5CFF] text-white shadow-[0_10px_20px_rgba(109,92,255,0.42)]"
+                      aria-label="Добавить в корзину"
+                    >
+                      <CartIcon />
                     </button>
                   </div>
 
@@ -793,29 +801,16 @@ export default function HomePageClient({
                       )}
                     </div>
 
-                    <div className="mt-[11px] flex items-end justify-between">
-                      <div className="flex items-end gap-[7px]">
-                        {p.oldPrice ? (
-                          <span className="text-[12px] font-medium leading-none text-[#A3A3A3] line-through">
-                            {formatPrice(p.oldPrice)} ₽
-                          </span>
-                        ) : null}
-
-                        <span className="text-[18px] font-semibold leading-none tracking-[-0.03em] text-[#37A536]">
-                          {formatPrice(p.price)} ₽
+                    <div className="mt-[11px] flex min-w-0 items-end gap-[7px]">
+                      {p.oldPrice ? (
+                        <span className="text-[12px] font-medium leading-none text-[#A3A3A3] line-through">
+                          {formatPrice(p.oldPrice)} ₽
                         </span>
-                      </div>
+                      ) : null}
 
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                        }}
-                        className="flex h-[30px] w-[30px] items-center justify-center rounded-full bg-black text-white"
-                        aria-label="Добавить в корзину"
-                      >
-                        <CartIcon />
-                      </button>
+                      <span className="text-[18px] font-semibold leading-none tracking-[-0.03em] text-[#37A536]">
+                        {formatPrice(p.price)} ₽
+                      </span>
                     </div>
 
                     <div className="mt-[10px] flex items-center gap-[5px] text-[9px] font-medium text-[#666]">
