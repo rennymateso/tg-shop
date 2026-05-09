@@ -222,7 +222,7 @@ function ChevronDownIcon() {
 
 function CartIcon() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M6 8h12l-1 12H7L6 8Z" />
       <path d="M9 8a3 3 0 0 1 6 0" />
     </svg>
@@ -759,17 +759,6 @@ export default function HomePageClient({
                     >
                       <HeartIcon active={favorites.includes(p.id)} />
                     </button>
-
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                      }}
-                      className="absolute bottom-[8px] right-[8px] z-20 flex h-[46px] w-[46px] items-center justify-center rounded-[14px] bg-[#6D5CFF] text-white shadow-[0_10px_20px_rgba(109,92,255,0.42)]"
-                      aria-label="Добавить в корзину"
-                    >
-                      <CartIcon />
-                    </button>
                   </div>
 
                   <div className="px-[11px] pb-[12px] pt-[10px]">
@@ -801,16 +790,29 @@ export default function HomePageClient({
                       )}
                     </div>
 
-                    <div className="mt-[11px] flex min-w-0 items-end gap-[7px]">
-                      {p.oldPrice ? (
-                        <span className="text-[12px] font-medium leading-none text-[#A3A3A3] line-through">
-                          {formatPrice(p.oldPrice)} ₽
-                        </span>
-                      ) : null}
+                    <div className="mt-[11px] flex items-end justify-between gap-2">
+                      <div className="flex min-w-0 items-end gap-[7px]">
+                        {p.oldPrice ? (
+                          <span className="text-[12px] font-medium leading-none text-[#A3A3A3] line-through">
+                            {formatPrice(p.oldPrice)} ₽
+                          </span>
+                        ) : null}
 
-                      <span className="text-[18px] font-semibold leading-none tracking-[-0.03em] text-[#37A536]">
-                        {formatPrice(p.price)} ₽
-                      </span>
+                        <span className="text-[18px] font-semibold leading-none tracking-[-0.03em] text-[#37A536]">
+                          {formatPrice(p.price)} ₽
+                        </span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                        }}
+                        className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[10px] bg-[#6D5CFF] text-white shadow-[0_8px_16px_rgba(109,92,255,0.34)]"
+                        aria-label="Добавить в корзину"
+                      >
+                        <CartIcon />
+                      </button>
                     </div>
 
                     <div className="mt-[10px] flex items-center gap-[5px] text-[9px] font-medium text-[#666]">
