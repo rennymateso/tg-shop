@@ -98,7 +98,7 @@ function TruckIcon() {
 
 function HeartIcon({ active }: { active: boolean }) {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="21" height="21" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round">
       <path d="M20.8 4.6c-1.8-1.8-4.7-1.8-6.5 0L12 6.9l-2.3-2.3c-1.8-1.8-4.7-1.8-6.5 0s-1.8 4.7 0 6.5L12 21l8.8-9.9c1.8-1.8 1.8-4.7 0-6.5z" />
     </svg>
   );
@@ -118,7 +118,7 @@ function ChevronDownIcon() {
 
 function CartIcon() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+    <svg width="23" height="23" viewBox="0 0 24 24" fill="none">
       <path d="M7.2 8.2h9.6c.55 0 1 .43.96.98l-.7 10.1a1.65 1.65 0 0 1-1.64 1.52H8.58a1.65 1.65 0 0 1-1.64-1.52l-.7-10.1c-.04-.55.41-.98.96-.98Z" fill="currentColor" />
       <path d="M9.2 8.2a2.8 2.8 0 0 1 5.6 0" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
       <path d="M9.6 12h4.8" stroke="white" strokeWidth="1.7" strokeLinecap="round" />
@@ -499,22 +499,19 @@ export default function HomePageClient({
                     />
 
                     {discountPercent > 0 && (
-                      <div
-                        className="absolute bottom-0 left-0 bg-[#4F46E5] pb-[4px] pl-[7px] pr-[15px] pt-[4px] text-[9px] font-semibold leading-none text-white"
-                        style={{ clipPath: "polygon(0 0, calc(100% - 8px) 0, 100% 100%, 0 100%)" }}
-                      >
+                      <div className="absolute left-[8px] top-[8px] rounded-[6px] bg-[#E11D48] px-[6px] py-[4px] text-[9px] font-semibold leading-none text-white">
                         -{discountPercent}%
                       </div>
                     )}
 
-                    <button type="button" onClick={(e) => { e.stopPropagation(); toggleFavorite(p.id); }} className="absolute right-[10px] top-[10px] z-20 text-black drop-shadow-[0_1px_5px_rgba(255,255,255,0.85)]" aria-label="В избранное">
+                    <button type="button" onClick={(e) => { e.stopPropagation(); toggleFavorite(p.id); }} className="absolute right-[10px] top-[10px] z-20 text-black/75" aria-label="В избранное">
                       <HeartIcon active={favorites.includes(p.id)} />
                     </button>
                   </div>
 
                   <div className="relative px-[11px] pb-[12px] pr-[60px] pt-[10px]">
-                    <div className="flex items-center">
-                      <p className="min-w-0 truncate text-[8px] font-medium uppercase tracking-[0.13em] text-[#9B9B9B]">{p.brand}</p>
+                    <div className="flex items-center gap-1">
+                      <p className="min-w-0 flex-1 truncate text-[7.5px] font-medium uppercase tracking-[0.11em] text-[#9B9B9B]">{p.brand}</p>
 
                       {isForeign && (
                         <span className="ml-auto shrink-0 rounded-full bg-[#F2F2F2] px-[6px] py-[3px] text-[7px] font-semibold leading-none text-[#555]">
@@ -569,7 +566,7 @@ export default function HomePageClient({
                     <button
                       type="button"
                       onClick={(e) => e.stopPropagation()}
-                      className="absolute bottom-[12px] right-0 flex h-[44px] w-[44px] items-center justify-center rounded-l-[14px] rounded-r-none bg-black text-white shadow-[0_9px_18px_rgba(0,0,0,0.24)]"
+                      className="absolute bottom-[12px] right-[10px] flex h-[46px] w-[46px] items-center justify-center rounded-[14px] border border-black bg-white text-black"
                       aria-label="Добавить в корзину"
                     >
                       <CartIcon />
