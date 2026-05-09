@@ -98,7 +98,7 @@ function TruckIcon() {
 
 function HeartIcon({ active }: { active: boolean }) {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" strokeLinejoin="round">
       <path d="M20.8 4.6c-1.8-1.8-4.7-1.8-6.5 0L12 6.9l-2.3-2.3c-1.8-1.8-4.7-1.8-6.5 0s-1.8 4.7 0 6.5L12 21l8.8-9.9c1.8-1.8 1.8-4.7 0-6.5z" />
     </svg>
   );
@@ -149,6 +149,7 @@ export default function HomePageClient({
   const [showBrandMenu, setShowBrandMenu] = useState(false);
   const [showAvailabilityMenu, setShowAvailabilityMenu] = useState(false);
   const [cardImageIndexes, setCardImageIndexes] = useState<Record<string, number>>({});
+  const [selectedCardColors, setSelectedCardColors] = useState<Record<string, string>>({});
 
   const sortMenuRef = useRef<HTMLDivElement | null>(null);
   const brandMenuWrapRef = useRef<HTMLDivElement | null>(null);
@@ -470,9 +471,13 @@ export default function HomePageClient({
           <div className="mt-4 grid grid-cols-2 gap-[8px]">
             {filteredProducts.map((p) => {
               const discountPercent = getDiscountPercent(p.oldPrice, p.price);
-              const imageCount = p.images?.length || 1;
+              const selectedColor = selectedCardColors[p.id] || p.defaultColor || p.colors?.[0] || "";
+              const colorGallery = selectedColor ? p.galleryByColor?.[selectedColor] || [] : [];
+              const colorImage = selectedColor ? p.colorImages?.[selectedColor] : "";
+              const baseImages = colorGallery.length > 0 ? colorGallery : colorImage ? [colorImage] : p.images?.length ? p.images : [p.image];
+              const imageCount = baseImages.length || 1;
               const currentImageIndex = cardImageIndexes[p.id] || 0;
-              const currentImage = p.images?.[currentImageIndex] || p.image || "/products/product-1.jpg";
+              const currentImage = baseImages[currentImageIndex] || p.image || "/products/product-1.jpg";
               const visibleColors = (p.colors || []).slice(0, 4);
               const extraColorsCount = getExtraColorsCount(p.colors || []);
               const isForeign = p.badge?.trim().toLowerCase() === "из-за рубежа";
@@ -495,7 +500,7 @@ export default function HomePageClient({
 
                     {discountPercent > 0 && (
                       <div
-                        className="absolute bottom-0 left-0 bg-[#7A5AF8] pb-[4px] pl-[7px] pr-[15px] pt-[4px] text-[9px] font-semibold leading-none text-white"
+                        className="absolute bottom-0 left-0 bg-[#4F46E5] pb-[4px] pl-[7px] pr-[15px] pt-[4px] text-[9px] font-semibold leading-none text-white"
                         style={{ clipPath: "polygon(0 0, calc(100% - 8px) 0, 100% 100%, 0 100%)" }}
                       >
                         -{discountPercent}%
@@ -507,38 +512,53 @@ export default function HomePageClient({
                     </button>
                   </div>
 
-                  <div className="relative px-[11px] pb-[12px] pr-[58px] pt-[10px]">
-                    <div className="flex items-center gap-1.5">
-                      <p className="min-w-0 truncate text-[9px] font-medium uppercase tracking-[0.13em] text-[#9B9B9B]">{p.brand}</p>
+                  <div className="relative px-[11px] pb-[12px] pr-[60px] pt-[10px]">
+                    <div className="flex items-center">
+                      <p className="min-w-0 truncate text-[8px] font-medium uppercase tracking-[0.13em] text-[#9B9B9B]">{p.brand}</p>
 
                       {isForeign && (
-                        <span className="shrink-0 rounded-[5px] bg-[#F1F1F1] px-[5px] py-[3px] text-[7.5px] font-semibold leading-none text-[#555]">
+                        <span className="ml-auto shrink-0 rounded-full bg-[#F2F2F2] px-[6px] py-[3px] text-[7px] font-semibold leading-none text-[#555]">
                           из-за рубежа
                         </span>
                       )}
                     </div>
 
-                    <h3 className="mt-[4px] line-clamp-2 min-h-[28px] text-[12px] font-medium leading-[1.15] tracking-[-0.01em] text-[#111111]">
+                    <h3 className="mt-[4px] line-clamp-2 min-h-[29px] text-[12px] font-normal leading-[1.18] tracking-[-0.02em] text-[#111111]">
                       {p.name}
                     </h3>
 
                     <div className="mt-[10px] flex items-center gap-[6px]">
-                      {visibleColors.map((color, index) => (
-                        <span
-                          key={`${p.id}-${color}-${index}`}
-                          className={`block h-[16px] w-[16px] rounded-full border shadow-[inset_0_0_0_1px_rgba(255,255,255,0.35)] ${
-                            color === "Белый" ? "border-[#BDBDBD]" : "border-black/15"
-                          }`}
-                          style={{ backgroundColor: colorSwatches[color] || "#D1D5DB" }}
-                        />
-                      ))}
+                      {visibleColors.map((color, index) => {
+                        const isSelected = selectedColor === color;
+
+                        return (
+                          <button
+                            key={`${p.id}-${color}-${index}`}
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedCardColors((prev) => ({ ...prev, [p.id]: color }));
+                              setCardImageIndexes((prev) => ({ ...prev, [p.id]: 0 }));
+                            }}
+                            className={`block h-[17px] w-[17px] rounded-full border transition ${
+                              isSelected
+                                ? "border-black ring-2 ring-black/10"
+                                : color === "Белый"
+                                ? "border-[#BDBDBD]"
+                                : "border-black/15"
+                            }`}
+                            style={{ backgroundColor: colorSwatches[color] || "#D1D5DB" }}
+                            aria-label={`Цвет ${color}`}
+                          />
+                        );
+                      })}
 
                       {extraColorsCount > 0 && <span className="text-[10px] font-medium text-[#707070]">+{extraColorsCount}</span>}
                     </div>
 
                     <div className="mt-[12px] flex min-w-0 items-end gap-[7px]">
                       {p.oldPrice ? <span className="text-[12px] font-medium leading-none text-[#A3A3A3] line-through">{formatPrice(p.oldPrice)} ₽</span> : null}
-                      <span className="text-[18px] font-semibold leading-none tracking-[-0.03em] text-[#37A536]">{formatPrice(p.price)} ₽</span>
+                      <span className="text-[18px] font-semibold leading-none tracking-[-0.03em] text-black">{formatPrice(p.price)} ₽</span>
                     </div>
 
                     <div className="mt-[10px] flex items-center gap-[5px] text-[9px] font-medium text-[#666]">
@@ -549,7 +569,7 @@ export default function HomePageClient({
                     <button
                       type="button"
                       onClick={(e) => e.stopPropagation()}
-                      className="absolute bottom-[12px] right-[10px] flex h-[44px] w-[44px] items-center justify-center rounded-[14px] bg-[#7A5AF8] text-white shadow-[0_9px_18px_rgba(122,90,248,0.36)]"
+                      className="absolute bottom-[12px] right-0 flex h-[44px] w-[44px] items-center justify-center rounded-l-[14px] rounded-r-none bg-black text-white shadow-[0_9px_18px_rgba(0,0,0,0.24)]"
                       aria-label="Добавить в корзину"
                     >
                       <CartIcon />
