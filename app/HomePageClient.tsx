@@ -11,7 +11,6 @@ const mensCategories = ["Все", "Футболки", "Поло", "Джинсы"
 const womensCategories = ["Все", "Платья", "Футболки", "Рубашки", "Брюки", "Юбки"] as const;
 const sortOptions = ["По популярности", "Сначала дешевле", "Сначала дороже", "Скидки", "Новинки"] as const;
 const banners = [{ image: "/banner.jpg", alt: "Весна Лето 2026", link: "/" }] as const;
-
 const availabilityOptions = ["Все товары", "В наличии", "Из-за рубежа"] as const;
 
 type Department = (typeof departments)[number];
@@ -42,12 +41,24 @@ export type HomeProduct = {
 
 const colorSwatches: Record<string, string> = {
   Черный: "#111111",
-  Белый: "#F7F6F1",
+  Белый: "#F8F7F2",
   Серый: "#9E9E9E",
   Синий: "#2563EB",
   Бежевый: "#C8B49A",
   Зеленый: "#4A7A3D",
   Коричневый: "#7A5230",
+};
+
+const categoryVisuals: Record<string, { label: string; tone: string; accent: string }> = {
+  Все: { label: "ALL", tone: "linear-gradient(145deg,#191919,#4a4238)", accent: "#f5efe3" },
+  Футболки: { label: "TEE", tone: "linear-gradient(145deg,#efe6d7,#cdbb9f)", accent: "#2b2118" },
+  Поло: { label: "POLO", tone: "linear-gradient(145deg,#dfe7df,#91a48d)", accent: "#172014" },
+  Джинсы: { label: "DENIM", tone: "linear-gradient(145deg,#d7e2ee,#496782)", accent: "#102033" },
+  Брюки: { label: "PANTS", tone: "linear-gradient(145deg,#eee8df,#8d8172)", accent: "#201a15" },
+  Костюмы: { label: "SUIT", tone: "linear-gradient(145deg,#e9e6e0,#1f1f1f)", accent: "#ffffff" },
+  Платья: { label: "DRESS", tone: "linear-gradient(145deg,#f1dfdf,#ad7b7b)", accent: "#311616" },
+  Рубашки: { label: "SHIRT", tone: "linear-gradient(145deg,#f3efe7,#a99578)", accent: "#241b12" },
+  Юбки: { label: "SKIRT", tone: "linear-gradient(145deg,#eee3ed,#9b7c96)", accent: "#2a1425" },
 };
 
 function getDiscountPercent(oldPrice: number | null, price: number) {
@@ -64,10 +75,9 @@ function getExtraColorsCount(colors: string[]) {
   return Math.max((colors || []).length - 3, 0);
 }
 
-// ── Icons ──────────────────────────────────────────────────────────────────
 function IconSearch() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round">
       <circle cx="11" cy="11" r="7" />
       <path d="M20 20L17 17" />
     </svg>
@@ -76,7 +86,7 @@ function IconSearch() {
 
 function IconChevron() {
   return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
       <path d="m6 9 6 6 6-6" />
     </svg>
   );
@@ -84,15 +94,17 @@ function IconChevron() {
 
 function IconFilter() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 6h16M7 12h10M10 18h4" />
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 7h16" />
+      <path d="M7 12h10" />
+      <path d="M10 17h4" />
     </svg>
   );
 }
 
 function IconHeart({ active }: { active: boolean }) {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill={active ? "#111" : "none"} stroke="#111" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="19" height="19" viewBox="0 0 24 24" fill={active ? "#111" : "none"} stroke="#111" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M20.8 4.6c-1.8-1.8-4.7-1.8-6.5 0L12 6.9l-2.3-2.3c-1.8-1.8-4.7-1.8-6.5 0s-1.8 4.7 0 6.5L12 21l8.8-9.9c1.8-1.8 1.8-4.7 0-6.5z" />
     </svg>
   );
@@ -100,7 +112,7 @@ function IconHeart({ active }: { active: boolean }) {
 
 function IconCart() {
   return (
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
       <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
       <path d="M3 6h18" />
       <path d="M16 10a4 4 0 0 1-8 0" />
@@ -110,7 +122,7 @@ function IconCart() {
 
 function IconTruck() {
   return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
       <path d="M10 17H6a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h8v10h-1" />
       <path d="M14 10h3l3 3v4h-1" />
       <circle cx="7.5" cy="17.5" r="1.5" />
@@ -121,7 +133,7 @@ function IconTruck() {
 
 function IconArrow() {
   return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M5 12h14M12 5l7 7-7 7" />
     </svg>
   );
@@ -129,33 +141,28 @@ function IconArrow() {
 
 function IconClose() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M18 6 6 18M6 6l12 12" />
     </svg>
   );
 }
 
-function CategoryIcon({ name }: { name: string }) {
-  const p = { width: 17, height: 17, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.7, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
-  if (name === "Все") return <svg {...p}><rect x="4" y="4" width="6" height="6" rx="1" /><rect x="14" y="4" width="6" height="6" rx="1" /><rect x="4" y="14" width="6" height="6" rx="1" /><rect x="14" y="14" width="6" height="6" rx="1" /></svg>;
-  if (name === "Футболки") return <svg {...p}><path d="M8 4 5 6.5 3 10l3 2 1-1v9h10v-9l1 1 3-2-2-3.5L16 4h-2a2 2 0 0 1-4 0H8Z" /></svg>;
-  if (name === "Поло") return <svg {...p}><path d="M8 4h8l3 3v13H5V7l3-3Z" /><path d="M9 4 12 7l3-3" /><path d="M12 7v5" /></svg>;
-  if (name === "Джинсы" || name === "Брюки") return <svg {...p}><path d="M8 4h8l1 16h-4l-1-10-1 10H7L8 4Z" /><path d="M8 7h8" /></svg>;
-  if (name === "Костюмы") return <svg {...p}><path d="M8 5h8l2 4v11h-5l-1-6-1 6H6V9l2-4Z" /><path d="M7 12h10" /></svg>;
-  if (name === "Платья") return <svg {...p}><path d="M9 4h6l2 5-3 2v9H10v-9L7 9Z" /></svg>;
-  if (name === "Рубашки") return <svg {...p}><path d="M8 4 5 6.5 3 10l3 2 1-1v9h10v-9l1 1 3-2-2-3.5L16 4h-2v4H10V4H8Z" /></svg>;
-  if (name === "Юбки") return <svg {...p}><path d="M8 8h8l2 12H6L8 8Z" /><path d="M9 8V5h6v3" /></svg>;
-  return <svg {...p}><circle cx="12" cy="12" r="8" /></svg>;
+function CategoryMark({ name }: { name: string }) {
+  const visual = categoryVisuals[name] || categoryVisuals["Все"];
+  return (
+    <span className="mn-category-mark" style={{ background: visual.tone, color: visual.accent }}>
+      {visual.label}
+    </span>
+  );
 }
 
-// ── Component ──────────────────────────────────────────────────────────────
 export default function HomePageClient({
   initialProducts,
   initialBrands,
 }: {
   initialProducts: HomeProduct[];
   initialBrands: BrandRow[];
-  initialBadges: BadgeRow[];
+  initialBadges?: BadgeRow[];
 }) {
   const router = useRouter();
   const [favorites, setFavorites] = useState<string[]>([]);
@@ -268,6 +275,9 @@ export default function HomePageClient({
     search.trim().length > 0,
   ].filter(Boolean).length;
 
+  const heroProduct = filteredProducts[0] || departmentProducts[0] || initialProducts[0];
+  const heroImage = heroProduct?.image || heroProduct?.images?.[0] || banners[0].image;
+
   const handleTouchStart = (id: string, x: number) => {
     touchStartMapRef.current[id] = x;
   };
@@ -291,459 +301,578 @@ export default function HomePageClient({
       {showSplash && <AppSplash />}
 
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Cormorant+Garamond:wght@500;600;700&display=swap');
 
         *, *::before, *::after { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        html { overscroll-behavior-x: none; }
-        body { overflow-x: hidden !important; max-width: 100vw !important; overscroll-behavior: none; }
+        html { overscroll-behavior-x: none; background: #f6f2ea; }
+        body { margin: 0; overflow-x: hidden !important; max-width: 100vw !important; overscroll-behavior: none; background: #f6f2ea; }
         button, input { font: inherit; }
-        button:focus-visible, input:focus-visible { outline: 2px solid rgba(17, 17, 17, 0.55); outline-offset: 2px; }
+        button { touch-action: manipulation; }
+        button:focus-visible, input:focus-visible { outline: 2px solid rgba(19, 19, 17, 0.5); outline-offset: 2px; }
 
         .mn-page {
-          --bg: #f4f1ec;
-          --surface: #ffffff;
-          --surface-soft: #faf8f5;
-          --text: #141414;
-          --muted: #7a766f;
-          --muted-light: #aaa49b;
-          --line: rgba(20, 20, 20, 0.08);
-          --line-strong: rgba(20, 20, 20, 0.14);
-          --dark: #111111;
+          --page: #f6f2ea;
+          --ink: #151411;
+          --soft-ink: #6f685e;
+          --muted: #9d9488;
+          --paper: #fffdf8;
+          --paper-strong: #ffffff;
+          --line: rgba(28, 25, 20, 0.09);
+          --line-strong: rgba(28, 25, 20, 0.16);
+          --gold: #b8925a;
+          --dark: #151411;
+          --radius-xl: 30px;
           --radius-lg: 24px;
           --radius-md: 18px;
-          --radius-sm: 13px;
-          font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-          background:
-            radial-gradient(circle at top left, rgba(255, 255, 255, 0.95), transparent 280px),
-            linear-gradient(180deg, #f7f4ef 0%, var(--bg) 45%, #eeeae3 100%);
-          color: var(--text);
+          font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
           min-height: 100vh;
           width: 100%;
           max-width: 100vw;
           overflow-x: hidden;
+          color: var(--ink);
+          background:
+            radial-gradient(circle at 50% -80px, rgba(255,255,255,0.92), rgba(255,255,255,0) 220px),
+            linear-gradient(180deg, #fbf8f2 0%, var(--page) 38%, #efe9dd 100%);
           padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px));
         }
 
         .mn-shell {
-          width: min(100%, 860px);
+          width: min(100%, 760px);
           margin: 0 auto;
+          overflow-x: clip;
         }
 
-        .mn-header {
+        .mn-topbar {
           position: sticky;
           top: 0;
           z-index: 100;
-          background: rgba(247, 244, 239, 0.86);
+          padding: calc(env(safe-area-inset-top, 0px) + 8px) 14px 8px;
+          background: linear-gradient(180deg, rgba(251,248,242,0.96), rgba(251,248,242,0.84));
           backdrop-filter: blur(22px);
           -webkit-backdrop-filter: blur(22px);
-          border-bottom: 1px solid var(--line);
-          padding-top: env(safe-area-inset-top, 0px);
+          border-bottom: 1px solid rgba(28, 25, 20, 0.055);
         }
 
-        .mn-header-inner {
-          min-height: 58px;
-          display: flex;
+        .mn-topbar-inner {
+          height: 46px;
+          display: grid;
+          grid-template-columns: 42px 1fr 42px;
           align-items: center;
-          justify-content: space-between;
-          gap: 12px;
-          padding: 0 16px;
+          gap: 8px;
+        }
+
+        .mn-round-action {
+          width: 42px;
+          height: 42px;
+          border: 1px solid var(--line);
+          border-radius: 999px;
+          background: rgba(255,255,255,0.82);
+          color: var(--ink);
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          box-shadow: 0 10px 26px rgba(34, 28, 20, 0.055);
         }
 
         .mn-logo-btn {
-          background: transparent;
+          min-width: 0;
+          justify-self: center;
           border: none;
+          background: transparent;
+          text-align: center;
+          padding: 0 4px;
           cursor: pointer;
-          padding: 7px 6px;
-          text-align: left;
         }
 
         .mn-logo-name {
-          font-family: 'Playfair Display', Georgia, serif;
-          font-size: 20px;
-          font-weight: 600;
-          letter-spacing: 0.2em;
-          color: var(--text);
-          line-height: 1;
+          font-family: 'Cormorant Garamond', Georgia, serif;
+          font-size: 23px;
+          font-weight: 700;
+          line-height: 0.92;
+          letter-spacing: 0.135em;
+          white-space: nowrap;
+          color: var(--ink);
         }
 
         .mn-logo-sub {
+          margin-top: 2px;
           font-size: 8px;
-          letter-spacing: 0.42em;
-          color: var(--muted-light);
+          font-weight: 800;
+          letter-spacing: 0.34em;
           text-transform: uppercase;
-          margin-top: 3px;
-          font-weight: 600;
+          color: var(--muted);
         }
 
-        .mn-header-meta {
-          min-width: 34px;
-          height: 34px;
-          padding: 0 9px;
+        .mn-top-count {
+          min-width: 18px;
+          height: 18px;
+          padding: 0 5px;
           border-radius: 999px;
-          background: rgba(255, 255, 255, 0.68);
-          border: 1px solid var(--line);
+          background: #151411;
+          color: #fff;
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          font-size: 12px;
-          font-weight: 700;
-          color: var(--text);
-          box-shadow: 0 8px 20px rgba(31, 26, 18, 0.05);
+          font-size: 9px;
+          font-weight: 800;
+          margin-left: -10px;
+          margin-top: -18px;
+          border: 2px solid #fffdf8;
         }
 
         .mn-hero {
-          padding: 14px 14px 0;
+          padding: 10px 14px 0;
         }
 
-        .mn-search {
-          background: rgba(255, 255, 255, 0.9);
-          border: 1px solid var(--line);
-          border-radius: 18px;
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          padding: 0 13px;
-          height: 48px;
-          color: var(--muted-light);
-          box-shadow: 0 10px 30px rgba(31, 26, 18, 0.05);
-          transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
-        }
-
-        .mn-search:focus-within {
-          background: #fff;
-          border-color: rgba(17, 17, 17, 0.22);
-          box-shadow: 0 0 0 4px rgba(17, 17, 17, 0.045), 0 14px 34px rgba(31, 26, 18, 0.08);
-          color: var(--text);
-        }
-
-        .mn-search input {
-          flex: 1;
-          min-width: 0;
-          background: transparent;
-          border: none;
-          outline: none;
-          font-size: 14px;
-          font-weight: 500;
-          color: var(--text);
-        }
-
-        .mn-search input::placeholder { color: #b3aea6; font-weight: 400; }
-
-        .mn-search-clear {
-          width: 28px;
-          height: 28px;
-          border-radius: 999px;
-          border: none;
-          background: #f1eee8;
-          color: var(--muted);
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-        }
-
-        .mn-tabs {
-          margin-top: 12px;
-          background: rgba(17, 17, 17, 0.06);
-          border: 1px solid rgba(255, 255, 255, 0.55);
-          border-radius: 18px;
-          padding: 4px;
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 4px;
-        }
-
-        .mn-tab {
-          border: none;
-          border-radius: 14px;
-          padding: 11px 8px;
-          font-size: 13px;
-          font-weight: 700;
-          cursor: pointer;
-          transition: transform 0.18s ease, background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
-          background: transparent;
-          color: var(--muted);
-        }
-
-        .mn-tab.active {
-          background: var(--dark);
-          color: #fff;
-          box-shadow: 0 12px 24px rgba(17, 17, 17, 0.18);
-        }
-
-        .mn-tab:active { transform: scale(0.985); }
-
-        .mn-cats-wrap {
-          margin: 14px -14px 0;
-          overflow-x: auto;
-          padding: 0 14px;
-          scrollbar-width: none;
-        }
-
-        .mn-cats-wrap::-webkit-scrollbar { display: none; }
-        .mn-cats-inner { display: flex; gap: 8px; min-width: max-content; padding-right: 14px; }
-
-        .mn-cat-btn {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          min-height: 38px;
-          padding: 8px 13px;
-          border-radius: 999px;
-          border: 1px solid var(--line);
-          background: rgba(255, 255, 255, 0.84);
-          font-size: 12px;
-          font-weight: 700;
-          color: var(--muted);
-          cursor: pointer;
-          white-space: nowrap;
-          transition: all 0.18s ease;
-          flex-shrink: 0;
-          box-shadow: 0 7px 18px rgba(31, 26, 18, 0.035);
-        }
-
-        .mn-cat-btn.active {
-          background: var(--dark);
-          color: #fff;
-          border-color: var(--dark);
-          box-shadow: 0 12px 24px rgba(17, 17, 17, 0.16);
-        }
-
-        .mn-banner {
-          margin-top: 16px;
-          border-radius: var(--radius-lg);
-          overflow: hidden;
+        .mn-hero-card {
           position: relative;
-          min-height: 196px;
-          display: block;
-          border: 1px solid rgba(255, 255, 255, 0.38);
-          cursor: pointer;
-          width: 100%;
-          padding: 0;
-          background: #211d18;
-          box-shadow: 0 18px 46px rgba(31, 26, 18, 0.16);
+          min-height: 286px;
+          border-radius: 34px;
+          overflow: hidden;
+          background: #191713;
+          border: 1px solid rgba(255,255,255,0.58);
+          box-shadow: 0 26px 56px rgba(42, 33, 22, 0.18);
         }
 
-        .mn-banner img {
+        .mn-hero-bg {
+          position: absolute;
+          inset: 0;
           width: 100%;
           height: 100%;
-          min-height: 196px;
           object-fit: cover;
-          display: block;
-          transform: scale(1.01);
-          transition: transform 0.45s ease;
+          transform: scale(1.04);
+          opacity: 0.8;
         }
 
-        .mn-banner:active img { transform: scale(1.035); }
-
-        .mn-banner-overlay {
+        .mn-hero-layer {
           position: absolute;
           inset: 0;
           background:
-            linear-gradient(105deg, rgba(10, 8, 6, 0.74) 0%, rgba(10, 8, 6, 0.36) 47%, rgba(10, 8, 6, 0.08) 100%),
-            linear-gradient(180deg, rgba(0,0,0,0.10), rgba(0,0,0,0.28));
+            linear-gradient(180deg, rgba(11,10,8,0.16) 0%, rgba(11,10,8,0.24) 42%, rgba(11,10,8,0.78) 100%),
+            linear-gradient(115deg, rgba(10,9,7,0.84) 0%, rgba(10,9,7,0.18) 58%, rgba(10,9,7,0) 100%);
         }
 
-        .mn-banner-content {
-          position: absolute;
-          inset: 0;
-          padding: 20px;
+        .mn-hero-content {
+          position: relative;
+          z-index: 2;
+          min-height: 286px;
+          padding: 18px;
           display: flex;
           flex-direction: column;
           justify-content: space-between;
-          align-items: flex-start;
         }
 
-        .mn-banner-eyebrow {
+        .mn-hero-topline {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+        }
+
+        .mn-pill-light {
+          min-height: 30px;
+          padding: 0 12px;
+          border-radius: 999px;
           display: inline-flex;
           align-items: center;
-          min-height: 24px;
-          padding: 0 10px;
-          border-radius: 999px;
-          background: rgba(255, 255, 255, 0.14);
-          border: 1px solid rgba(255, 255, 255, 0.18);
-          color: rgba(255,255,255,0.78);
-          font-size: 9px;
-          letter-spacing: 0.24em;
+          gap: 7px;
+          background: rgba(255,255,255,0.13);
+          border: 1px solid rgba(255,255,255,0.18);
+          color: rgba(255,255,255,0.84);
+          font-size: 10px;
+          font-weight: 800;
+          letter-spacing: 0.16em;
           text-transform: uppercase;
+          backdrop-filter: blur(12px);
+        }
+
+        .mn-hero-title {
+          max-width: 245px;
+          margin-top: 54px;
+          font-family: 'Cormorant Garamond', Georgia, serif;
+          font-size: clamp(42px, 12vw, 58px);
           font-weight: 700;
-          backdrop-filter: blur(8px);
+          line-height: 0.82;
+          letter-spacing: -0.065em;
+          color: #fffdf8;
         }
 
-        .mn-banner-title {
-          font-family: 'Playfair Display', Georgia, serif;
-          font-size: clamp(30px, 8vw, 48px);
-          color: #fff;
-          line-height: 0.94;
-          margin-top: 16px;
+        .mn-hero-description {
+          max-width: 235px;
+          margin-top: 14px;
+          color: rgba(255,255,255,0.78);
+          font-size: 13px;
           font-weight: 600;
-          letter-spacing: -0.035em;
-          text-align: left;
+          line-height: 1.38;
         }
 
-        .mn-banner-bottom {
-          width: 100%;
+        .mn-hero-bottom {
+          margin-top: 22px;
           display: flex;
           align-items: flex-end;
           justify-content: space-between;
           gap: 14px;
         }
 
-        .mn-banner-note {
-          max-width: 190px;
-          font-size: 12px;
-          line-height: 1.35;
-          color: rgba(255,255,255,0.76);
-          text-align: left;
-        }
-
-        .mn-banner-cta {
-          flex-shrink: 0;
+        .mn-primary-cta {
+          height: 46px;
+          padding: 0 18px;
+          border: none;
+          border-radius: 999px;
+          background: #fffdf8;
+          color: #151411;
           display: inline-flex;
           align-items: center;
-          gap: 7px;
-          background: #fff;
-          color: var(--text);
-          font-size: 12px;
-          font-weight: 800;
-          letter-spacing: -0.01em;
-          padding: 10px 14px;
-          border-radius: 999px;
-          box-shadow: 0 10px 22px rgba(0, 0, 0, 0.16);
+          justify-content: center;
+          gap: 8px;
+          font-size: 13px;
+          font-weight: 900;
+          cursor: pointer;
+          box-shadow: 0 16px 28px rgba(0,0,0,0.2);
         }
 
-        .mn-catalog-head {
-          margin: 22px 14px 0;
+        .mn-hero-stat {
+          min-width: 74px;
+          padding: 9px 10px;
+          border-radius: 20px;
+          background: rgba(255,255,255,0.13);
+          border: 1px solid rgba(255,255,255,0.18);
+          color: #fffdf8;
+          text-align: center;
+          backdrop-filter: blur(12px);
+        }
+
+        .mn-hero-stat strong {
+          display: block;
+          font-size: 18px;
+          line-height: 1;
+          font-weight: 900;
+        }
+
+        .mn-hero-stat span {
+          display: block;
+          margin-top: 3px;
+          font-size: 9px;
+          text-transform: uppercase;
+          letter-spacing: 0.11em;
+          color: rgba(255,255,255,0.66);
+          font-weight: 800;
+        }
+
+        .mn-search-dock {
+          position: relative;
+          z-index: 3;
+          margin: -24px 12px 0;
+          height: 54px;
+          border-radius: 22px;
+          background: rgba(255,255,255,0.96);
+          border: 1px solid rgba(255,255,255,0.88);
+          box-shadow: 0 18px 42px rgba(41, 32, 21, 0.16);
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 0 13px;
+          color: var(--muted);
+        }
+
+        .mn-search-dock input {
+          flex: 1;
+          min-width: 0;
+          height: 100%;
+          border: none;
+          outline: none;
+          background: transparent;
+          color: var(--ink);
+          font-size: 14px;
+          font-weight: 700;
+        }
+
+        .mn-search-dock input::placeholder { color: #aaa196; font-weight: 600; }
+
+        .mn-search-clear {
+          width: 30px;
+          height: 30px;
+          border-radius: 999px;
+          border: none;
+          background: #f2eee6;
+          color: var(--soft-ink);
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+        }
+
+        .mn-segment {
+          margin-top: 14px;
+          height: 48px;
+          padding: 4px;
+          border-radius: 999px;
+          background: rgba(21,20,17,0.07);
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 4px;
+        }
+
+        .mn-segment-btn {
+          border: none;
+          border-radius: 999px;
+          background: transparent;
+          color: var(--soft-ink);
+          font-size: 13px;
+          font-weight: 900;
+          cursor: pointer;
+          transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+        }
+
+        .mn-segment-btn.active {
+          background: var(--dark);
+          color: #fffdf8;
+          box-shadow: 0 12px 26px rgba(21,20,17,0.18);
+        }
+
+        .mn-section {
+          margin-top: 24px;
+        }
+
+        .mn-section-head {
+          padding: 0 14px;
           display: flex;
           align-items: flex-end;
           justify-content: space-between;
           gap: 12px;
         }
 
-        .mn-catalog-kicker {
+        .mn-kicker {
           font-size: 10px;
-          letter-spacing: 0.2em;
+          line-height: 1;
+          letter-spacing: 0.18em;
           text-transform: uppercase;
-          color: var(--muted-light);
-          font-weight: 800;
+          color: var(--gold);
+          font-weight: 900;
         }
 
-        .mn-catalog-title {
-          margin-top: 4px;
+        .mn-section-title {
+          margin-top: 5px;
           font-size: 22px;
           line-height: 1.05;
           letter-spacing: -0.055em;
-          font-weight: 800;
-          color: var(--text);
+          font-weight: 900;
+          color: var(--ink);
         }
 
-        .mn-catalog-count {
-          flex-shrink: 0;
-          padding: 7px 10px;
+        .mn-count-chip {
+          height: 32px;
+          padding: 0 11px;
           border-radius: 999px;
-          background: rgba(255, 255, 255, 0.72);
+          background: rgba(255,255,255,0.72);
           border: 1px solid var(--line);
-          color: var(--muted);
+          display: inline-flex;
+          align-items: center;
+          color: var(--soft-ink);
           font-size: 12px;
-          font-weight: 700;
+          font-weight: 900;
         }
 
-        .mn-controls {
-          margin: 12px 14px 0;
-          padding: 10px;
-          border-radius: 22px;
-          background: rgba(255, 255, 255, 0.72);
-          border: 1px solid rgba(255, 255, 255, 0.74);
-          box-shadow: 0 14px 34px rgba(31, 26, 18, 0.055);
-        }
-
-        .mn-chips {
+        .mn-category-strip {
+          margin-top: 12px;
+          padding: 0 14px 4px;
           display: flex;
-          gap: 7px;
+          gap: 10px;
           overflow-x: auto;
           scrollbar-width: none;
-          padding-bottom: 2px;
+          scroll-snap-type: x proximity;
         }
 
-        .mn-chips::-webkit-scrollbar { display: none; }
+        .mn-category-strip::-webkit-scrollbar { display: none; }
+
+        .mn-category-card {
+          position: relative;
+          flex: 0 0 116px;
+          height: 126px;
+          border: 1px solid rgba(255,255,255,0.78);
+          border-radius: 26px;
+          padding: 11px;
+          overflow: hidden;
+          cursor: pointer;
+          text-align: left;
+          color: var(--ink);
+          box-shadow: 0 14px 32px rgba(41, 32, 21, 0.09);
+          scroll-snap-align: start;
+        }
+
+        .mn-category-card::after {
+          content: "";
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(180deg, rgba(255,255,255,0.36), rgba(255,255,255,0.02));
+          pointer-events: none;
+        }
+
+        .mn-category-card.active {
+          outline: 2px solid #151411;
+          outline-offset: -2px;
+        }
+
+        .mn-category-name {
+          position: relative;
+          z-index: 2;
+          display: block;
+          margin-top: 34px;
+          font-size: 14px;
+          font-weight: 900;
+          letter-spacing: -0.035em;
+        }
+
+        .mn-category-caption {
+          position: relative;
+          z-index: 2;
+          display: block;
+          margin-top: 3px;
+          max-width: 82px;
+          font-size: 10px;
+          line-height: 1.2;
+          font-weight: 800;
+          opacity: 0.72;
+        }
+
+        .mn-category-mark {
+          position: absolute;
+          top: 11px;
+          left: 11px;
+          z-index: 2;
+          min-width: 42px;
+          height: 24px;
+          border-radius: 999px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0 8px;
+          font-size: 9px;
+          font-weight: 900;
+          letter-spacing: 0.08em;
+          box-shadow: 0 8px 18px rgba(0,0,0,0.12);
+        }
+
+        .mn-category-art {
+          position: absolute;
+          right: -14px;
+          bottom: -16px;
+          width: 78px;
+          height: 78px;
+          border-radius: 30px;
+          background: rgba(255,255,255,0.26);
+          transform: rotate(-18deg);
+          z-index: 1;
+        }
+
+        .mn-category-art::before {
+          content: "";
+          position: absolute;
+          inset: 13px;
+          border-radius: 22px;
+          border: 1px solid rgba(255,255,255,0.42);
+        }
+
+        .mn-controls-panel {
+          margin: 18px 14px 0;
+          border-radius: 28px;
+          padding: 12px;
+          background: rgba(255,253,248,0.78);
+          border: 1px solid rgba(255,255,255,0.9);
+          box-shadow: 0 18px 42px rgba(41, 32, 21, 0.08);
+        }
+
+        .mn-availability {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0,1fr));
+          gap: 7px;
+        }
 
         .mn-chip {
-          flex-shrink: 0;
-          min-height: 35px;
-          padding: 8px 13px;
-          border-radius: 999px;
-          font-size: 12px;
-          font-weight: 700;
+          min-height: 38px;
+          border-radius: 16px;
           border: 1px solid var(--line);
           background: #fff;
-          color: var(--muted);
+          color: var(--soft-ink);
+          font-size: 11px;
+          font-weight: 900;
           cursor: pointer;
+          padding: 0 8px;
           white-space: nowrap;
-          transition: all 0.18s ease;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
 
         .mn-chip.active {
-          background: var(--dark);
-          color: #fff;
-          border-color: var(--dark);
-          box-shadow: 0 10px 20px rgba(17, 17, 17, 0.14);
+          background: #151411;
+          color: #fffdf8;
+          border-color: #151411;
         }
 
-        .mn-sort-row {
+        .mn-filter-grid {
           margin-top: 9px;
           display: grid;
-          grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 44px;
+          grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 46px;
           gap: 8px;
         }
 
         .mn-control-wrap { position: relative; min-width: 0; }
 
-        .mn-sort-btn, .mn-filter-btn {
-          height: 42px;
-          background: var(--surface-soft);
+        .mn-select-btn, .mn-filter-btn {
+          height: 46px;
+          width: 100%;
+          border-radius: 18px;
           border: 1px solid var(--line);
-          border-radius: 14px;
-          color: var(--text);
+          background: #fff;
+          color: var(--ink);
           cursor: pointer;
-          transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+          box-shadow: 0 8px 18px rgba(41,32,21,0.035);
         }
 
-        .mn-sort-btn {
-          width: 100%;
+        .mn-select-btn {
           padding: 0 12px;
           display: flex;
           align-items: center;
           justify-content: space-between;
-          gap: 7px;
+          gap: 8px;
           font-size: 12px;
-          font-weight: 700;
-          min-width: 0;
+          font-weight: 900;
         }
 
-        .mn-sort-btn span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; text-align: left; }
+        .mn-select-btn span {
+          min-width: 0;
+          flex: 1;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          text-align: left;
+        }
 
         .mn-filter-btn {
-          width: 44px;
           display: flex;
           align-items: center;
           justify-content: center;
         }
 
-        .mn-sort-btn:active, .mn-filter-btn:active { transform: scale(0.98); }
-        .mn-sort-btn.is-open, .mn-filter-btn.is-open { background: #111; color: #fff; border-color: #111; }
+        .mn-select-btn.is-open, .mn-filter-btn.is-open {
+          background: #151411;
+          border-color: #151411;
+          color: #fffdf8;
+        }
 
         .mn-dropdown {
           position: absolute;
-          top: 49px;
+          top: 52px;
           left: 0;
           right: 0;
           z-index: 300;
-          background: #fff;
+          padding: 7px;
+          border-radius: 20px;
+          background: #fffdf8;
           border: 1px solid var(--line);
-          border-radius: 16px;
-          padding: 6px;
-          box-shadow: 0 18px 50px rgba(22, 18, 14, 0.16);
-          max-height: 250px;
+          box-shadow: 0 22px 54px rgba(29, 24, 18, 0.2);
+          max-height: 260px;
           overflow-y: auto;
           scrollbar-width: none;
         }
@@ -751,126 +880,127 @@ export default function HomePageClient({
         .mn-dropdown::-webkit-scrollbar { display: none; }
 
         .mn-dropdown button {
-          display: block;
           width: 100%;
-          text-align: left;
-          padding: 10px 11px;
-          border-radius: 11px;
-          font-size: 13px;
-          font-weight: 700;
-          color: var(--text);
+          min-height: 42px;
           border: none;
-          cursor: pointer;
+          border-radius: 14px;
           background: transparent;
-          transition: background 0.14s ease, color 0.14s ease;
+          color: var(--ink);
+          text-align: left;
+          padding: 0 12px;
+          font-size: 13px;
+          font-weight: 800;
+          cursor: pointer;
         }
 
-        .mn-dropdown button:hover { background: #f4f1ec; }
-        .mn-dropdown button.active { background: #111; color: #fff; }
+        .mn-dropdown button.active {
+          background: #151411;
+          color: #fffdf8;
+        }
 
         .mn-active-tools {
-          margin-top: 9px;
+          margin-top: 10px;
+          padding: 0 2px;
           display: flex;
           align-items: center;
           justify-content: space-between;
-          gap: 8px;
-          color: var(--muted);
+          gap: 12px;
           font-size: 12px;
-          font-weight: 600;
+          font-weight: 800;
+          color: var(--soft-ink);
         }
 
         .mn-reset-btn {
           border: none;
           background: transparent;
-          color: var(--text);
+          color: #151411;
           font-size: 12px;
-          font-weight: 800;
+          font-weight: 900;
           cursor: pointer;
           padding: 4px 0;
         }
 
-        .mn-grid {
-          margin: 12px 14px 0;
+        .mn-product-grid {
+          margin: 14px 14px 0;
           display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
+          grid-template-columns: repeat(2, minmax(0,1fr));
           gap: 12px;
         }
 
-        .mn-card {
-          background: rgba(255, 255, 255, 0.9);
-          border-radius: 22px;
+        .mn-product-card {
+          min-width: 0;
+          border: none;
+          border-radius: 26px;
           overflow: hidden;
+          background: #fffdf8;
+          box-shadow: 0 16px 36px rgba(41,32,21,0.09);
           cursor: pointer;
-          border: 1px solid rgba(20, 20, 20, 0.055);
-          box-shadow: 0 12px 28px rgba(31, 26, 18, 0.06);
-          transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+          text-align: left;
+          transition: transform 0.18s ease, box-shadow 0.18s ease;
         }
 
-        .mn-card:active { transform: scale(0.985); }
+        .mn-product-card:active { transform: scale(0.985); }
 
-        @media (hover: hover) {
-          .mn-card:hover {
-            transform: translateY(-3px);
-            border-color: rgba(20, 20, 20, 0.11);
-            box-shadow: 0 18px 38px rgba(31, 26, 18, 0.10);
-          }
-          .mn-card:hover .mn-card-img { transform: scale(1.035); }
-          .mn-cat-btn:hover, .mn-chip:hover { border-color: var(--line-strong); }
-        }
-
-        .mn-card-img-wrap {
+        .mn-image-box {
           position: relative;
-          aspect-ratio: 3 / 4;
+          aspect-ratio: 0.74;
           overflow: hidden;
-          background: #eeeae4;
+          background: #e9e2d7;
         }
 
-        .mn-card-img {
+        .mn-product-img {
           width: 100%;
           height: 100%;
           object-fit: cover;
           display: block;
-          transition: transform 0.34s ease;
+          transition: transform 0.32s ease;
+        }
+
+        .mn-product-gradient {
+          position: absolute;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          height: 52%;
+          background: linear-gradient(180deg, rgba(0,0,0,0), rgba(0,0,0,0.18));
+          pointer-events: none;
         }
 
         .mn-badge {
           position: absolute;
           top: 10px;
           left: 10px;
-          min-height: 24px;
+          min-height: 26px;
+          padding: 0 9px;
+          border-radius: 999px;
           display: inline-flex;
           align-items: center;
           font-size: 10px;
-          font-weight: 800;
+          font-weight: 900;
           letter-spacing: -0.01em;
-          padding: 0 8px;
-          border-radius: 999px;
-          box-shadow: 0 8px 18px rgba(0,0,0,0.12);
+          box-shadow: 0 10px 20px rgba(0,0,0,0.14);
         }
 
-        .mn-badge-sale { background: #d8372f; color: #fff; }
-        .mn-badge-new { background: #111; color: #fff; }
+        .mn-badge-sale { background: #d63a32; color: #fff; }
+        .mn-badge-new { background: #151411; color: #fffdf8; }
 
         .mn-heart-btn {
           position: absolute;
           top: 9px;
           right: 9px;
           z-index: 10;
-          width: 36px;
-          height: 36px;
+          width: 38px;
+          height: 38px;
           border-radius: 999px;
-          background: rgba(255,255,255,0.92);
-          backdrop-filter: blur(10px);
-          border: 1px solid rgba(255,255,255,0.55);
-          display: flex;
+          border: 1px solid rgba(255,255,255,0.7);
+          background: rgba(255,255,255,0.88);
+          backdrop-filter: blur(12px);
+          display: inline-flex;
           align-items: center;
           justify-content: center;
           cursor: pointer;
-          box-shadow: 0 8px 20px rgba(0,0,0,0.10);
-          transition: transform 0.16s ease, background 0.16s ease;
+          box-shadow: 0 10px 22px rgba(0,0,0,0.11);
         }
-
-        .mn-heart-btn:active { transform: scale(0.92); }
 
         .mn-dots {
           position: absolute;
@@ -881,8 +1011,8 @@ export default function HomePageClient({
           gap: 4px;
           padding: 5px 7px;
           border-radius: 999px;
-          background: rgba(17,17,17,0.18);
-          backdrop-filter: blur(8px);
+          background: rgba(21,20,17,0.26);
+          backdrop-filter: blur(10px);
         }
 
         .mn-dot {
@@ -892,86 +1022,84 @@ export default function HomePageClient({
           transition: all 0.2s ease;
         }
 
-        .mn-dot.active { background: #fff; }
+        .mn-dot.active { background: #fffdf8; }
 
-        .mn-card-body {
+        .mn-product-info {
           padding: 12px 12px 13px;
-          position: relative;
         }
 
-        .mn-card-top {
+        .mn-product-meta {
           display: flex;
           align-items: center;
           justify-content: space-between;
           gap: 6px;
         }
 
-        .mn-card-brand {
+        .mn-brand {
           min-width: 0;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
           font-size: 9px;
-          letter-spacing: 0.16em;
+          line-height: 1;
+          font-weight: 900;
+          letter-spacing: 0.17em;
           text-transform: uppercase;
-          color: var(--muted-light);
-          font-weight: 800;
+          color: var(--muted);
         }
 
         .mn-foreign {
           flex-shrink: 0;
-          font-size: 9px;
-          font-weight: 800;
-          letter-spacing: -0.01em;
-          padding: 4px 6px;
-          background: #f1eee8;
+          max-width: 74px;
+          min-height: 21px;
+          padding: 0 7px;
           border-radius: 999px;
-          color: var(--muted);
+          background: #f0e9de;
+          color: #776a59;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 9px;
+          font-weight: 900;
           white-space: nowrap;
         }
 
-        .mn-card-name {
-          margin-top: 5px;
+        .mn-product-name {
+          margin-top: 7px;
+          min-height: 35px;
+          color: var(--ink);
           font-size: 13px;
-          font-weight: 700;
-          color: var(--text);
-          line-height: 1.24;
+          line-height: 1.28;
+          letter-spacing: -0.035em;
+          font-weight: 900;
           display: -webkit-box;
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
           overflow: hidden;
-          min-height: 32px;
-          letter-spacing: -0.025em;
         }
 
         .mn-swatches {
+          min-height: 20px;
+          margin-top: 9px;
           display: flex;
           align-items: center;
-          gap: 6px;
-          margin-top: 10px;
-          min-height: 18px;
+          gap: 7px;
         }
 
         .mn-swatch {
-          width: 15px;
-          height: 15px;
-          border-radius: 50%;
-          border: 2px solid rgba(255,255,255,0.88);
-          box-shadow: 0 0 0 1px rgba(17,17,17,0.12);
+          width: 16px;
+          height: 16px;
+          border-radius: 999px;
+          border: 2px solid #fffdf8;
+          box-shadow: 0 0 0 1px rgba(21,20,17,0.14);
           cursor: pointer;
-          flex-shrink: 0;
-          transition: transform 0.15s ease, box-shadow 0.15s ease;
         }
 
-        .mn-swatch.active {
-          transform: scale(1.13);
-          box-shadow: 0 0 0 2px #111;
-        }
+        .mn-swatch.active { box-shadow: 0 0 0 2px #151411; }
+        .mn-extra { font-size: 10px; font-weight: 900; color: var(--muted); }
 
-        .mn-extra { font-size: 10px; color: var(--muted-light); font-weight: 700; }
-
-        .mn-prices {
-          margin-top: 11px;
+        .mn-price-row {
+          margin-top: 10px;
           display: flex;
           align-items: baseline;
           flex-wrap: wrap;
@@ -979,19 +1107,18 @@ export default function HomePageClient({
         }
 
         .mn-old-price {
-          font-size: 11px;
-          color: var(--muted-light);
+          color: var(--muted);
           text-decoration: line-through;
-          line-height: 1;
-          font-weight: 600;
+          font-size: 11px;
+          font-weight: 700;
         }
 
         .mn-price {
-          font-size: 17px;
-          font-weight: 800;
-          color: var(--text);
+          color: var(--ink);
+          font-size: 18px;
           line-height: 1;
-          letter-spacing: -0.045em;
+          letter-spacing: -0.06em;
+          font-weight: 900;
         }
 
         .mn-delivery {
@@ -999,354 +1126,408 @@ export default function HomePageClient({
           display: flex;
           align-items: center;
           gap: 5px;
+          color: var(--soft-ink);
           font-size: 11px;
-          color: var(--muted);
-          font-weight: 600;
+          line-height: 1;
+          font-weight: 800;
         }
 
         .mn-cart-btn {
           width: 100%;
-          margin-top: 11px;
-          height: 38px;
-          background: #111;
+          height: 40px;
+          margin-top: 12px;
           border: none;
-          border-radius: 13px;
+          border-radius: 16px;
+          background: #151411;
+          color: #fffdf8;
           display: flex;
           align-items: center;
           justify-content: center;
           gap: 8px;
-          color: #fff;
-          cursor: pointer;
           font-size: 12px;
-          font-weight: 800;
-          transition: transform 0.15s ease, background 0.15s ease;
+          font-weight: 900;
+          cursor: pointer;
         }
-
-        .mn-cart-btn:active { transform: scale(0.98); background: #2b2b2b; }
 
         .mn-empty {
           margin: 14px;
-          padding: 42px 22px;
-          background: rgba(255, 255, 255, 0.86);
-          border-radius: 24px;
+          padding: 36px 18px;
+          border-radius: 30px;
           text-align: center;
-          border: 1px solid rgba(20,20,20,0.06);
-          box-shadow: 0 14px 34px rgba(31, 26, 18, 0.055);
+          background: #fffdf8;
+          box-shadow: 0 18px 42px rgba(41,32,21,0.08);
+          border: 1px solid rgba(255,255,255,0.9);
         }
 
         .mn-empty-title {
-          font-family: 'Playfair Display', Georgia, serif;
-          font-size: 22px;
-          color: var(--text);
-          font-weight: 600;
-          line-height: 1.1;
+          font-family: 'Cormorant Garamond', Georgia, serif;
+          color: var(--ink);
+          font-size: 30px;
+          line-height: 0.96;
+          font-weight: 700;
+          letter-spacing: -0.045em;
         }
 
         .mn-empty-sub {
-          margin: 8px auto 0;
-          max-width: 240px;
+          max-width: 260px;
+          margin: 10px auto 0;
+          color: var(--soft-ink);
           font-size: 13px;
-          line-height: 1.45;
-          color: var(--muted);
-          font-weight: 500;
+          line-height: 1.42;
+          font-weight: 700;
         }
 
         .mn-empty-action {
           margin-top: 18px;
-          height: 42px;
+          height: 44px;
           border: none;
           border-radius: 999px;
           padding: 0 18px;
-          background: #111;
-          color: #fff;
+          background: #151411;
+          color: #fffdf8;
           font-size: 13px;
-          font-weight: 800;
+          font-weight: 900;
           cursor: pointer;
         }
 
-        @media (min-width: 620px) {
-          .mn-header-inner, .mn-hero, .mn-catalog-head, .mn-controls, .mn-grid, .mn-empty { margin-left: auto; margin-right: auto; }
-          .mn-hero, .mn-catalog-head, .mn-controls, .mn-grid { width: calc(100% - 32px); }
-          .mn-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
-          .mn-banner { min-height: 260px; }
-          .mn-banner img { min-height: 260px; }
+        @media (hover: hover) {
+          .mn-product-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 24px 50px rgba(41,32,21,0.13);
+          }
+          .mn-product-card:hover .mn-product-img { transform: scale(1.035); }
+          .mn-primary-cta:hover, .mn-cart-btn:hover { filter: brightness(1.03); }
         }
 
-        @media (max-width: 370px) {
-          .mn-grid { gap: 9px; }
-          .mn-card-body { padding: 10px; }
-          .mn-card-name { font-size: 12px; }
-          .mn-price { font-size: 16px; }
+        @media (min-width: 560px) {
+          .mn-hero-card, .mn-hero-content { min-height: 340px; }
+          .mn-product-grid { grid-template-columns: repeat(3, minmax(0,1fr)); gap: 14px; }
+          .mn-category-card { flex-basis: 132px; }
+        }
+
+        @media (max-width: 390px) {
+          .mn-logo-name { font-size: 21px; letter-spacing: 0.12em; }
+          .mn-hero-card, .mn-hero-content { min-height: 270px; }
+          .mn-hero-title { margin-top: 42px; font-size: 40px; }
+          .mn-hero-description { font-size: 12px; max-width: 220px; }
+          .mn-primary-cta { height: 43px; padding: 0 15px; }
+          .mn-hero-stat { min-width: 66px; }
+          .mn-category-card { flex-basis: 108px; height: 120px; border-radius: 24px; }
+          .mn-filter-grid { grid-template-columns: minmax(0, 1fr) 46px; }
+          .mn-filter-grid .mn-control-wrap:nth-child(2) { grid-column: 1 / -1; grid-row: 2; }
+          .mn-filter-grid .mn-control-wrap:nth-child(3) { grid-column: 2; grid-row: 1; }
+          .mn-product-grid { gap: 10px; }
+          .mn-product-info { padding: 11px 10px 12px; }
           .mn-cart-btn span { display: none; }
-          .mn-sort-row { grid-template-columns: minmax(0, 1fr) 44px; }
-          .mn-sort-row .mn-control-wrap:nth-child(2) { grid-column: 1 / -1; grid-row: 2; }
-          .mn-sort-row .mn-control-wrap:nth-child(3) { grid-column: 2; grid-row: 1; }
+        }
+
+        @media (max-width: 340px) {
+          .mn-topbar-inner { grid-template-columns: 38px 1fr 38px; }
+          .mn-round-action { width: 38px; height: 38px; }
+          .mn-logo-name { font-size: 19px; letter-spacing: 0.105em; }
+          .mn-logo-sub { font-size: 7px; }
+          .mn-hero { padding-left: 10px; padding-right: 10px; }
+          .mn-section-head, .mn-category-strip, .mn-controls-panel, .mn-product-grid, .mn-empty { margin-left: 10px; margin-right: 10px; }
+          .mn-section-head, .mn-category-strip { padding-left: 0; padding-right: 0; }
+          .mn-product-name { font-size: 12px; }
+          .mn-price { font-size: 16px; }
         }
       `}</style>
 
       <div className="mn-page">
         <div className="mn-shell">
-          {/* HEADER */}
-          <header className="mn-header">
-            <div className="mn-header-inner">
+          <header className="mn-topbar">
+            <div className="mn-topbar-inner">
+              <button className="mn-round-action" type="button" onClick={() => setSearch((v) => v)} aria-label="Поиск">
+                <IconSearch />
+              </button>
+
               <button className="mn-logo-btn" type="button" onClick={resetPage} aria-label="На главную">
                 <div className="mn-logo-name">MONTREAUX</div>
-                <div className="mn-logo-sub">Fashion</div>
+                <div className="mn-logo-sub">Fashion Store</div>
               </button>
-              <div className="mn-header-meta" aria-label={`Товаров найдено: ${filteredProducts.length}`}>
-                {filteredProducts.length}
-              </div>
+
+              <button className="mn-round-action" type="button" onClick={() => setShowAvailabilityMenu((p) => !p)} aria-label="Фильтры">
+                <IconFilter />
+                {activeFiltersCount > 0 && <span className="mn-top-count">{activeFiltersCount}</span>}
+              </button>
             </div>
           </header>
 
-          {/* HERO / SEARCH / NAV */}
-          <section className="mn-hero" aria-label="Главный экран каталога">
-            <div className="mn-search">
-              <IconSearch />
-              <input
-                placeholder="Найти бренд, товар или категорию"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                aria-label="Поиск по каталогу"
-              />
-              {search.trim() && (
-                <button type="button" className="mn-search-clear" onClick={() => setSearch("")} aria-label="Очистить поиск">
-                  <IconClose />
-                </button>
-              )}
-            </div>
+          <main>
+            <section className="mn-hero" aria-label="Главная витрина магазина">
+              <div className="mn-hero-card">
+                <img src={heroImage} alt="Новая коллекция MONTREAUX" className="mn-hero-bg" onError={(e) => { e.currentTarget.src = banners[0].image; }} />
+                <div className="mn-hero-layer" />
+                <div className="mn-hero-content">
+                  <div className="mn-hero-topline">
+                    <span className="mn-pill-light">Новая коллекция</span>
+                    <span className="mn-pill-light">SS 2026</span>
+                  </div>
 
-            <div className="mn-tabs" role="tablist" aria-label="Раздел каталога">
-              {departments.map((dep) => (
-                <button
-                  key={dep}
-                  type="button"
-                  role="tab"
-                  aria-selected={selectedDepartment === dep}
-                  className={`mn-tab${selectedDepartment === dep ? " active" : ""}`}
-                  onClick={() => {
-                    setSelectedDepartment(dep);
-                    setSelectedBrand("Все бренды");
-                    setSelectedAvailability("Все товары");
-                    setSearch("");
-                  }}
-                >
-                  {dep}
-                </button>
-              ))}
-            </div>
+                  <div>
+                    <h1 className="mn-hero-title">Premium essentials</h1>
+                    <p className="mn-hero-description">Одежда для чистого, собранного и дорогого повседневного образа.</p>
+                  </div>
 
-            <div className="mn-cats-wrap" aria-label="Категории">
-              <div className="mn-cats-inner">
-                {currentCategories.map((cat) => (
+                  <div className="mn-hero-bottom">
+                    <button type="button" className="mn-primary-cta" onClick={() => router.push(banners[0].link)}>
+                      Смотреть каталог <IconArrow />
+                    </button>
+                    <div className="mn-hero-stat">
+                      <strong>{filteredProducts.length}</strong>
+                      <span>товаров</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mn-search-dock">
+                <IconSearch />
+                <input
+                  placeholder="Поиск: бренд, товар, категория"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  aria-label="Поиск по каталогу"
+                />
+                {search.trim() && (
+                  <button type="button" className="mn-search-clear" onClick={() => setSearch("")} aria-label="Очистить поиск">
+                    <IconClose />
+                  </button>
+                )}
+              </div>
+
+              <div className="mn-segment" role="tablist" aria-label="Раздел каталога">
+                {departments.map((dep) => (
                   <button
-                    key={cat}
+                    key={dep}
                     type="button"
-                    className={`mn-cat-btn${currentCategory === cat ? " active" : ""}`}
+                    role="tab"
+                    aria-selected={selectedDepartment === dep}
+                    className={`mn-segment-btn${selectedDepartment === dep ? " active" : ""}`}
                     onClick={() => {
-                      if (selectedDepartment === "Мужчинам") setSelectedMensCategory(cat as MensCategory);
-                      else setSelectedWomensCategory(cat as WomensCategory);
+                      setSelectedDepartment(dep);
+                      setSelectedBrand("Все бренды");
+                      setSelectedAvailability("Все товары");
+                      setSearch("");
                     }}
                   >
-                    <CategoryIcon name={cat} />
-                    {cat}
+                    {dep}
                   </button>
                 ))}
               </div>
-            </div>
+            </section>
 
-            <button className="mn-banner" type="button" onClick={() => router.push(banners[0].link)}>
-              <img src={banners[0].image} alt={banners[0].alt} />
-              <div className="mn-banner-overlay" />
-              <div className="mn-banner-content">
+            <section className="mn-section" aria-label="Категории">
+              <div className="mn-section-head">
                 <div>
-                  <div className="mn-banner-eyebrow">Новая коллекция</div>
-                  <div className="mn-banner-title">Весна<br />Лето 2026</div>
+                  <div className="mn-kicker">Навигация</div>
+                  <div className="mn-section-title">Категории</div>
                 </div>
-                <div className="mn-banner-bottom">
-                  <div className="mn-banner-note">Лаконичные силуэты, базовые оттенки и вещи на каждый день.</div>
-                  <div className="mn-banner-cta">Смотреть <IconArrow /></div>
-                </div>
-              </div>
-            </button>
-          </section>
-
-          {/* CATALOG HEADER */}
-          <div className="mn-catalog-head">
-            <div>
-              <div className="mn-catalog-kicker">Каталог</div>
-              <div className="mn-catalog-title">Подборка товаров</div>
-            </div>
-            <div className="mn-catalog-count">{filteredProducts.length} шт.</div>
-          </div>
-
-          {/* FILTERS */}
-          <section className="mn-controls" aria-label="Фильтры каталога">
-            <div className="mn-chips">
-              {availabilityOptions.map((opt) => (
-                <button
-                  key={opt}
-                  type="button"
-                  className={`mn-chip${selectedAvailability === opt ? " active" : ""}`}
-                  onClick={() => setSelectedAvailability(opt)}
-                >
-                  {opt}
-                </button>
-              ))}
-            </div>
-
-            <div className="mn-sort-row">
-              <div className="mn-control-wrap" ref={brandMenuRef}>
-                <button type="button" className={`mn-sort-btn${showBrandMenu ? " is-open" : ""}`} onClick={() => setShowBrandMenu((p) => !p)} aria-expanded={showBrandMenu}>
-                  <span>{selectedBrand}</span>
-                  <IconChevron />
-                </button>
-                {showBrandMenu && (
-                  <div className="mn-dropdown">
-                    <button className={selectedBrand === "Все бренды" ? "active" : ""} onClick={() => { setSelectedBrand("Все бренды"); setShowBrandMenu(false); }}>Все бренды</button>
-                    {initialBrands.map((b) => (
-                      <button key={b.id} className={selectedBrand === b.name ? "active" : ""} onClick={() => { setSelectedBrand(b.name); setShowBrandMenu(false); }}>{b.name}</button>
-                    ))}
-                  </div>
-                )}
+                <span className="mn-count-chip">{currentCategories.length} разделов</span>
               </div>
 
-              <div className="mn-control-wrap" ref={sortMenuRef}>
-                <button type="button" className={`mn-sort-btn${showSortMenu ? " is-open" : ""}`} onClick={() => setShowSortMenu((p) => !p)} aria-expanded={showSortMenu}>
-                  <span>{selectedSort}</span>
-                  <IconChevron />
-                </button>
-                {showSortMenu && (
-                  <div className="mn-dropdown" style={{ right: 0, left: "auto", minWidth: "190px" }}>
-                    {sortOptions.map((opt) => (
-                      <button key={opt} className={selectedSort === opt ? "active" : ""} onClick={() => { setSelectedSort(opt); setShowSortMenu(false); }}>{opt}</button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="mn-control-wrap" ref={availMenuRef}>
-                <button type="button" className={`mn-filter-btn${showAvailabilityMenu ? " is-open" : ""}`} onClick={() => setShowAvailabilityMenu((p) => !p)} aria-label="Фильтр наличия" aria-expanded={showAvailabilityMenu}>
-                  <IconFilter />
-                </button>
-                {showAvailabilityMenu && (
-                  <div className="mn-dropdown" style={{ right: 0, left: "auto", minWidth: "175px" }}>
-                    {availabilityOptions.map((opt) => (
-                      <button key={opt} className={selectedAvailability === opt ? "active" : ""} onClick={() => { setSelectedAvailability(opt); setShowAvailabilityMenu(false); }}>{opt}</button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {activeFiltersCount > 0 && (
-              <div className="mn-active-tools">
-                <span>Активных фильтров: {activeFiltersCount}</span>
-                <button type="button" className="mn-reset-btn" onClick={resetFilters}>Сбросить</button>
-              </div>
-            )}
-          </section>
-
-          {/* PRODUCTS */}
-          {filteredProducts.length === 0 ? (
-            <div className="mn-empty">
-              <div className="mn-empty-title">{selectedDepartment === "Женщинам" ? "Женский раздел в разработке" : "Ничего не найдено"}</div>
-              <div className="mn-empty-sub">{selectedDepartment === "Женщинам" ? "Скоро здесь появятся товары и отдельные подборки." : "Попробуйте изменить категорию, бренд или очистить поиск."}</div>
-              <button type="button" className="mn-empty-action" onClick={resetFilters}>Сбросить фильтры</button>
-            </div>
-          ) : (
-            <div className="mn-grid">
-              {filteredProducts.map((p) => {
-                const discount = getDiscountPercent(p.oldPrice, p.price);
-                const selColor = selectedCardColors[p.id] || p.defaultColor || p.colors?.[0] || "";
-                const gallery = selColor ? p.galleryByColor?.[selColor] || [] : [];
-                const colorImg = selColor ? p.colorImages?.[selColor] : "";
-                const imgs = gallery.length > 0 ? gallery : colorImg ? [colorImg] : p.images?.length ? p.images : [p.image];
-                const total = imgs.length || 1;
-                const curIdx = cardImageIndexes[p.id] || 0;
-                const curImg = imgs[curIdx] || p.image || "/products/product-1.jpg";
-                const visColors = (p.colors || []).slice(0, 3);
-                const extraColors = getExtraColorsCount(p.colors || []);
-                const isForeign = p.badge?.trim().toLowerCase() === "из-за рубежа";
-
-                return (
-                  <article
-                    key={p.id}
-                    className="mn-card"
-                    onClick={() => router.push(`/product?id=${p.id}`)}
-                    onMouseEnter={() => router.prefetch(`/product?id=${p.id}`)}
-                  >
-                    <div
-                      className="mn-card-img-wrap"
-                      onTouchStart={(e) => handleTouchStart(p.id, e.touches[0]?.clientX ?? 0)}
-                      onTouchEnd={(e) => handleTouchEnd(p.id, e.changedTouches[0]?.clientX ?? 0, total)}
+              <div className="mn-category-strip">
+                {currentCategories.map((cat) => {
+                  const visual = categoryVisuals[cat] || categoryVisuals["Все"];
+                  return (
+                    <button
+                      key={cat}
+                      type="button"
+                      className={`mn-category-card${currentCategory === cat ? " active" : ""}`}
+                      style={{ background: visual.tone, color: visual.accent }}
+                      onClick={() => {
+                        if (selectedDepartment === "Мужчинам") setSelectedMensCategory(cat as MensCategory);
+                        else setSelectedWomensCategory(cat as WomensCategory);
+                      }}
                     >
-                      <img src={curImg} alt={p.name} className="mn-card-img" onError={(e) => { e.currentTarget.src = "/products/product-1.jpg"; }} />
+                      <CategoryMark name={cat} />
+                      <span className="mn-category-name">{cat}</span>
+                      <span className="mn-category-caption">Быстрый подбор</span>
+                      <span className="mn-category-art" />
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
 
-                      {discount > 0 && <div className="mn-badge mn-badge-sale">−{discount}%</div>}
-                      {p.badge === "Новинка" && !discount && <div className="mn-badge mn-badge-new">Новинка</div>}
+            <section className="mn-section" aria-label="Каталог товаров">
+              <div className="mn-section-head">
+                <div>
+                  <div className="mn-kicker">Shop now</div>
+                  <div className="mn-section-title">Витрина</div>
+                </div>
+                <span className="mn-count-chip">{filteredProducts.length} шт.</span>
+              </div>
 
-                      <button type="button" className="mn-heart-btn" onClick={(e) => { e.stopPropagation(); toggleFavorite(p.id); }} aria-label="В избранное">
-                        <IconHeart active={favorites.includes(p.id)} />
-                      </button>
+              <div className="mn-controls-panel">
+                <div className="mn-availability">
+                  {availabilityOptions.map((opt) => (
+                    <button
+                      key={opt}
+                      type="button"
+                      className={`mn-chip${selectedAvailability === opt ? " active" : ""}`}
+                      onClick={() => setSelectedAvailability(opt)}
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                </div>
 
-                      {total > 1 && (
-                        <div className="mn-dots">
-                          {Array.from({ length: Math.min(total, 4) }).map((_, i) => (
-                            <div key={i} className={`mn-dot${i === curIdx ? " active" : ""}`} style={{ width: i === curIdx ? "13px" : "4px" }} />
-                          ))}
+                <div className="mn-filter-grid">
+                  <div className="mn-control-wrap" ref={brandMenuRef}>
+                    <button type="button" className={`mn-select-btn${showBrandMenu ? " is-open" : ""}`} onClick={() => setShowBrandMenu((p) => !p)} aria-expanded={showBrandMenu}>
+                      <span>{selectedBrand}</span>
+                      <IconChevron />
+                    </button>
+                    {showBrandMenu && (
+                      <div className="mn-dropdown">
+                        <button className={selectedBrand === "Все бренды" ? "active" : ""} onClick={() => { setSelectedBrand("Все бренды"); setShowBrandMenu(false); }}>Все бренды</button>
+                        {initialBrands.map((b) => (
+                          <button key={b.id} className={selectedBrand === b.name ? "active" : ""} onClick={() => { setSelectedBrand(b.name); setShowBrandMenu(false); }}>{b.name}</button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="mn-control-wrap" ref={sortMenuRef}>
+                    <button type="button" className={`mn-select-btn${showSortMenu ? " is-open" : ""}`} onClick={() => setShowSortMenu((p) => !p)} aria-expanded={showSortMenu}>
+                      <span>{selectedSort}</span>
+                      <IconChevron />
+                    </button>
+                    {showSortMenu && (
+                      <div className="mn-dropdown" style={{ right: 0, left: "auto", minWidth: "196px" }}>
+                        {sortOptions.map((opt) => (
+                          <button key={opt} className={selectedSort === opt ? "active" : ""} onClick={() => { setSelectedSort(opt); setShowSortMenu(false); }}>{opt}</button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="mn-control-wrap" ref={availMenuRef}>
+                    <button type="button" className={`mn-filter-btn${showAvailabilityMenu ? " is-open" : ""}`} onClick={() => setShowAvailabilityMenu((p) => !p)} aria-label="Фильтр наличия" aria-expanded={showAvailabilityMenu}>
+                      <IconFilter />
+                    </button>
+                    {showAvailabilityMenu && (
+                      <div className="mn-dropdown" style={{ right: 0, left: "auto", minWidth: "178px" }}>
+                        {availabilityOptions.map((opt) => (
+                          <button key={opt} className={selectedAvailability === opt ? "active" : ""} onClick={() => { setSelectedAvailability(opt); setShowAvailabilityMenu(false); }}>{opt}</button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {activeFiltersCount > 0 && (
+                  <div className="mn-active-tools">
+                    <span>Активных фильтров: {activeFiltersCount}</span>
+                    <button type="button" className="mn-reset-btn" onClick={resetFilters}>Сбросить</button>
+                  </div>
+                )}
+              </div>
+
+              {filteredProducts.length === 0 ? (
+                <div className="mn-empty">
+                  <div className="mn-empty-title">{selectedDepartment === "Женщинам" ? "Раздел скоро откроется" : "Ничего не найдено"}</div>
+                  <div className="mn-empty-sub">{selectedDepartment === "Женщинам" ? "Мы готовим женскую витрину и подборки под новый сезон." : "Попробуйте изменить категорию, бренд или очистить поиск."}</div>
+                  <button type="button" className="mn-empty-action" onClick={resetFilters}>Сбросить фильтры</button>
+                </div>
+              ) : (
+                <div className="mn-product-grid">
+                  {filteredProducts.map((p) => {
+                    const discount = getDiscountPercent(p.oldPrice, p.price);
+                    const selColor = selectedCardColors[p.id] || p.defaultColor || p.colors?.[0] || "";
+                    const gallery = selColor ? p.galleryByColor?.[selColor] || [] : [];
+                    const colorImg = selColor ? p.colorImages?.[selColor] : "";
+                    const imgs = gallery.length > 0 ? gallery : colorImg ? [colorImg] : p.images?.length ? p.images : [p.image];
+                    const total = imgs.length || 1;
+                    const curIdx = cardImageIndexes[p.id] || 0;
+                    const curImg = imgs[curIdx] || p.image || "/products/product-1.jpg";
+                    const visColors = (p.colors || []).slice(0, 3);
+                    const extraColors = getExtraColorsCount(p.colors || []);
+                    const isForeign = p.badge?.trim().toLowerCase() === "из-за рубежа";
+
+                    return (
+                      <article
+                        key={p.id}
+                        className="mn-product-card"
+                        onClick={() => router.push(`/product?id=${p.id}`)}
+                        onMouseEnter={() => router.prefetch(`/product?id=${p.id}`)}
+                      >
+                        <div
+                          className="mn-image-box"
+                          onTouchStart={(e) => handleTouchStart(p.id, e.touches[0]?.clientX ?? 0)}
+                          onTouchEnd={(e) => handleTouchEnd(p.id, e.changedTouches[0]?.clientX ?? 0, total)}
+                        >
+                          <img src={curImg} alt={p.name} className="mn-product-img" onError={(e) => { e.currentTarget.src = "/products/product-1.jpg"; }} />
+                          <div className="mn-product-gradient" />
+
+                          {discount > 0 && <div className="mn-badge mn-badge-sale">−{discount}%</div>}
+                          {p.badge === "Новинка" && !discount && <div className="mn-badge mn-badge-new">Новинка</div>}
+
+                          <button type="button" className="mn-heart-btn" onClick={(e) => { e.stopPropagation(); toggleFavorite(p.id); }} aria-label="В избранное">
+                            <IconHeart active={favorites.includes(p.id)} />
+                          </button>
+
+                          {total > 1 && (
+                            <div className="mn-dots">
+                              {Array.from({ length: Math.min(total, 4) }).map((_, i) => (
+                                <div key={i} className={`mn-dot${i === curIdx ? " active" : ""}`} style={{ width: i === curIdx ? "14px" : "4px" }} />
+                              ))}
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
 
-                    <div className="mn-card-body">
-                      <div className="mn-card-top">
-                        <span className="mn-card-brand">{p.brand}</span>
-                        {isForeign && <span className="mn-foreign">из-за рубежа</span>}
-                      </div>
+                        <div className="mn-product-info">
+                          <div className="mn-product-meta">
+                            <span className="mn-brand">{p.brand}</span>
+                            {isForeign && <span className="mn-foreign">import</span>}
+                          </div>
 
-                      <div className="mn-card-name">{p.name}</div>
+                          <div className="mn-product-name">{p.name}</div>
 
-                      {visColors.length > 0 && (
-                        <div className="mn-swatches">
-                          {visColors.map((color, idx) => (
-                            <button
-                              key={`${p.id}-${color}-${idx}`}
-                              type="button"
-                              className={`mn-swatch${selColor === color ? " active" : ""}`}
-                              style={{ backgroundColor: colorSwatches[color] || "#ccc" }}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedCardColors((prev) => ({ ...prev, [p.id]: color }));
-                                setCardImageIndexes((prev) => ({ ...prev, [p.id]: 0 }));
-                              }}
-                              aria-label={`Цвет ${color}`}
-                            />
-                          ))}
-                          {extraColors > 0 && <span className="mn-extra">+{extraColors}</span>}
+                          {visColors.length > 0 && (
+                            <div className="mn-swatches">
+                              {visColors.map((color, idx) => (
+                                <button
+                                  key={`${p.id}-${color}-${idx}`}
+                                  type="button"
+                                  className={`mn-swatch${selColor === color ? " active" : ""}`}
+                                  style={{ backgroundColor: colorSwatches[color] || "#ccc" }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedCardColors((prev) => ({ ...prev, [p.id]: color }));
+                                    setCardImageIndexes((prev) => ({ ...prev, [p.id]: 0 }));
+                                  }}
+                                  aria-label={`Цвет ${color}`}
+                                />
+                              ))}
+                              {extraColors > 0 && <span className="mn-extra">+{extraColors}</span>}
+                            </div>
+                          )}
+
+                          <div className="mn-price-row">
+                            {p.oldPrice ? <span className="mn-old-price">{formatPrice(p.oldPrice)} ₽</span> : null}
+                            <span className="mn-price">{formatPrice(p.price)} ₽</span>
+                          </div>
+
+                          <div className="mn-delivery">
+                            <IconTruck />
+                            <span>7–14 дней</span>
+                          </div>
+
+                          <button type="button" className="mn-cart-btn" onClick={(e) => e.stopPropagation()} aria-label="Добавить в корзину">
+                            <IconCart />
+                            <span>В корзину</span>
+                          </button>
                         </div>
-                      )}
-
-                      <div className="mn-prices">
-                        {p.oldPrice ? <span className="mn-old-price">{formatPrice(p.oldPrice)} ₽</span> : null}
-                        <span className="mn-price">{formatPrice(p.price)} ₽</span>
-                      </div>
-
-                      <div className="mn-delivery">
-                        <IconTruck />
-                        <span>Доставка 7–14 дней</span>
-                      </div>
-
-                      <button type="button" className="mn-cart-btn" onClick={(e) => e.stopPropagation()} aria-label="Добавить в корзину">
-                        <IconCart />
-                        <span>В корзину</span>
-                      </button>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-          )}
+                      </article>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+          </main>
 
           <BottomNav />
         </div>
