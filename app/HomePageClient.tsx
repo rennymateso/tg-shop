@@ -41,7 +41,7 @@ export type HomeProduct = {
 
 const colorSwatches: Record<string, string> = {
   Черный: "#111111",
-  Белый: "#F8F7F2",
+  Белый: "#F7F5EF",
   Серый: "#9E9E9E",
   Синий: "#2563EB",
   Бежевый: "#C8B49A",
@@ -49,16 +49,16 @@ const colorSwatches: Record<string, string> = {
   Коричневый: "#7A5230",
 };
 
-const categoryVisuals: Record<string, { label: string; tone: string; accent: string }> = {
-  Все: { label: "ALL", tone: "linear-gradient(145deg,#191919,#4a4238)", accent: "#f5efe3" },
-  Футболки: { label: "TEE", tone: "linear-gradient(145deg,#efe6d7,#cdbb9f)", accent: "#2b2118" },
-  Поло: { label: "POLO", tone: "linear-gradient(145deg,#dfe7df,#91a48d)", accent: "#172014" },
-  Джинсы: { label: "DENIM", tone: "linear-gradient(145deg,#d7e2ee,#496782)", accent: "#102033" },
-  Брюки: { label: "PANTS", tone: "linear-gradient(145deg,#eee8df,#8d8172)", accent: "#201a15" },
-  Костюмы: { label: "SUIT", tone: "linear-gradient(145deg,#e9e6e0,#1f1f1f)", accent: "#ffffff" },
-  Платья: { label: "DRESS", tone: "linear-gradient(145deg,#f1dfdf,#ad7b7b)", accent: "#311616" },
-  Рубашки: { label: "SHIRT", tone: "linear-gradient(145deg,#f3efe7,#a99578)", accent: "#241b12" },
-  Юбки: { label: "SKIRT", tone: "linear-gradient(145deg,#eee3ed,#9b7c96)", accent: "#2a1425" },
+const categoryHints: Record<string, string> = {
+  Все: "Весь каталог",
+  Футболки: "База на каждый день",
+  Поло: "Smart casual",
+  Джинсы: "Denim selection",
+  Брюки: "Классика и casual",
+  Костюмы: "Деловой стиль",
+  Платья: "Женственные образы",
+  Рубашки: "Офис и casual",
+  Юбки: "Лёгкие силуэты",
 };
 
 function getDiscountPercent(oldPrice: number | null, price: number) {
@@ -75,9 +75,10 @@ function getExtraColorsCount(colors: string[]) {
   return Math.max((colors || []).length - 3, 0);
 }
 
+// ── UI icons ───────────────────────────────────────────────────────────────
 function IconSearch() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round">
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round">
       <circle cx="11" cy="11" r="7" />
       <path d="M20 20L17 17" />
     </svg>
@@ -86,7 +87,7 @@ function IconSearch() {
 
 function IconChevron() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
       <path d="m6 9 6 6 6-6" />
     </svg>
   );
@@ -94,7 +95,7 @@ function IconChevron() {
 
 function IconFilter() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
       <path d="M4 7h16" />
       <path d="M7 12h10" />
       <path d="M10 17h4" />
@@ -104,7 +105,7 @@ function IconFilter() {
 
 function IconHeart({ active }: { active: boolean }) {
   return (
-    <svg width="19" height="19" viewBox="0 0 24 24" fill={active ? "#111" : "none"} stroke="#111" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill={active ? "#111111" : "none"} stroke="#111111" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M20.8 4.6c-1.8-1.8-4.7-1.8-6.5 0L12 6.9l-2.3-2.3c-1.8-1.8-4.7-1.8-6.5 0s-1.8 4.7 0 6.5L12 21l8.8-9.9c1.8-1.8 1.8-4.7 0-6.5z" />
     </svg>
   );
@@ -112,7 +113,7 @@ function IconHeart({ active }: { active: boolean }) {
 
 function IconCart() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
       <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
       <path d="M3 6h18" />
       <path d="M16 10a4 4 0 0 1-8 0" />
@@ -120,9 +121,18 @@ function IconCart() {
   );
 }
 
+function IconProfile() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="8" r="4" />
+      <path d="M5 21a7 7 0 0 1 14 0" />
+    </svg>
+  );
+}
+
 function IconTruck() {
   return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
       <path d="M10 17H6a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h8v10h-1" />
       <path d="M14 10h3l3 3v4h-1" />
       <circle cx="7.5" cy="17.5" r="1.5" />
@@ -133,7 +143,7 @@ function IconTruck() {
 
 function IconArrow() {
   return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M5 12h14M12 5l7 7-7 7" />
     </svg>
   );
@@ -147,12 +157,90 @@ function IconClose() {
   );
 }
 
-function CategoryMark({ name }: { name: string }) {
-  const visual = categoryVisuals[name] || categoryVisuals["Все"];
+// ── Category clothing icons. Unified stroke SVG set, no broken assets. ─────
+function CategoryIcon({ name }: { name: string }) {
+  const p = { width: 28, height: 28, viewBox: "0 0 32 32", fill: "none", stroke: "currentColor", strokeWidth: 1.75, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
+
+  if (name === "Все") {
+    return (
+      <svg {...p}>
+        <rect x="6" y="6" width="8" height="8" rx="2" />
+        <rect x="18" y="6" width="8" height="8" rx="2" />
+        <rect x="6" y="18" width="8" height="8" rx="2" />
+        <rect x="18" y="18" width="8" height="8" rx="2" />
+      </svg>
+    );
+  }
+
+  if (name === "Футболки") {
+    return (
+      <svg {...p}>
+        <path d="M11 6h3a2 2 0 0 0 4 0h3l5 4-3 5-2-1.3V26H11V13.7L9 15l-3-5 5-4Z" />
+        <path d="M14 7.5c.7.8 1.3 1.1 2 1.1s1.3-.3 2-1.1" />
+      </svg>
+    );
+  }
+
+  if (name === "Поло" || name === "Рубашки") {
+    return (
+      <svg {...p}>
+        <path d="M10 6h12l3 4v16H7V10l3-4Z" />
+        <path d="M11 6l5 5 5-5" />
+        <path d="M16 11v7" />
+        <path d="M12 17h8" />
+      </svg>
+    );
+  }
+
+  if (name === "Джинсы" || name === "Брюки") {
+    return (
+      <svg {...p}>
+        <path d="M11 6h10l1.4 20h-5.2L16 14.5 14.8 26H9.6L11 6Z" />
+        <path d="M11 10h10" />
+        <path d="M16 6v8.5" />
+        <path d="M13 10v2" />
+        <path d="M19 10v2" />
+      </svg>
+    );
+  }
+
+  if (name === "Костюмы") {
+    return (
+      <svg {...p}>
+        <path d="M10 6h12l3 6v14H7V12l3-6Z" />
+        <path d="M12 7l4 5 4-5" />
+        <path d="M16 12v14" />
+        <path d="M11 17h3" />
+        <path d="M18 17h3" />
+      </svg>
+    );
+  }
+
+  if (name === "Платья") {
+    return (
+      <svg {...p}>
+        <path d="M12 6h8l2 6-3 2 4 12H9l4-12-3-2 2-6Z" />
+        <path d="M14 6c.4 1.4 1.1 2.2 2 2.2S17.6 7.4 18 6" />
+        <path d="M13 14h6" />
+      </svg>
+    );
+  }
+
+  if (name === "Юбки") {
+    return (
+      <svg {...p}>
+        <path d="M12 8h8l4 18H8l4-18Z" />
+        <path d="M11 8V5h10v3" />
+        <path d="M14 11l-2 15" />
+        <path d="M18 11l2 15" />
+      </svg>
+    );
+  }
+
   return (
-    <span className="mn-category-mark" style={{ background: visual.tone, color: visual.accent }}>
-      {visual.label}
-    </span>
+    <svg {...p}>
+      <circle cx="16" cy="16" r="10" />
+    </svg>
   );
 }
 
@@ -256,7 +344,8 @@ export default function HomePageClient({
     const result = departmentProducts.filter((item) => {
       const matchCat = currentCategory === "Все" || item.category === currentCategory;
       const matchBrand = selectedBrand === "Все бренды" || item.brand === selectedBrand;
-      const matchSearch = item.name.toLowerCase().includes(search.toLowerCase()) || item.brand.toLowerCase().includes(search.toLowerCase()) || item.category.toLowerCase().includes(search.toLowerCase());
+      const query = search.trim().toLowerCase();
+      const matchSearch = !query || item.name.toLowerCase().includes(query) || item.brand.toLowerCase().includes(query) || item.category.toLowerCase().includes(query);
       const matchAvail = selectedAvailability === "Все товары" || item.badge === selectedAvailability;
       return matchCat && matchBrand && matchSearch && matchAvail;
     });
@@ -275,8 +364,12 @@ export default function HomePageClient({
     search.trim().length > 0,
   ].filter(Boolean).length;
 
-  const heroProduct = filteredProducts[0] || departmentProducts[0] || initialProducts[0];
-  const heroImage = heroProduct?.image || heroProduct?.images?.[0] || banners[0].image;
+  const newProducts = useMemo(() => {
+    const list = departmentProducts.filter((p) => p.badge === "Новинка");
+    return (list.length ? list : departmentProducts).slice(0, 8);
+  }, [departmentProducts]);
+
+  const popularProducts = useMemo(() => filteredProducts.slice(0, 4), [filteredProducts]);
 
   const handleTouchStart = (id: string, x: number) => {
     touchStartMapRef.current[id] = x;
@@ -296,287 +389,237 @@ export default function HomePageClient({
     touchStartMapRef.current[id] = null;
   };
 
+  const renderProductCard = (p: HomeProduct, mode: "grid" | "rail" = "grid") => {
+    const discount = getDiscountPercent(p.oldPrice, p.price);
+    const selColor = selectedCardColors[p.id] || p.defaultColor || p.colors?.[0] || "";
+    const gallery = selColor ? p.galleryByColor?.[selColor] || [] : [];
+    const colorImg = selColor ? p.colorImages?.[selColor] : "";
+    const imgs = gallery.length > 0 ? gallery : colorImg ? [colorImg] : p.images?.length ? p.images : [p.image];
+    const total = imgs.length || 1;
+    const curIdx = Math.min(cardImageIndexes[p.id] || 0, total - 1);
+    const curImg = imgs[curIdx] || p.image || "/products/product-1.jpg";
+    const visColors = (p.colors || []).slice(0, 4);
+    const extraColors = getExtraColorsCount(p.colors || []);
+    const isForeign = p.badge?.trim().toLowerCase() === "из-за рубежа";
+
+    return (
+      <article
+        key={`${mode}-${p.id}`}
+        className={`mn-product-card ${mode === "rail" ? "mn-product-card-rail" : ""}`}
+        onClick={() => router.push(`/product?id=${p.id}`)}
+        onMouseEnter={() => router.prefetch(`/product?id=${p.id}`)}
+      >
+        <div
+          className="mn-product-media"
+          onTouchStart={(e) => handleTouchStart(p.id, e.touches[0]?.clientX ?? 0)}
+          onTouchEnd={(e) => handleTouchEnd(p.id, e.changedTouches[0]?.clientX ?? 0, total)}
+        >
+          <img src={curImg} alt={p.name} className="mn-product-img" loading="lazy" onError={(e) => { e.currentTarget.src = "/products/product-1.jpg"; }} />
+
+          {discount > 0 && <div className="mn-badge mn-badge-sale">−{discount}%</div>}
+          {p.badge === "Новинка" && !discount && <div className="mn-badge mn-badge-new">Новинка</div>}
+
+          <button type="button" className="mn-heart-btn" onClick={(e) => { e.stopPropagation(); toggleFavorite(p.id); }} aria-label="Добавить в избранное">
+            <IconHeart active={favorites.includes(p.id)} />
+          </button>
+
+          {total > 1 && (
+            <div className="mn-photo-dots" aria-hidden="true">
+              {Array.from({ length: Math.min(total, 5) }).map((_, i) => (
+                <span key={i} className={`mn-photo-dot${i === curIdx ? " active" : ""}`} />
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="mn-product-body">
+          <div className="mn-product-brand-row">
+            <span className="mn-product-brand">{p.brand}</span>
+            {isForeign && <span className="mn-import-label">import</span>}
+          </div>
+
+          <div className="mn-product-name">{p.name}</div>
+
+          {visColors.length > 0 && (
+            <div className="mn-swatches" aria-label="Цвета товара">
+              {visColors.map((color, idx) => (
+                <button
+                  key={`${p.id}-${color}-${idx}`}
+                  type="button"
+                  className={`mn-swatch${selColor === color ? " active" : ""}`}
+                  style={{ backgroundColor: colorSwatches[color] || "#ccc" }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedCardColors((prev) => ({ ...prev, [p.id]: color }));
+                    setCardImageIndexes((prev) => ({ ...prev, [p.id]: 0 }));
+                  }}
+                  aria-label={`Цвет ${color}`}
+                />
+              ))}
+              {extraColors > 0 && <span className="mn-extra-colors">+{extraColors}</span>}
+            </div>
+          )}
+
+          <div className="mn-price-row">
+            <span className="mn-price">{formatPrice(p.price)} ₽</span>
+            {p.oldPrice ? <span className="mn-old-price">{formatPrice(p.oldPrice)} ₽</span> : null}
+          </div>
+
+          <div className="mn-card-footer">
+            <div className="mn-delivery"><IconTruck /> 7–14 дней</div>
+            <button type="button" className="mn-cart-mini" onClick={(e) => e.stopPropagation()} aria-label="Добавить в корзину">
+              <IconCart />
+            </button>
+          </div>
+        </div>
+      </article>
+    );
+  };
+
   return (
     <>
       {showSplash && <AppSplash />}
 
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Cormorant+Garamond:wght@500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
         *, *::before, *::after { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        html { overscroll-behavior-x: none; background: #f6f2ea; }
-        body { margin: 0; overflow-x: hidden !important; max-width: 100vw !important; overscroll-behavior: none; background: #f6f2ea; }
+        html { overscroll-behavior-x: none; background: #f6f6f6; }
+        body { margin: 0; overflow-x: hidden !important; max-width: 100vw !important; overscroll-behavior: none; background: #f6f6f6; }
         button, input { font: inherit; }
         button { touch-action: manipulation; }
-        button:focus-visible, input:focus-visible { outline: 2px solid rgba(19, 19, 17, 0.5); outline-offset: 2px; }
+        button:focus-visible, input:focus-visible { outline: 2px solid rgba(17,17,17,.44); outline-offset: 2px; }
 
         .mn-page {
-          --page: #f6f2ea;
-          --ink: #151411;
-          --soft-ink: #6f685e;
-          --muted: #9d9488;
-          --paper: #fffdf8;
-          --paper-strong: #ffffff;
-          --line: rgba(28, 25, 20, 0.09);
-          --line-strong: rgba(28, 25, 20, 0.16);
-          --gold: #b8925a;
-          --dark: #151411;
-          --radius-xl: 30px;
-          --radius-lg: 24px;
-          --radius-md: 18px;
-          font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+          --bg: #f6f6f6;
+          --card: #ffffff;
+          --ink: #111111;
+          --text: #2a2a2a;
+          --muted: #7a7a7a;
+          --soft: #f1f1f1;
+          --line: rgba(17,17,17,.08);
+          --line-strong: rgba(17,17,17,.16);
+          --accent: #111111;
+          --sale: #e03131;
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
           min-height: 100vh;
           width: 100%;
           max-width: 100vw;
           overflow-x: hidden;
           color: var(--ink);
-          background:
-            radial-gradient(circle at 50% -80px, rgba(255,255,255,0.92), rgba(255,255,255,0) 220px),
-            linear-gradient(180deg, #fbf8f2 0%, var(--page) 38%, #efe9dd 100%);
-          padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px));
+          background: var(--bg);
+          padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
         }
 
         .mn-shell {
-          width: min(100%, 760px);
+          width: min(100%, 560px);
           margin: 0 auto;
           overflow-x: clip;
         }
 
-        .mn-topbar {
+        .mn-shop-header {
           position: sticky;
           top: 0;
           z-index: 100;
-          padding: calc(env(safe-area-inset-top, 0px) + 8px) 14px 8px;
-          background: linear-gradient(180deg, rgba(251,248,242,0.96), rgba(251,248,242,0.84));
-          backdrop-filter: blur(22px);
-          -webkit-backdrop-filter: blur(22px);
-          border-bottom: 1px solid rgba(28, 25, 20, 0.055);
+          background: rgba(246,246,246,.96);
+          backdrop-filter: blur(18px);
+          -webkit-backdrop-filter: blur(18px);
+          padding: calc(env(safe-area-inset-top, 0px) + 8px) 12px 10px;
+          border-bottom: 1px solid rgba(17,17,17,.05);
         }
 
-        .mn-topbar-inner {
-          height: 46px;
+        .mn-shop-header-row {
+          min-height: 44px;
           display: grid;
-          grid-template-columns: 42px 1fr 42px;
+          grid-template-columns: minmax(0, 1fr) auto;
+          align-items: center;
+          gap: 10px;
+        }
+
+        .mn-brand-button {
+          min-width: 0;
+          border: none;
+          background: transparent;
+          padding: 0;
+          text-align: left;
+          cursor: pointer;
+        }
+
+        .mn-brand-name {
+          display: block;
+          font-size: 23px;
+          line-height: 1;
+          font-weight: 900;
+          letter-spacing: -0.05em;
+          color: var(--ink);
+          white-space: nowrap;
+        }
+
+        .mn-brand-subtitle {
+          display: block;
+          margin-top: 4px;
+          color: var(--muted);
+          font-size: 11px;
+          line-height: 1;
+          font-weight: 700;
+          letter-spacing: -0.01em;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .mn-header-actions {
+          display: flex;
           align-items: center;
           gap: 8px;
         }
 
-        .mn-round-action {
+        .mn-icon-btn {
+          position: relative;
           width: 42px;
           height: 42px;
+          border-radius: 14px;
           border: 1px solid var(--line);
-          border-radius: 999px;
-          background: rgba(255,255,255,0.82);
+          background: #fff;
           color: var(--ink);
           display: inline-flex;
           align-items: center;
           justify-content: center;
           cursor: pointer;
-          box-shadow: 0 10px 26px rgba(34, 28, 20, 0.055);
         }
 
-        .mn-logo-btn {
-          min-width: 0;
-          justify-self: center;
-          border: none;
-          background: transparent;
-          text-align: center;
-          padding: 0 4px;
-          cursor: pointer;
-        }
-
-        .mn-logo-name {
-          font-family: 'Cormorant Garamond', Georgia, serif;
-          font-size: 23px;
-          font-weight: 700;
-          line-height: 0.92;
-          letter-spacing: 0.135em;
-          white-space: nowrap;
-          color: var(--ink);
-        }
-
-        .mn-logo-sub {
-          margin-top: 2px;
-          font-size: 8px;
-          font-weight: 800;
-          letter-spacing: 0.34em;
-          text-transform: uppercase;
-          color: var(--muted);
-        }
-
-        .mn-top-count {
+        .mn-icon-badge {
+          position: absolute;
+          top: -5px;
+          right: -5px;
           min-width: 18px;
           height: 18px;
           padding: 0 5px;
           border-radius: 999px;
-          background: #151411;
+          background: var(--sale);
           color: #fff;
           display: inline-flex;
           align-items: center;
           justify-content: center;
           font-size: 9px;
-          font-weight: 800;
-          margin-left: -10px;
-          margin-top: -18px;
-          border: 2px solid #fffdf8;
+          font-weight: 900;
+          border: 2px solid #fff;
         }
 
-        .mn-hero {
-          padding: 10px 14px 0;
-        }
-
-        .mn-hero-card {
-          position: relative;
-          min-height: 286px;
-          border-radius: 34px;
-          overflow: hidden;
-          background: #191713;
-          border: 1px solid rgba(255,255,255,0.58);
-          box-shadow: 0 26px 56px rgba(42, 33, 22, 0.18);
-        }
-
-        .mn-hero-bg {
-          position: absolute;
-          inset: 0;
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          transform: scale(1.04);
-          opacity: 0.8;
-        }
-
-        .mn-hero-layer {
-          position: absolute;
-          inset: 0;
-          background:
-            linear-gradient(180deg, rgba(11,10,8,0.16) 0%, rgba(11,10,8,0.24) 42%, rgba(11,10,8,0.78) 100%),
-            linear-gradient(115deg, rgba(10,9,7,0.84) 0%, rgba(10,9,7,0.18) 58%, rgba(10,9,7,0) 100%);
-        }
-
-        .mn-hero-content {
-          position: relative;
-          z-index: 2;
-          min-height: 286px;
-          padding: 18px;
-          display: flex;
-          flex-direction: column;
-          justify-content: space-between;
-        }
-
-        .mn-hero-topline {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 10px;
-        }
-
-        .mn-pill-light {
-          min-height: 30px;
-          padding: 0 12px;
-          border-radius: 999px;
-          display: inline-flex;
-          align-items: center;
-          gap: 7px;
-          background: rgba(255,255,255,0.13);
-          border: 1px solid rgba(255,255,255,0.18);
-          color: rgba(255,255,255,0.84);
-          font-size: 10px;
-          font-weight: 800;
-          letter-spacing: 0.16em;
-          text-transform: uppercase;
-          backdrop-filter: blur(12px);
-        }
-
-        .mn-hero-title {
-          max-width: 245px;
-          margin-top: 54px;
-          font-family: 'Cormorant Garamond', Georgia, serif;
-          font-size: clamp(42px, 12vw, 58px);
-          font-weight: 700;
-          line-height: 0.82;
-          letter-spacing: -0.065em;
-          color: #fffdf8;
-        }
-
-        .mn-hero-description {
-          max-width: 235px;
-          margin-top: 14px;
-          color: rgba(255,255,255,0.78);
-          font-size: 13px;
-          font-weight: 600;
-          line-height: 1.38;
-        }
-
-        .mn-hero-bottom {
-          margin-top: 22px;
-          display: flex;
-          align-items: flex-end;
-          justify-content: space-between;
-          gap: 14px;
-        }
-
-        .mn-primary-cta {
+        .mn-search-bar {
+          margin-top: 10px;
           height: 46px;
-          padding: 0 18px;
-          border: none;
-          border-radius: 999px;
-          background: #fffdf8;
-          color: #151411;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-          font-size: 13px;
-          font-weight: 900;
-          cursor: pointer;
-          box-shadow: 0 16px 28px rgba(0,0,0,0.2);
-        }
-
-        .mn-hero-stat {
-          min-width: 74px;
-          padding: 9px 10px;
-          border-radius: 20px;
-          background: rgba(255,255,255,0.13);
-          border: 1px solid rgba(255,255,255,0.18);
-          color: #fffdf8;
-          text-align: center;
-          backdrop-filter: blur(12px);
-        }
-
-        .mn-hero-stat strong {
-          display: block;
-          font-size: 18px;
-          line-height: 1;
-          font-weight: 900;
-        }
-
-        .mn-hero-stat span {
-          display: block;
-          margin-top: 3px;
-          font-size: 9px;
-          text-transform: uppercase;
-          letter-spacing: 0.11em;
-          color: rgba(255,255,255,0.66);
-          font-weight: 800;
-        }
-
-        .mn-search-dock {
-          position: relative;
-          z-index: 3;
-          margin: -24px 12px 0;
-          height: 54px;
-          border-radius: 22px;
-          background: rgba(255,255,255,0.96);
-          border: 1px solid rgba(255,255,255,0.88);
-          box-shadow: 0 18px 42px rgba(41, 32, 21, 0.16);
+          border-radius: 14px;
+          background: #fff;
+          border: 1px solid var(--line);
           display: flex;
           align-items: center;
           gap: 10px;
-          padding: 0 13px;
+          padding: 0 12px;
           color: var(--muted);
         }
 
-        .mn-search-dock input {
+        .mn-search-bar input {
           flex: 1;
           min-width: 0;
           height: 100%;
@@ -585,98 +628,248 @@ export default function HomePageClient({
           background: transparent;
           color: var(--ink);
           font-size: 14px;
-          font-weight: 700;
+          font-weight: 600;
         }
 
-        .mn-search-dock input::placeholder { color: #aaa196; font-weight: 600; }
+        .mn-search-bar input::placeholder { color: #9b9b9b; font-weight: 500; }
 
-        .mn-search-clear {
+        .mn-clear-search {
           width: 30px;
           height: 30px;
-          border-radius: 999px;
           border: none;
-          background: #f2eee6;
-          color: var(--soft-ink);
+          border-radius: 999px;
+          background: #f1f1f1;
+          color: #555;
           display: inline-flex;
           align-items: center;
           justify-content: center;
           cursor: pointer;
         }
 
-        .mn-segment {
-          margin-top: 14px;
-          height: 48px;
-          padding: 4px;
-          border-radius: 999px;
-          background: rgba(21,20,17,0.07);
+        .mn-main {
+          padding-top: 12px;
+        }
+
+        .mn-department-tabs {
+          margin: 0 12px;
+          padding: 3px;
+          border-radius: 14px;
+          background: #e9e9e9;
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 4px;
+          gap: 3px;
         }
 
-        .mn-segment-btn {
+        .mn-department-tab {
+          min-height: 38px;
           border: none;
-          border-radius: 999px;
+          border-radius: 12px;
           background: transparent;
-          color: var(--soft-ink);
+          color: #676767;
           font-size: 13px;
-          font-weight: 900;
+          font-weight: 800;
           cursor: pointer;
-          transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
         }
 
-        .mn-segment-btn.active {
-          background: var(--dark);
-          color: #fffdf8;
-          box-shadow: 0 12px 26px rgba(21,20,17,0.18);
+        .mn-department-tab.active {
+          background: #fff;
+          color: #111;
+          box-shadow: 0 2px 8px rgba(17,17,17,.08);
         }
 
         .mn-section {
-          margin-top: 24px;
+          margin-top: 18px;
         }
 
         .mn-section-head {
-          padding: 0 14px;
+          padding: 0 12px;
           display: flex;
           align-items: flex-end;
           justify-content: space-between;
           gap: 12px;
         }
 
-        .mn-kicker {
-          font-size: 10px;
-          line-height: 1;
-          letter-spacing: 0.18em;
-          text-transform: uppercase;
-          color: var(--gold);
-          font-weight: 900;
-        }
-
         .mn-section-title {
-          margin-top: 5px;
-          font-size: 22px;
-          line-height: 1.05;
-          letter-spacing: -0.055em;
-          font-weight: 900;
+          margin: 0;
           color: var(--ink);
+          font-size: 20px;
+          line-height: 1.1;
+          letter-spacing: -0.045em;
+          font-weight: 900;
         }
 
-        .mn-count-chip {
-          height: 32px;
-          padding: 0 11px;
-          border-radius: 999px;
-          background: rgba(255,255,255,0.72);
+        .mn-section-subtitle {
+          margin-top: 4px;
+          color: var(--muted);
+          font-size: 12px;
+          line-height: 1.25;
+          font-weight: 600;
+        }
+
+        .mn-section-link {
+          border: none;
+          background: transparent;
+          color: #111;
+          font-size: 12px;
+          line-height: 1;
+          font-weight: 900;
+          cursor: pointer;
+          padding: 5px 0;
+          white-space: nowrap;
+        }
+
+        .mn-categories-grid {
+          margin: 12px 12px 0;
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 8px;
+        }
+
+        .mn-category-tile {
+          min-width: 0;
+          min-height: 104px;
           border: 1px solid var(--line);
+          border-radius: 18px;
+          background: #fff;
+          color: #111;
+          padding: 10px 8px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          text-align: center;
+          gap: 8px;
+          cursor: pointer;
+        }
+
+        .mn-category-tile.active {
+          border-color: #111;
+          background: #111;
+          color: #fff;
+        }
+
+        .mn-category-icon {
+          width: 46px;
+          height: 46px;
+          border-radius: 15px;
+          background: #f4f4f4;
           display: inline-flex;
           align-items: center;
-          color: var(--soft-ink);
+          justify-content: center;
+          color: currentColor;
+        }
+
+        .mn-category-tile.active .mn-category-icon {
+          background: rgba(255,255,255,.13);
+        }
+
+        .mn-category-name {
+          max-width: 100%;
+          color: currentColor;
+          font-size: 12px;
+          line-height: 1.05;
+          font-weight: 900;
+          letter-spacing: -0.025em;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .mn-category-hint {
+          max-width: 86px;
+          color: currentColor;
+          opacity: .6;
+          font-size: 9px;
+          line-height: 1.15;
+          font-weight: 700;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+
+        .mn-promo {
+          margin: 18px 12px 0;
+          min-height: 158px;
+          border: none;
+          border-radius: 22px;
+          overflow: hidden;
+          position: relative;
+          display: block;
+          width: calc(100% - 24px);
+          padding: 0;
+          text-align: left;
+          background: #191919;
+          cursor: pointer;
+        }
+
+        .mn-promo img {
+          position: absolute;
+          inset: 0;
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          opacity: .72;
+        }
+
+        .mn-promo::after {
+          content: "";
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(90deg, rgba(0,0,0,.74), rgba(0,0,0,.28) 58%, rgba(0,0,0,.04));
+        }
+
+        .mn-promo-content {
+          position: relative;
+          z-index: 2;
+          min-height: 158px;
+          padding: 17px;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          align-items: flex-start;
+        }
+
+        .mn-promo-label {
+          min-height: 26px;
+          padding: 0 10px;
+          border-radius: 999px;
+          background: rgba(255,255,255,.15);
+          border: 1px solid rgba(255,255,255,.2);
+          color: rgba(255,255,255,.88);
+          display: inline-flex;
+          align-items: center;
+          font-size: 10px;
+          font-weight: 900;
+          text-transform: uppercase;
+          letter-spacing: .12em;
+        }
+
+        .mn-promo-title {
+          max-width: 230px;
+          color: #fff;
+          font-size: 28px;
+          line-height: .95;
+          letter-spacing: -0.06em;
+          font-weight: 900;
+        }
+
+        .mn-promo-bottom {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          color: #111;
+          background: #fff;
+          min-height: 38px;
+          padding: 0 13px;
+          border-radius: 999px;
           font-size: 12px;
           font-weight: 900;
         }
 
-        .mn-category-strip {
+        .mn-rail {
           margin-top: 12px;
-          padding: 0 14px 4px;
+          padding: 0 12px 4px;
           display: flex;
           gap: 10px;
           overflow-x: auto;
@@ -684,195 +877,107 @@ export default function HomePageClient({
           scroll-snap-type: x proximity;
         }
 
-        .mn-category-strip::-webkit-scrollbar { display: none; }
+        .mn-rail::-webkit-scrollbar { display: none; }
 
-        .mn-category-card {
-          position: relative;
-          flex: 0 0 116px;
-          height: 126px;
-          border: 1px solid rgba(255,255,255,0.78);
-          border-radius: 26px;
-          padding: 11px;
-          overflow: hidden;
-          cursor: pointer;
-          text-align: left;
-          color: var(--ink);
-          box-shadow: 0 14px 32px rgba(41, 32, 21, 0.09);
-          scroll-snap-align: start;
+        .mn-filters-card {
+          margin: 12px 12px 0;
+          padding: 10px;
+          border-radius: 18px;
+          background: #fff;
+          border: 1px solid var(--line);
         }
 
-        .mn-category-card::after {
-          content: "";
-          position: absolute;
-          inset: 0;
-          background: linear-gradient(180deg, rgba(255,255,255,0.36), rgba(255,255,255,0.02));
-          pointer-events: none;
-        }
-
-        .mn-category-card.active {
-          outline: 2px solid #151411;
-          outline-offset: -2px;
-        }
-
-        .mn-category-name {
-          position: relative;
-          z-index: 2;
-          display: block;
-          margin-top: 34px;
-          font-size: 14px;
-          font-weight: 900;
-          letter-spacing: -0.035em;
-        }
-
-        .mn-category-caption {
-          position: relative;
-          z-index: 2;
-          display: block;
-          margin-top: 3px;
-          max-width: 82px;
-          font-size: 10px;
-          line-height: 1.2;
-          font-weight: 800;
-          opacity: 0.72;
-        }
-
-        .mn-category-mark {
-          position: absolute;
-          top: 11px;
-          left: 11px;
-          z-index: 2;
-          min-width: 42px;
-          height: 24px;
-          border-radius: 999px;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          padding: 0 8px;
-          font-size: 9px;
-          font-weight: 900;
-          letter-spacing: 0.08em;
-          box-shadow: 0 8px 18px rgba(0,0,0,0.12);
-        }
-
-        .mn-category-art {
-          position: absolute;
-          right: -14px;
-          bottom: -16px;
-          width: 78px;
-          height: 78px;
-          border-radius: 30px;
-          background: rgba(255,255,255,0.26);
-          transform: rotate(-18deg);
-          z-index: 1;
-        }
-
-        .mn-category-art::before {
-          content: "";
-          position: absolute;
-          inset: 13px;
-          border-radius: 22px;
-          border: 1px solid rgba(255,255,255,0.42);
-        }
-
-        .mn-controls-panel {
-          margin: 18px 14px 0;
-          border-radius: 28px;
-          padding: 12px;
-          background: rgba(255,253,248,0.78);
-          border: 1px solid rgba(255,255,255,0.9);
-          box-shadow: 0 18px 42px rgba(41, 32, 21, 0.08);
-        }
-
-        .mn-availability {
-          display: grid;
-          grid-template-columns: repeat(3, minmax(0,1fr));
+        .mn-availability-row {
+          display: flex;
           gap: 7px;
+          overflow-x: auto;
+          scrollbar-width: none;
         }
+
+        .mn-availability-row::-webkit-scrollbar { display: none; }
 
         .mn-chip {
-          min-height: 38px;
-          border-radius: 16px;
+          flex: 0 0 auto;
+          min-height: 36px;
+          padding: 0 12px;
+          border-radius: 12px;
           border: 1px solid var(--line);
-          background: #fff;
-          color: var(--soft-ink);
-          font-size: 11px;
-          font-weight: 900;
+          background: #f7f7f7;
+          color: #4f4f4f;
+          font-size: 12px;
+          font-weight: 800;
           cursor: pointer;
-          padding: 0 8px;
           white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
         }
 
         .mn-chip.active {
-          background: #151411;
-          color: #fffdf8;
-          border-color: #151411;
+          background: #111;
+          border-color: #111;
+          color: #fff;
         }
 
-        .mn-filter-grid {
-          margin-top: 9px;
+        .mn-filter-row {
+          margin-top: 8px;
           display: grid;
-          grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 46px;
-          gap: 8px;
+          grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 42px;
+          gap: 7px;
         }
 
         .mn-control-wrap { position: relative; min-width: 0; }
 
         .mn-select-btn, .mn-filter-btn {
-          height: 46px;
           width: 100%;
-          border-radius: 18px;
+          height: 42px;
           border: 1px solid var(--line);
+          border-radius: 13px;
           background: #fff;
-          color: var(--ink);
+          color: #111;
           cursor: pointer;
-          box-shadow: 0 8px 18px rgba(41,32,21,0.035);
         }
 
         .mn-select-btn {
-          padding: 0 12px;
+          padding: 0 10px;
           display: flex;
           align-items: center;
           justify-content: space-between;
-          gap: 8px;
+          gap: 6px;
           font-size: 12px;
-          font-weight: 900;
+          font-weight: 800;
         }
 
         .mn-select-btn span {
           min-width: 0;
           flex: 1;
           overflow: hidden;
-          text-overflow: ellipsis;
           white-space: nowrap;
+          text-overflow: ellipsis;
           text-align: left;
         }
 
         .mn-filter-btn {
-          display: flex;
+          display: inline-flex;
           align-items: center;
           justify-content: center;
         }
 
         .mn-select-btn.is-open, .mn-filter-btn.is-open {
-          background: #151411;
-          border-color: #151411;
-          color: #fffdf8;
+          background: #111;
+          color: #fff;
+          border-color: #111;
         }
 
         .mn-dropdown {
           position: absolute;
-          top: 52px;
+          top: 48px;
           left: 0;
           right: 0;
           z-index: 300;
-          padding: 7px;
-          border-radius: 20px;
-          background: #fffdf8;
+          padding: 6px;
+          border-radius: 16px;
+          background: #fff;
           border: 1px solid var(--line);
-          box-shadow: 0 22px 54px rgba(29, 24, 18, 0.2);
-          max-height: 260px;
+          box-shadow: 0 16px 44px rgba(0,0,0,.16);
+          max-height: 252px;
           overflow-y: auto;
           scrollbar-width: none;
         }
@@ -881,39 +986,38 @@ export default function HomePageClient({
 
         .mn-dropdown button {
           width: 100%;
-          min-height: 42px;
+          min-height: 40px;
           border: none;
-          border-radius: 14px;
+          border-radius: 11px;
           background: transparent;
-          color: var(--ink);
+          color: #111;
           text-align: left;
-          padding: 0 12px;
+          padding: 0 10px;
           font-size: 13px;
           font-weight: 800;
           cursor: pointer;
         }
 
         .mn-dropdown button.active {
-          background: #151411;
-          color: #fffdf8;
+          background: #111;
+          color: #fff;
         }
 
         .mn-active-tools {
-          margin-top: 10px;
-          padding: 0 2px;
+          margin-top: 9px;
           display: flex;
-          align-items: center;
           justify-content: space-between;
-          gap: 12px;
+          align-items: center;
+          gap: 10px;
+          color: var(--muted);
           font-size: 12px;
-          font-weight: 800;
-          color: var(--soft-ink);
+          font-weight: 700;
         }
 
         .mn-reset-btn {
           border: none;
           background: transparent;
-          color: #151411;
+          color: #111;
           font-size: 12px;
           font-weight: 900;
           cursor: pointer;
@@ -921,31 +1025,46 @@ export default function HomePageClient({
         }
 
         .mn-product-grid {
-          margin: 14px 14px 0;
+          margin: 12px 12px 0;
           display: grid;
-          grid-template-columns: repeat(2, minmax(0,1fr));
-          gap: 12px;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 10px;
         }
 
         .mn-product-card {
           min-width: 0;
-          border: none;
-          border-radius: 26px;
+          border-radius: 16px;
+          background: #fff;
+          border: 1px solid rgba(17,17,17,.06);
           overflow: hidden;
-          background: #fffdf8;
-          box-shadow: 0 16px 36px rgba(41,32,21,0.09);
           cursor: pointer;
           text-align: left;
-          transition: transform 0.18s ease, box-shadow 0.18s ease;
+          transform: none !important;
+          transition: box-shadow .18s ease, border-color .18s ease;
         }
 
-        .mn-product-card:active { transform: scale(0.985); }
+        .mn-product-card-rail {
+          flex: 0 0 154px;
+          scroll-snap-align: start;
+        }
 
-        .mn-image-box {
+        .mn-product-card:active {
+          transform: none !important;
+        }
+
+        @media (hover: hover) {
+          .mn-product-card:hover {
+            border-color: rgba(17,17,17,.12);
+            box-shadow: 0 8px 24px rgba(0,0,0,.06);
+          }
+        }
+
+        .mn-product-media {
           position: relative;
-          aspect-ratio: 0.74;
+          aspect-ratio: 3 / 4;
           overflow: hidden;
-          background: #e9e2d7;
+          background: #f0f0f0;
+          touch-action: pan-y;
         }
 
         .mn-product-img {
@@ -953,125 +1072,105 @@ export default function HomePageClient({
           height: 100%;
           object-fit: cover;
           display: block;
-          transition: transform 0.32s ease;
-        }
-
-        .mn-product-gradient {
-          position: absolute;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          height: 52%;
-          background: linear-gradient(180deg, rgba(0,0,0,0), rgba(0,0,0,0.18));
-          pointer-events: none;
+          transform: none !important;
+          transition: opacity .18s ease;
         }
 
         .mn-badge {
           position: absolute;
-          top: 10px;
-          left: 10px;
-          min-height: 26px;
-          padding: 0 9px;
+          top: 8px;
+          left: 8px;
+          min-height: 23px;
+          padding: 0 8px;
           border-radius: 999px;
           display: inline-flex;
           align-items: center;
           font-size: 10px;
           font-weight: 900;
-          letter-spacing: -0.01em;
-          box-shadow: 0 10px 20px rgba(0,0,0,0.14);
         }
 
-        .mn-badge-sale { background: #d63a32; color: #fff; }
-        .mn-badge-new { background: #151411; color: #fffdf8; }
+        .mn-badge-sale { background: var(--sale); color: #fff; }
+        .mn-badge-new { background: #111; color: #fff; }
 
         .mn-heart-btn {
           position: absolute;
-          top: 9px;
-          right: 9px;
+          top: 7px;
+          right: 7px;
           z-index: 10;
-          width: 38px;
-          height: 38px;
+          width: 34px;
+          height: 34px;
           border-radius: 999px;
-          border: 1px solid rgba(255,255,255,0.7);
-          background: rgba(255,255,255,0.88);
-          backdrop-filter: blur(12px);
+          border: 1px solid rgba(17,17,17,.06);
+          background: rgba(255,255,255,.92);
           display: inline-flex;
           align-items: center;
           justify-content: center;
           cursor: pointer;
-          box-shadow: 0 10px 22px rgba(0,0,0,0.11);
         }
 
-        .mn-dots {
+        .mn-heart-btn:active { transform: none !important; }
+
+        .mn-photo-dots {
           position: absolute;
-          bottom: 10px;
-          left: 50%;
-          transform: translateX(-50%);
+          left: 8px;
+          right: 8px;
+          bottom: 8px;
           display: flex;
           gap: 4px;
-          padding: 5px 7px;
+        }
+
+        .mn-photo-dot {
+          height: 3px;
+          flex: 1;
           border-radius: 999px;
-          background: rgba(21,20,17,0.26);
-          backdrop-filter: blur(10px);
+          background: rgba(255,255,255,.45);
         }
 
-        .mn-dot {
-          height: 4px;
-          border-radius: 999px;
-          background: rgba(255,255,255,0.55);
-          transition: all 0.2s ease;
+        .mn-photo-dot.active { background: #fff; }
+
+        .mn-product-body {
+          padding: 9px 9px 10px;
         }
 
-        .mn-dot.active { background: #fffdf8; }
-
-        .mn-product-info {
-          padding: 12px 12px 13px;
-        }
-
-        .mn-product-meta {
+        .mn-product-brand-row {
           display: flex;
-          align-items: center;
           justify-content: space-between;
+          align-items: center;
           gap: 6px;
         }
 
-        .mn-brand {
+        .mn-product-brand {
           min-width: 0;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
+          color: var(--muted);
           font-size: 9px;
           line-height: 1;
           font-weight: 900;
-          letter-spacing: 0.17em;
+          letter-spacing: .12em;
           text-transform: uppercase;
-          color: var(--muted);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
 
-        .mn-foreign {
-          flex-shrink: 0;
-          max-width: 74px;
-          min-height: 21px;
-          padding: 0 7px;
+        .mn-import-label {
+          flex: 0 0 auto;
+          color: #666;
+          background: #f0f0f0;
           border-radius: 999px;
-          background: #f0e9de;
-          color: #776a59;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
+          padding: 3px 6px;
           font-size: 9px;
           font-weight: 900;
-          white-space: nowrap;
+          line-height: 1;
         }
 
         .mn-product-name {
-          margin-top: 7px;
-          min-height: 35px;
-          color: var(--ink);
+          margin-top: 6px;
+          min-height: 34px;
+          color: #111;
           font-size: 13px;
           line-height: 1.28;
-          letter-spacing: -0.035em;
-          font-weight: 900;
+          letter-spacing: -0.025em;
+          font-weight: 700;
           display: -webkit-box;
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
@@ -1079,289 +1178,304 @@ export default function HomePageClient({
         }
 
         .mn-swatches {
-          min-height: 20px;
-          margin-top: 9px;
+          min-height: 18px;
+          margin-top: 8px;
           display: flex;
           align-items: center;
-          gap: 7px;
+          gap: 6px;
         }
 
         .mn-swatch {
-          width: 16px;
-          height: 16px;
+          width: 14px;
+          height: 14px;
           border-radius: 999px;
-          border: 2px solid #fffdf8;
-          box-shadow: 0 0 0 1px rgba(21,20,17,0.14);
+          border: 2px solid #fff;
+          box-shadow: 0 0 0 1px rgba(17,17,17,.16);
           cursor: pointer;
         }
 
-        .mn-swatch.active { box-shadow: 0 0 0 2px #151411; }
-        .mn-extra { font-size: 10px; font-weight: 900; color: var(--muted); }
+        .mn-swatch.active {
+          box-shadow: 0 0 0 2px #111;
+        }
+
+        .mn-extra-colors {
+          color: var(--muted);
+          font-size: 10px;
+          font-weight: 800;
+        }
 
         .mn-price-row {
-          margin-top: 10px;
+          margin-top: 8px;
           display: flex;
           align-items: baseline;
           flex-wrap: wrap;
           gap: 5px;
         }
 
-        .mn-old-price {
-          color: var(--muted);
-          text-decoration: line-through;
-          font-size: 11px;
-          font-weight: 700;
+        .mn-price {
+          color: #111;
+          font-size: 17px;
+          line-height: 1;
+          letter-spacing: -0.045em;
+          font-weight: 900;
         }
 
-        .mn-price {
-          color: var(--ink);
-          font-size: 18px;
+        .mn-old-price {
+          color: #9b9b9b;
+          font-size: 11px;
           line-height: 1;
-          letter-spacing: -0.06em;
-          font-weight: 900;
+          font-weight: 700;
+          text-decoration: line-through;
+        }
+
+        .mn-card-footer {
+          margin-top: 9px;
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) 36px;
+          gap: 7px;
+          align-items: center;
         }
 
         .mn-delivery {
-          margin-top: 8px;
-          display: flex;
+          min-width: 0;
+          height: 36px;
+          padding: 0 8px;
+          border-radius: 12px;
+          background: #f7f7f7;
+          color: #6f6f6f;
+          display: inline-flex;
           align-items: center;
           gap: 5px;
-          color: var(--soft-ink);
-          font-size: 11px;
-          line-height: 1;
+          font-size: 10px;
           font-weight: 800;
+          white-space: nowrap;
+          overflow: hidden;
         }
 
-        .mn-cart-btn {
-          width: 100%;
-          height: 40px;
-          margin-top: 12px;
+        .mn-cart-mini {
+          width: 36px;
+          height: 36px;
           border: none;
-          border-radius: 16px;
-          background: #151411;
-          color: #fffdf8;
-          display: flex;
+          border-radius: 12px;
+          background: #111;
+          color: #fff;
+          display: inline-flex;
           align-items: center;
           justify-content: center;
-          gap: 8px;
-          font-size: 12px;
-          font-weight: 900;
           cursor: pointer;
         }
 
         .mn-empty {
-          margin: 14px;
-          padding: 36px 18px;
-          border-radius: 30px;
+          margin: 12px;
+          padding: 34px 18px;
+          border-radius: 20px;
+          background: #fff;
+          border: 1px solid var(--line);
           text-align: center;
-          background: #fffdf8;
-          box-shadow: 0 18px 42px rgba(41,32,21,0.08);
-          border: 1px solid rgba(255,255,255,0.9);
         }
 
         .mn-empty-title {
-          font-family: 'Cormorant Garamond', Georgia, serif;
-          color: var(--ink);
-          font-size: 30px;
-          line-height: 0.96;
-          font-weight: 700;
+          color: #111;
+          font-size: 22px;
+          line-height: 1.05;
           letter-spacing: -0.045em;
+          font-weight: 900;
         }
 
         .mn-empty-sub {
           max-width: 260px;
-          margin: 10px auto 0;
-          color: var(--soft-ink);
+          margin: 8px auto 0;
+          color: var(--muted);
           font-size: 13px;
-          line-height: 1.42;
-          font-weight: 700;
+          line-height: 1.4;
+          font-weight: 600;
         }
 
         .mn-empty-action {
-          margin-top: 18px;
-          height: 44px;
+          margin-top: 16px;
+          min-height: 42px;
+          padding: 0 16px;
           border: none;
-          border-radius: 999px;
-          padding: 0 18px;
-          background: #151411;
-          color: #fffdf8;
+          border-radius: 14px;
+          background: #111;
+          color: #fff;
           font-size: 13px;
           font-weight: 900;
           cursor: pointer;
         }
 
-        @media (hover: hover) {
-          .mn-product-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 24px 50px rgba(41,32,21,0.13);
-          }
-          .mn-product-card:hover .mn-product-img { transform: scale(1.035); }
-          .mn-primary-cta:hover, .mn-cart-btn:hover { filter: brightness(1.03); }
+        @media (min-width: 430px) {
+          .mn-product-card-rail { flex-basis: 168px; }
+          .mn-promo { min-height: 178px; }
+          .mn-promo-content { min-height: 178px; }
         }
 
-        @media (min-width: 560px) {
-          .mn-hero-card, .mn-hero-content { min-height: 340px; }
-          .mn-product-grid { grid-template-columns: repeat(3, minmax(0,1fr)); gap: 14px; }
-          .mn-category-card { flex-basis: 132px; }
-        }
-
-        @media (max-width: 390px) {
-          .mn-logo-name { font-size: 21px; letter-spacing: 0.12em; }
-          .mn-hero-card, .mn-hero-content { min-height: 270px; }
-          .mn-hero-title { margin-top: 42px; font-size: 40px; }
-          .mn-hero-description { font-size: 12px; max-width: 220px; }
-          .mn-primary-cta { height: 43px; padding: 0 15px; }
-          .mn-hero-stat { min-width: 66px; }
-          .mn-category-card { flex-basis: 108px; height: 120px; border-radius: 24px; }
-          .mn-filter-grid { grid-template-columns: minmax(0, 1fr) 46px; }
-          .mn-filter-grid .mn-control-wrap:nth-child(2) { grid-column: 1 / -1; grid-row: 2; }
-          .mn-filter-grid .mn-control-wrap:nth-child(3) { grid-column: 2; grid-row: 1; }
-          .mn-product-grid { gap: 10px; }
-          .mn-product-info { padding: 11px 10px 12px; }
-          .mn-cart-btn span { display: none; }
+        @media (max-width: 374px) {
+          .mn-shop-header { padding-left: 10px; padding-right: 10px; }
+          .mn-brand-name { font-size: 21px; }
+          .mn-brand-subtitle { font-size: 10px; }
+          .mn-icon-btn { width: 39px; height: 39px; border-radius: 13px; }
+          .mn-categories-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; margin-left: 10px; margin-right: 10px; }
+          .mn-category-tile { min-height: 98px; padding: 8px 6px; border-radius: 16px; }
+          .mn-category-icon { width: 42px; height: 42px; }
+          .mn-category-name { font-size: 11px; }
+          .mn-promo, .mn-filters-card, .mn-product-grid { margin-left: 10px; margin-right: 10px; }
+          .mn-promo { width: calc(100% - 20px); }
+          .mn-section-head { padding-left: 10px; padding-right: 10px; }
+          .mn-product-grid { gap: 8px; }
+          .mn-product-body { padding: 8px; }
+          .mn-product-name { font-size: 12px; min-height: 31px; }
+          .mn-price { font-size: 16px; }
+          .mn-delivery { font-size: 9px; padding: 0 6px; }
         }
 
         @media (max-width: 340px) {
-          .mn-topbar-inner { grid-template-columns: 38px 1fr 38px; }
-          .mn-round-action { width: 38px; height: 38px; }
-          .mn-logo-name { font-size: 19px; letter-spacing: 0.105em; }
-          .mn-logo-sub { font-size: 7px; }
-          .mn-hero { padding-left: 10px; padding-right: 10px; }
-          .mn-section-head, .mn-category-strip, .mn-controls-panel, .mn-product-grid, .mn-empty { margin-left: 10px; margin-right: 10px; }
-          .mn-section-head, .mn-category-strip { padding-left: 0; padding-right: 0; }
-          .mn-product-name { font-size: 12px; }
-          .mn-price { font-size: 16px; }
+          .mn-header-actions { gap: 6px; }
+          .mn-icon-btn { width: 37px; height: 37px; }
+          .mn-brand-name { font-size: 19px; }
+          .mn-search-bar { height: 44px; }
+          .mn-filter-row { grid-template-columns: minmax(0,1fr) 42px; }
+          .mn-filter-row .mn-control-wrap:nth-child(2) { grid-column: 1 / -1; grid-row: 2; }
+          .mn-filter-row .mn-control-wrap:nth-child(3) { grid-column: 2; grid-row: 1; }
+          .mn-category-hint { display: none; }
+          .mn-category-tile { min-height: 84px; }
         }
       `}</style>
 
       <div className="mn-page">
         <div className="mn-shell">
-          <header className="mn-topbar">
-            <div className="mn-topbar-inner">
-              <button className="mn-round-action" type="button" onClick={() => setSearch((v) => v)} aria-label="Поиск">
-                <IconSearch />
+          <header className="mn-shop-header">
+            <div className="mn-shop-header-row">
+              <button className="mn-brand-button" type="button" onClick={resetPage} aria-label="На главную">
+                <span className="mn-brand-name">MONTREAUX</span>
+                <span className="mn-brand-subtitle">магазин одежды • доставка 7–14 дней</span>
               </button>
 
-              <button className="mn-logo-btn" type="button" onClick={resetPage} aria-label="На главную">
-                <div className="mn-logo-name">MONTREAUX</div>
-                <div className="mn-logo-sub">Fashion Store</div>
-              </button>
+              <div className="mn-header-actions">
+                <button className="mn-icon-btn" type="button" onClick={() => router.push("/cart")} aria-label="Корзина">
+                  <IconCart />
+                </button>
+                <button className="mn-icon-btn" type="button" onClick={() => router.push("/profile")} aria-label="Профиль">
+                  <IconProfile />
+                  {activeFiltersCount > 0 && <span className="mn-icon-badge">{activeFiltersCount}</span>}
+                </button>
+              </div>
+            </div>
 
-              <button className="mn-round-action" type="button" onClick={() => setShowAvailabilityMenu((p) => !p)} aria-label="Фильтры">
-                <IconFilter />
-                {activeFiltersCount > 0 && <span className="mn-top-count">{activeFiltersCount}</span>}
-              </button>
+            <div className="mn-search-bar">
+              <IconSearch />
+              <input
+                placeholder="Искать одежду, бренд или категорию"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                aria-label="Поиск товаров"
+              />
+              {search.trim() && (
+                <button type="button" className="mn-clear-search" onClick={() => setSearch("")} aria-label="Очистить поиск">
+                  <IconClose />
+                </button>
+              )}
             </div>
           </header>
 
-          <main>
-            <section className="mn-hero" aria-label="Главная витрина магазина">
-              <div className="mn-hero-card">
-                <img src={heroImage} alt="Новая коллекция MONTREAUX" className="mn-hero-bg" onError={(e) => { e.currentTarget.src = banners[0].image; }} />
-                <div className="mn-hero-layer" />
-                <div className="mn-hero-content">
-                  <div className="mn-hero-topline">
-                    <span className="mn-pill-light">Новая коллекция</span>
-                    <span className="mn-pill-light">SS 2026</span>
-                  </div>
+          <main className="mn-main">
+            <div className="mn-department-tabs" role="tablist" aria-label="Раздел магазина">
+              {departments.map((dep) => (
+                <button
+                  key={dep}
+                  type="button"
+                  role="tab"
+                  aria-selected={selectedDepartment === dep}
+                  className={`mn-department-tab${selectedDepartment === dep ? " active" : ""}`}
+                  onClick={() => {
+                    setSelectedDepartment(dep);
+                    setSelectedBrand("Все бренды");
+                    setSelectedAvailability("Все товары");
+                    setSearch("");
+                  }}
+                >
+                  {dep}
+                </button>
+              ))}
+            </div>
 
-                  <div>
-                    <h1 className="mn-hero-title">Premium essentials</h1>
-                    <p className="mn-hero-description">Одежда для чистого, собранного и дорогого повседневного образа.</p>
-                  </div>
-
-                  <div className="mn-hero-bottom">
-                    <button type="button" className="mn-primary-cta" onClick={() => router.push(banners[0].link)}>
-                      Смотреть каталог <IconArrow />
-                    </button>
-                    <div className="mn-hero-stat">
-                      <strong>{filteredProducts.length}</strong>
-                      <span>товаров</span>
-                    </div>
-                  </div>
+            <section className="mn-section" aria-label="Категории одежды">
+              <div className="mn-section-head">
+                <div>
+                  <h2 className="mn-section-title">Категории</h2>
+                  <div className="mn-section-subtitle">Быстрый переход к нужной одежде</div>
                 </div>
+                {currentCategory !== "Все" && <button className="mn-section-link" type="button" onClick={() => selectedDepartment === "Мужчинам" ? setSelectedMensCategory("Все") : setSelectedWomensCategory("Все")}>Все</button>}
               </div>
 
-              <div className="mn-search-dock">
-                <IconSearch />
-                <input
-                  placeholder="Поиск: бренд, товар, категория"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  aria-label="Поиск по каталогу"
-                />
-                {search.trim() && (
-                  <button type="button" className="mn-search-clear" onClick={() => setSearch("")} aria-label="Очистить поиск">
-                    <IconClose />
-                  </button>
-                )}
-              </div>
-
-              <div className="mn-segment" role="tablist" aria-label="Раздел каталога">
-                {departments.map((dep) => (
+              <div className="mn-categories-grid">
+                {currentCategories.map((cat) => (
                   <button
-                    key={dep}
+                    key={cat}
                     type="button"
-                    role="tab"
-                    aria-selected={selectedDepartment === dep}
-                    className={`mn-segment-btn${selectedDepartment === dep ? " active" : ""}`}
+                    className={`mn-category-tile${currentCategory === cat ? " active" : ""}`}
                     onClick={() => {
-                      setSelectedDepartment(dep);
-                      setSelectedBrand("Все бренды");
-                      setSelectedAvailability("Все товары");
-                      setSearch("");
+                      if (selectedDepartment === "Мужчинам") setSelectedMensCategory(cat as MensCategory);
+                      else setSelectedWomensCategory(cat as WomensCategory);
                     }}
                   >
-                    {dep}
+                    <span className="mn-category-icon"><CategoryIcon name={cat} /></span>
+                    <span className="mn-category-name">{cat}</span>
+                    <span className="mn-category-hint">{categoryHints[cat] || "Подборка"}</span>
                   </button>
                 ))}
               </div>
             </section>
 
-            <section className="mn-section" aria-label="Категории">
-              <div className="mn-section-head">
-                <div>
-                  <div className="mn-kicker">Навигация</div>
-                  <div className="mn-section-title">Категории</div>
-                </div>
-                <span className="mn-count-chip">{currentCategories.length} разделов</span>
+            <button className="mn-promo" type="button" onClick={() => router.push(banners[0].link)} aria-label="Открыть коллекцию Весна Лето 2026">
+              <img src={banners[0].image} alt={banners[0].alt} onError={(e) => { e.currentTarget.src = "/products/product-1.jpg"; }} />
+              <div className="mn-promo-content">
+                <span className="mn-promo-label">Новая коллекция</span>
+                <div className="mn-promo-title">Весна / Лето 2026</div>
+                <span className="mn-promo-bottom">Смотреть товары <IconArrow /></span>
               </div>
+            </button>
 
-              <div className="mn-category-strip">
-                {currentCategories.map((cat) => {
-                  const visual = categoryVisuals[cat] || categoryVisuals["Все"];
-                  return (
-                    <button
-                      key={cat}
-                      type="button"
-                      className={`mn-category-card${currentCategory === cat ? " active" : ""}`}
-                      style={{ background: visual.tone, color: visual.accent }}
-                      onClick={() => {
-                        if (selectedDepartment === "Мужчинам") setSelectedMensCategory(cat as MensCategory);
-                        else setSelectedWomensCategory(cat as WomensCategory);
-                      }}
-                    >
-                      <CategoryMark name={cat} />
-                      <span className="mn-category-name">{cat}</span>
-                      <span className="mn-category-caption">Быстрый подбор</span>
-                      <span className="mn-category-art" />
-                    </button>
-                  );
-                })}
-              </div>
-            </section>
+            {newProducts.length > 0 && (
+              <section className="mn-section" aria-label="Новинки">
+                <div className="mn-section-head">
+                  <div>
+                    <h2 className="mn-section-title">Новинки</h2>
+                    <div className="mn-section-subtitle">Свежие поступления в каталоге</div>
+                  </div>
+                  <button className="mn-section-link" type="button" onClick={() => setSelectedSort("Новинки")}>Все</button>
+                </div>
+                <div className="mn-rail">
+                  {newProducts.map((p) => renderProductCard(p, "rail"))}
+                </div>
+              </section>
+            )}
+
+            {popularProducts.length > 0 && selectedSort === "По популярности" && search.trim().length === 0 && currentCategory === "Все" && (
+              <section className="mn-section" aria-label="Популярное">
+                <div className="mn-section-head">
+                  <div>
+                    <h2 className="mn-section-title">Популярное</h2>
+                    <div className="mn-section-subtitle">То, что чаще выбирают покупатели</div>
+                  </div>
+                </div>
+                <div className="mn-product-grid">
+                  {popularProducts.map((p) => renderProductCard(p))}
+                </div>
+              </section>
+            )}
 
             <section className="mn-section" aria-label="Каталог товаров">
               <div className="mn-section-head">
                 <div>
-                  <div className="mn-kicker">Shop now</div>
-                  <div className="mn-section-title">Витрина</div>
+                  <h2 className="mn-section-title">Каталог</h2>
+                  <div className="mn-section-subtitle">{filteredProducts.length} товаров найдено</div>
                 </div>
-                <span className="mn-count-chip">{filteredProducts.length} шт.</span>
+                {activeFiltersCount > 0 && <button className="mn-section-link" type="button" onClick={resetFilters}>Сбросить</button>}
               </div>
 
-              <div className="mn-controls-panel">
-                <div className="mn-availability">
+              <div className="mn-filters-card">
+                <div className="mn-availability-row">
                   {availabilityOptions.map((opt) => (
                     <button
                       key={opt}
@@ -1374,11 +1488,10 @@ export default function HomePageClient({
                   ))}
                 </div>
 
-                <div className="mn-filter-grid">
+                <div className="mn-filter-row">
                   <div className="mn-control-wrap" ref={brandMenuRef}>
                     <button type="button" className={`mn-select-btn${showBrandMenu ? " is-open" : ""}`} onClick={() => setShowBrandMenu((p) => !p)} aria-expanded={showBrandMenu}>
-                      <span>{selectedBrand}</span>
-                      <IconChevron />
+                      <span>{selectedBrand}</span><IconChevron />
                     </button>
                     {showBrandMenu && (
                       <div className="mn-dropdown">
@@ -1392,11 +1505,10 @@ export default function HomePageClient({
 
                   <div className="mn-control-wrap" ref={sortMenuRef}>
                     <button type="button" className={`mn-select-btn${showSortMenu ? " is-open" : ""}`} onClick={() => setShowSortMenu((p) => !p)} aria-expanded={showSortMenu}>
-                      <span>{selectedSort}</span>
-                      <IconChevron />
+                      <span>{selectedSort}</span><IconChevron />
                     </button>
                     {showSortMenu && (
-                      <div className="mn-dropdown" style={{ right: 0, left: "auto", minWidth: "196px" }}>
+                      <div className="mn-dropdown" style={{ right: 0, left: "auto", minWidth: "190px" }}>
                         {sortOptions.map((opt) => (
                           <button key={opt} className={selectedSort === opt ? "active" : ""} onClick={() => { setSelectedSort(opt); setShowSortMenu(false); }}>{opt}</button>
                         ))}
@@ -1421,109 +1533,20 @@ export default function HomePageClient({
                 {activeFiltersCount > 0 && (
                   <div className="mn-active-tools">
                     <span>Активных фильтров: {activeFiltersCount}</span>
-                    <button type="button" className="mn-reset-btn" onClick={resetFilters}>Сбросить</button>
+                    <button type="button" className="mn-reset-btn" onClick={resetFilters}>Очистить</button>
                   </div>
                 )}
               </div>
 
               {filteredProducts.length === 0 ? (
                 <div className="mn-empty">
-                  <div className="mn-empty-title">{selectedDepartment === "Женщинам" ? "Раздел скоро откроется" : "Ничего не найдено"}</div>
+                  <div className="mn-empty-title">{selectedDepartment === "Женщинам" ? "Женский раздел скоро откроется" : "Ничего не найдено"}</div>
                   <div className="mn-empty-sub">{selectedDepartment === "Женщинам" ? "Мы готовим женскую витрину и подборки под новый сезон." : "Попробуйте изменить категорию, бренд или очистить поиск."}</div>
                   <button type="button" className="mn-empty-action" onClick={resetFilters}>Сбросить фильтры</button>
                 </div>
               ) : (
                 <div className="mn-product-grid">
-                  {filteredProducts.map((p) => {
-                    const discount = getDiscountPercent(p.oldPrice, p.price);
-                    const selColor = selectedCardColors[p.id] || p.defaultColor || p.colors?.[0] || "";
-                    const gallery = selColor ? p.galleryByColor?.[selColor] || [] : [];
-                    const colorImg = selColor ? p.colorImages?.[selColor] : "";
-                    const imgs = gallery.length > 0 ? gallery : colorImg ? [colorImg] : p.images?.length ? p.images : [p.image];
-                    const total = imgs.length || 1;
-                    const curIdx = cardImageIndexes[p.id] || 0;
-                    const curImg = imgs[curIdx] || p.image || "/products/product-1.jpg";
-                    const visColors = (p.colors || []).slice(0, 3);
-                    const extraColors = getExtraColorsCount(p.colors || []);
-                    const isForeign = p.badge?.trim().toLowerCase() === "из-за рубежа";
-
-                    return (
-                      <article
-                        key={p.id}
-                        className="mn-product-card"
-                        onClick={() => router.push(`/product?id=${p.id}`)}
-                        onMouseEnter={() => router.prefetch(`/product?id=${p.id}`)}
-                      >
-                        <div
-                          className="mn-image-box"
-                          onTouchStart={(e) => handleTouchStart(p.id, e.touches[0]?.clientX ?? 0)}
-                          onTouchEnd={(e) => handleTouchEnd(p.id, e.changedTouches[0]?.clientX ?? 0, total)}
-                        >
-                          <img src={curImg} alt={p.name} className="mn-product-img" onError={(e) => { e.currentTarget.src = "/products/product-1.jpg"; }} />
-                          <div className="mn-product-gradient" />
-
-                          {discount > 0 && <div className="mn-badge mn-badge-sale">−{discount}%</div>}
-                          {p.badge === "Новинка" && !discount && <div className="mn-badge mn-badge-new">Новинка</div>}
-
-                          <button type="button" className="mn-heart-btn" onClick={(e) => { e.stopPropagation(); toggleFavorite(p.id); }} aria-label="В избранное">
-                            <IconHeart active={favorites.includes(p.id)} />
-                          </button>
-
-                          {total > 1 && (
-                            <div className="mn-dots">
-                              {Array.from({ length: Math.min(total, 4) }).map((_, i) => (
-                                <div key={i} className={`mn-dot${i === curIdx ? " active" : ""}`} style={{ width: i === curIdx ? "14px" : "4px" }} />
-                              ))}
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="mn-product-info">
-                          <div className="mn-product-meta">
-                            <span className="mn-brand">{p.brand}</span>
-                            {isForeign && <span className="mn-foreign">import</span>}
-                          </div>
-
-                          <div className="mn-product-name">{p.name}</div>
-
-                          {visColors.length > 0 && (
-                            <div className="mn-swatches">
-                              {visColors.map((color, idx) => (
-                                <button
-                                  key={`${p.id}-${color}-${idx}`}
-                                  type="button"
-                                  className={`mn-swatch${selColor === color ? " active" : ""}`}
-                                  style={{ backgroundColor: colorSwatches[color] || "#ccc" }}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setSelectedCardColors((prev) => ({ ...prev, [p.id]: color }));
-                                    setCardImageIndexes((prev) => ({ ...prev, [p.id]: 0 }));
-                                  }}
-                                  aria-label={`Цвет ${color}`}
-                                />
-                              ))}
-                              {extraColors > 0 && <span className="mn-extra">+{extraColors}</span>}
-                            </div>
-                          )}
-
-                          <div className="mn-price-row">
-                            {p.oldPrice ? <span className="mn-old-price">{formatPrice(p.oldPrice)} ₽</span> : null}
-                            <span className="mn-price">{formatPrice(p.price)} ₽</span>
-                          </div>
-
-                          <div className="mn-delivery">
-                            <IconTruck />
-                            <span>7–14 дней</span>
-                          </div>
-
-                          <button type="button" className="mn-cart-btn" onClick={(e) => e.stopPropagation()} aria-label="Добавить в корзину">
-                            <IconCart />
-                            <span>В корзину</span>
-                          </button>
-                        </div>
-                      </article>
-                    );
-                  })}
+                  {filteredProducts.map((p) => renderProductCard(p))}
                 </div>
               )}
             </section>
