@@ -222,6 +222,14 @@ export default function HomePageClient({
     return result;
   }, [departmentProducts, currentCategory, selectedBrand, selectedSort, selectedAvailability, search]);
 
+  const activeFiltersCount = [
+    currentCategory !== "Все",
+    selectedBrand !== "Все бренды",
+    selectedSort !== "По популярности",
+    selectedAvailability !== "Все товары",
+    search.trim().length > 0,
+  ].filter(Boolean).length;
+
   const handleTouchStart = (id: string, x: number) => {
     touchStartMapRef.current[id] = x;
   };
@@ -284,7 +292,7 @@ export default function HomePageClient({
           background: rgba(245,245,245,.96);
           backdrop-filter: blur(18px);
           -webkit-backdrop-filter: blur(18px);
-          padding: calc(env(safe-area-inset-top, 0px) + 28px) 12px 10px;
+          padding: 88px 12px 10px;
           border-bottom: 1px solid rgba(17,17,17,.04);
         }
 
