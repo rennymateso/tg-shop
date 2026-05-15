@@ -6,35 +6,19 @@ import BottomNav from "./components/BottomNav";
 import AppSplash from "./components/AppSplash";
 import { getTelegramWebApp } from "./lib/telegram-mini-app";
 
-const departments = ["Мужская одежда", "Женская одежда"] as const;
+const departments = ["Мужчинам", "Женщинам"] as const;
 const mensCategories = ["Все", "Футболки", "Поло", "Джинсы", "Брюки", "Костюмы"] as const;
 const womensCategories = ["Все", "Платья", "Футболки", "Рубашки", "Брюки", "Юбки"] as const;
-const sortOptions = ["По умолчанию", "Сначала дешевле", "Сначала дороже"] as const;
-
-const banners = [
-  {
-    image: "/banner.jpg",
-    alt: "Баннер",
-    link: "/",
-  },
-] as const;
+const sortOptions = ["По популярности", "Сначала дешевле", "Сначала дороже", "Скидки", "Новинки"] as const;
+const availabilityOptions = ["Все товары", "В наличии", "Из-за рубежа"] as const;
+const banners = [{ image: "/banner.jpg", alt: "Весна Лето 2026", link: "/" }] as const;
 
 type Department = (typeof departments)[number];
 type MensCategory = (typeof mensCategories)[number];
 type WomensCategory = (typeof womensCategories)[number];
 type SortOption = (typeof sortOptions)[number];
-
-type BrandRow = {
-  id: string;
-  name: string;
-  created_at: string;
-};
-
-type BadgeRow = {
-  id: string;
-  name: string;
-  created_at: string;
-};
+type BrandRow = { id: string; name: string; created_at: string };
+type BadgeRow = { id: string; name: string; created_at: string };
 
 export type HomeProduct = {
   id: string;
@@ -47,21 +31,21 @@ export type HomeProduct = {
   images: string[];
   colorImages?: Record<string, string>;
   galleryByColor?: Record<string, string[]>;
-  defaultColor: string;
-  type: "top" | "bottom";
-  category: "Футболки" | "Поло" | "Джинсы" | "Брюки" | "Костюмы";
+  defaultColor?: string;
+  type?: "top" | "bottom";
+  category: string;
   colors: string[];
   sizes: string[];
-  description: string;
+  description?: string;
 };
 
 const colorSwatches: Record<string, string> = {
   Черный: "#111111",
-  Белый: "#F5F5F5",
-  Серый: "#8F8F8F",
-  Синий: "#243B63",
-  Бежевый: "#D8CBB8",
-  Зеленый: "#7C8D74",
+  Белый: "#F7F5EF",
+  Серый: "#9E9E9E",
+  Синий: "#2563EB",
+  Бежевый: "#C8B49A",
+  Зеленый: "#4A7A3D",
   Коричневый: "#7A5230",
 };
 
@@ -70,60 +54,53 @@ function getDiscountPercent(oldPrice: number | null, price: number) {
   return Math.round(((oldPrice - price) / oldPrice) * 100);
 }
 
-function formatPriceNumber(value: number | null | undefined) {
+function formatPrice(value: number | null | undefined) {
   if (!value) return "";
   return value.toLocaleString("ru-RU");
 }
 
-function getExtraColorsLabel(colors: string[] | undefined) {
-  const count = Array.isArray(colors) ? colors.length : 0;
-  const extra = count - 3;
-
-  if (extra <= 0) return "";
-  if (extra === 1) return "+1";
-  return `+${extra}`;
+function getExtraColorsCount(colors: string[]) {
+  return Math.max((colors || []).length - 4, 0);
 }
 
-function getDeliveryLabel() {
-  return "Доставка 7–14 дней";
-}
-
-function SearchIcon() {
+function IconSearch() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round">
       <circle cx="11" cy="11" r="7" />
       <path d="M20 20L17 17" />
     </svg>
   );
 }
 
-function CloseIcon() {
+function IconChevron() {
   return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M18 6 6 18M6 6l12 12" />
-    </svg>
-  );
-}
-
-function ChevronIcon() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
       <path d="m6 9 6 6 6-6" />
     </svg>
   );
 }
 
-function ArrowIcon() {
+function IconFilter() {
   return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M5 12h14M12 5l7 7-7 7" />
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 7h16" />
+      <path d="M7 12h10" />
+      <path d="M10 17h4" />
     </svg>
   );
 }
 
-function DeliveryIcon() {
+function IconHeart({ active }: { active: boolean }) {
   return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg width="19" height="19" viewBox="0 0 24 24" fill={active ? "#111" : "none"} stroke="#111" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20.8 4.6c-1.8-1.8-4.7-1.8-6.5 0L12 6.9l-2.3-2.3c-1.8-1.8-4.7-1.8-6.5 0s-1.8 4.7 0 6.5L12 21l8.8-9.9c1.8-1.8 1.8-4.7 0-6.5z" />
+    </svg>
+  );
+}
+
+function IconDelivery() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M3 7h11v9H3z" />
       <path d="M14 10h3l4 4v2h-7" />
       <circle cx="7" cy="18" r="1.5" />
@@ -132,164 +109,55 @@ function DeliveryIcon() {
   );
 }
 
-function CategoryIcon({ name }: { name: string }) {
-  const p = {
-    width: 22,
-    height: 22,
-    viewBox: "0 0 32 32",
-    fill: "none",
-    stroke: "currentColor",
-    strokeWidth: 1.9,
-    strokeLinecap: "round" as const,
-    strokeLinejoin: "round" as const,
-  };
-
-  if (name === "Все") {
-    return (
-      <svg {...p}>
-        <rect x="7" y="7" width="6" height="6" rx="1.4" />
-        <rect x="19" y="7" width="6" height="6" rx="1.4" />
-        <rect x="7" y="19" width="6" height="6" rx="1.4" />
-        <rect x="19" y="19" width="6" height="6" rx="1.4" />
-      </svg>
-    );
-  }
-
-  if (name === "Футболки") {
-    return (
-      <svg {...p}>
-        <path d="M11 7h3a2 2 0 0 0 4 0h3l5 4-3 5-2.2-1.3V26H11.2V14.7L9 16l-3-5 5-4Z" />
-      </svg>
-    );
-  }
-
-  if (name === "Поло") {
-    return (
-      <svg {...p}>
-        <path d="M10 7h12l3 4v15H7V11l3-4Z" />
-        <path d="M11 7l5 5 5-5" />
-        <path d="M16 12v5" />
-        <path d="M13.5 17h5" />
-      </svg>
-    );
-  }
-
-  if (name === "Джинсы") {
-    return (
-      <svg {...p}>
-        <path d="M11 6h10l1.4 20h-5.1L16 14.2 14.7 26H9.6L11 6Z" />
-        <path d="M11 10h10" />
-        <path d="M16 6v8" />
-        <path d="M13 10v2" />
-        <path d="M19 10v2" />
-      </svg>
-    );
-  }
-
-  if (name === "Брюки") {
-    return (
-      <svg {...p}>
-        <path d="M12 6h8l1.5 20h-4.4L16 13.5 14.9 26h-4.4L12 6Z" />
-        <path d="M12 10h8" />
-        <path d="M16 6v7.5" />
-      </svg>
-    );
-  }
-
-  if (name === "Костюмы") {
-    return (
-      <svg {...p}>
-        <path d="M10 7h12l3 5v14H7V12l3-5Z" />
-        <path d="M12 7l4 6 4-6" />
-        <path d="M16 13v13" />
-        <path d="M11 18h3" />
-        <path d="M18 18h3" />
-      </svg>
-    );
-  }
-
-  if (name === "Платья") {
-    return (
-      <svg {...p}>
-        <path d="M12 6h8l2 6-3 2 4 12H9l4-12-3-2 2-6Z" />
-        <path d="M14 6c.4 1.4 1.1 2.1 2 2.1S17.6 7.4 18 6" />
-      </svg>
-    );
-  }
-
-  if (name === "Рубашки") {
-    return (
-      <svg {...p}>
-        <path d="M10 7h12l3 4v15H7V11l3-4Z" />
-        <path d="M11 7l5 5 5-5" />
-        <path d="M16 12v14" />
-        <path d="M12 17h8" />
-      </svg>
-    );
-  }
-
-  if (name === "Юбки") {
-    return (
-      <svg {...p}>
-        <path d="M12 8h8l4 18H8l4-18Z" />
-        <path d="M11 8V5h10v3" />
-        <path d="M14 12l-2 14" />
-        <path d="M18 12l2 14" />
-      </svg>
-    );
-  }
-
+function IconClose() {
   return (
-    <svg {...p}>
-      <circle cx="16" cy="16" r="10" />
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 6 6 18M6 6l12 12" />
     </svg>
   );
 }
 
-function PriceText({ value }: { value: number }) {
+function IconArrow() {
   return (
-    <span className="inline-flex items-baseline gap-[2px]">
-      <span>{formatPriceNumber(value)}</span>
-      <span className="text-[0.78em] font-semibold">₽</span>
-    </span>
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 12h14M12 5l7 7-7 7" />
+    </svg>
   );
 }
 
 export default function HomePageClient({
   initialProducts,
   initialBrands,
-  initialBadges,
 }: {
   initialProducts: HomeProduct[];
   initialBrands: BrandRow[];
-  initialBadges: BadgeRow[];
+  initialBadges?: BadgeRow[];
 }) {
   const router = useRouter();
-
   const [favorites, setFavorites] = useState<string[]>([]);
-  const [selectedDepartment, setSelectedDepartment] = useState<Department>("Мужская одежда");
+  const [selectedDepartment, setSelectedDepartment] = useState<Department>("Мужчинам");
   const [selectedMensCategory, setSelectedMensCategory] = useState<MensCategory>("Все");
   const [selectedWomensCategory, setSelectedWomensCategory] = useState<WomensCategory>("Все");
   const [selectedBrand, setSelectedBrand] = useState("Все бренды");
-  const [selectedSort, setSelectedSort] = useState<SortOption>("По умолчанию");
-  const [selectedBadge, setSelectedBadge] = useState("Все");
+  const [selectedSort, setSelectedSort] = useState<SortOption>("По популярности");
+  const [selectedAvailability, setSelectedAvailability] = useState("Все товары");
   const [search, setSearch] = useState("");
-  const [activeBanner] = useState(0);
   const [showSplash, setShowSplash] = useState(true);
-
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [showBrandMenu, setShowBrandMenu] = useState(false);
-
+  const [showAvailabilityMenu, setShowAvailabilityMenu] = useState(false);
   const [cardImageIndexes, setCardImageIndexes] = useState<Record<string, number>>({});
+  const [selectedCardColors, setSelectedCardColors] = useState<Record<string, string>>({});
 
-  const sortMenuRef = useRef<HTMLDivElement | null>(null);
-  const brandMenuWrapRef = useRef<HTMLDivElement | null>(null);
+  const sortMenuRef = useRef<HTMLDivElement>(null);
+  const brandMenuRef = useRef<HTMLDivElement>(null);
+  const availMenuRef = useRef<HTMLDivElement>(null);
   const touchStartMapRef = useRef<Record<string, number | null>>({});
 
   useEffect(() => {
-    const webApp = getTelegramWebApp();
-    webApp?.ready();
-    webApp?.expand();
+    const tg = getTelegramWebApp();
+    tg?.ready();
+    tg?.expand();
   }, []);
 
   useEffect(() => {
@@ -298,520 +166,997 @@ export default function HomePageClient({
   }, []);
 
   useEffect(() => {
-    const splashShown = sessionStorage.getItem("montreaux_splash_shown");
-
-    if (splashShown === "1") {
+    if (sessionStorage.getItem("montreaux_splash_shown") === "1") {
       setShowSplash(false);
       return;
     }
 
-    const timer = window.setTimeout(() => {
+    const t = setTimeout(() => {
       setShowSplash(false);
       sessionStorage.setItem("montreaux_splash_shown", "1");
     }, 3000);
 
-    return () => window.clearTimeout(timer);
+    return () => clearTimeout(t);
   }, []);
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (sortMenuRef.current && !sortMenuRef.current.contains(event.target as Node)) {
-        setShowSortMenu(false);
-      }
-
-      if (brandMenuWrapRef.current && !brandMenuWrapRef.current.contains(event.target as Node)) {
-        setShowBrandMenu(false);
-      }
+    const handler = (e: MouseEvent) => {
+      if (sortMenuRef.current && !sortMenuRef.current.contains(e.target as Node)) setShowSortMenu(false);
+      if (brandMenuRef.current && !brandMenuRef.current.contains(e.target as Node)) setShowBrandMenu(false);
+      if (availMenuRef.current && !availMenuRef.current.contains(e.target as Node)) setShowAvailabilityMenu(false);
     };
 
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, []);
 
   const toggleFavorite = (id: string) => {
-    const updated = favorites.includes(id) ? favorites.filter((i) => i !== id) : [...favorites, id];
-
+    const updated = favorites.includes(id) ? favorites.filter((x) => x !== id) : [...favorites, id];
     setFavorites(updated);
     localStorage.setItem("favorites", JSON.stringify(updated));
     window.dispatchEvent(new Event("favorites-updated"));
   };
 
   const resetPage = () => {
-    setSelectedDepartment("Мужская одежда");
+    setSelectedDepartment("Мужчинам");
     setSelectedMensCategory("Все");
     setSelectedWomensCategory("Все");
     setSelectedBrand("Все бренды");
-    setSelectedSort("По умолчанию");
-    setSelectedBadge("Все");
+    setSelectedSort("По популярности");
+    setSelectedAvailability("Все товары");
     setSearch("");
     setShowSortMenu(false);
     setShowBrandMenu(false);
+    setShowAvailabilityMenu(false);
     router.push("/");
   };
 
   const resetFilters = () => {
-    setSelectedMensCategory("Все");
-    setSelectedWomensCategory("Все");
     setSelectedBrand("Все бренды");
-    setSelectedSort("По умолчанию");
-    setSelectedBadge("Все");
+    setSelectedSort("По популярности");
+    setSelectedAvailability("Все товары");
     setSearch("");
-    setShowSortMenu(false);
-    setShowBrandMenu(false);
+
+    if (selectedDepartment === "Мужчинам") setSelectedMensCategory("Все");
+    else setSelectedWomensCategory("Все");
   };
 
-  const prefetchProduct = (productId: string) => {
-    router.prefetch(`/product?id=${productId}`);
-  };
-
-  const nextCardImage = (productId: string, totalImages: number) => {
-    if (totalImages <= 1) return;
-
-    setCardImageIndexes((prev) => {
-      const currentIndex = prev[productId] || 0;
-      const nextIndex = currentIndex >= totalImages - 1 ? 0 : currentIndex + 1;
-
-      return {
-        ...prev,
-        [productId]: nextIndex,
-      };
-    });
-  };
-
-  const prevCardImage = (productId: string, totalImages: number) => {
-    if (totalImages <= 1) return;
-
-    setCardImageIndexes((prev) => {
-      const currentIndex = prev[productId] || 0;
-      const nextIndex = currentIndex <= 0 ? totalImages - 1 : currentIndex - 1;
-
-      return {
-        ...prev,
-        [productId]: nextIndex,
-      };
-    });
-  };
-
-  const handleCardTouchStart = (productId: string, clientX: number) => {
-    touchStartMapRef.current[productId] = clientX;
-  };
-
-  const handleCardTouchEnd = (productId: string, clientX: number, totalImages: number) => {
-    const startX = touchStartMapRef.current[productId];
-
-    if (startX == null) return;
-
-    const diff = startX - clientX;
-
-    if (Math.abs(diff) > 40) {
-      if (diff > 0) {
-        nextCardImage(productId, totalImages);
-      } else {
-        prevCardImage(productId, totalImages);
-      }
-    }
-
-    touchStartMapRef.current[productId] = null;
-  };
-
-  const currentCategory = selectedDepartment === "Мужская одежда" ? selectedMensCategory : selectedWomensCategory;
-  const currentCategories = selectedDepartment === "Мужская одежда" ? mensCategories : womensCategories;
-
-  const departmentProducts = useMemo(() => {
-    if (selectedDepartment === "Женская одежда") {
-      return [];
-    }
-
-    return initialProducts;
-  }, [initialProducts, selectedDepartment]);
+  const currentCategory = selectedDepartment === "Мужчинам" ? selectedMensCategory : selectedWomensCategory;
+  const currentCategories = selectedDepartment === "Мужчинам" ? mensCategories : womensCategories;
+  const departmentProducts = useMemo(() => (selectedDepartment === "Женщинам" ? [] : initialProducts), [initialProducts, selectedDepartment]);
 
   const filteredProducts = useMemo(() => {
     const result = departmentProducts.filter((item) => {
-      const matchesCategory = currentCategory === "Все" || item.category === currentCategory;
-      const matchesBrand = selectedBrand === "Все бренды" || item.brand === selectedBrand;
-
+      const matchCat = currentCategory === "Все" || item.category === currentCategory;
+      const matchBrand = selectedBrand === "Все бренды" || item.brand === selectedBrand;
       const query = search.trim().toLowerCase();
-      const matchesSearch =
-        !query ||
-        item.name.toLowerCase().includes(query) ||
-        item.brand.toLowerCase().includes(query) ||
-        item.category.toLowerCase().includes(query);
-
-      const matchesBadge = selectedBadge === "Все" || item.badge === selectedBadge;
-
-      return matchesCategory && matchesBrand && matchesSearch && matchesBadge;
+      const matchSearch = !query || item.name.toLowerCase().includes(query) || item.brand.toLowerCase().includes(query) || item.category.toLowerCase().includes(query);
+      const matchAvail = selectedAvailability === "Все товары" || item.badge === selectedAvailability;
+      return matchCat && matchBrand && matchSearch && matchAvail;
     });
 
-    if (selectedSort === "Сначала дешевле") {
-      return [...result].sort((a, b) => a.price - b.price);
-    }
-
-    if (selectedSort === "Сначала дороже") {
-      return [...result].sort((a, b) => b.price - a.price);
-    }
+    if (selectedSort === "Сначала дешевле") return [...result].sort((a, b) => a.price - b.price);
+    if (selectedSort === "Сначала дороже") return [...result].sort((a, b) => b.price - a.price);
+    if (selectedSort === "Скидки") return [...result].sort((a, b) => getDiscountPercent(b.oldPrice, b.price) - getDiscountPercent(a.oldPrice, a.price));
+    if (selectedSort === "Новинки") return [...result].filter((i) => i.badge === "Новинка");
 
     return result;
-  }, [departmentProducts, currentCategory, selectedBrand, selectedSort, selectedBadge, search]);
+  }, [departmentProducts, currentCategory, selectedBrand, selectedSort, selectedAvailability, search]);
 
   const activeFiltersCount = [
     currentCategory !== "Все",
     selectedBrand !== "Все бренды",
-    selectedSort !== "По умолчанию",
-    selectedBadge !== "Все",
+    selectedSort !== "По популярности",
+    selectedAvailability !== "Все товары",
     search.trim().length > 0,
   ].filter(Boolean).length;
+
+  const handleTouchStart = (id: string, x: number) => {
+    touchStartMapRef.current[id] = x;
+  };
+
+  const handleTouchEnd = (id: string, x: number, total: number) => {
+    const start = touchStartMapRef.current[id];
+    if (start == null) return;
+
+    const diff = start - x;
+
+    if (Math.abs(diff) > 40) {
+      setCardImageIndexes((prev) => {
+        const cur = prev[id] || 0;
+        const next = diff > 0 ? (cur >= total - 1 ? 0 : cur + 1) : cur <= 0 ? total - 1 : cur - 1;
+        return { ...prev, [id]: next };
+      });
+    }
+
+    touchStartMapRef.current[id] = null;
+  };
 
   return (
     <>
       {showSplash && <AppSplash />}
 
-      <main className="min-h-screen overflow-x-hidden bg-[#F5F5F5] px-3 pb-32 pt-[70px]">
-        <section className="text-center">
-          <button type="button" onClick={resetPage} className="mx-auto block max-w-full text-[32px] font-semibold leading-none tracking-[0.16em] text-black">
-            MONTREAUX
-          </button>
-        </section>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Onest:wght@400;500;600;700;800&display=swap');
 
-        <section className="mt-4">
-          <div className="rounded-[20px] border border-black/[0.04] bg-white px-4 py-3 shadow-[0_8px_24px_rgba(0,0,0,0.035)]">
-            <div className="flex items-center gap-3 text-gray-400">
-              <SearchIcon />
+        *, *::before, *::after { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        html { background: #f5f5f5; overscroll-behavior-x: none; }
+        body { margin: 0; background: #f5f5f5; overflow-x: hidden !important; max-width: 100vw !important; overscroll-behavior: none; }
+        button, input { font: inherit; }
+        button { touch-action: manipulation; }
+        button:focus-visible, input:focus-visible { outline: 2px solid rgba(17,17,17,.4); outline-offset: 2px; }
 
+        .mn-page {
+          --bg: #f5f5f5;
+          --card: #fff;
+          --text: #111;
+          --muted: #7b7b7b;
+          --soft: #efefef;
+          --line: rgba(17,17,17,.08);
+          --green: #128243;
+          --red: #e13a3a;
+          font-family: 'Onest', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+          width: 100%;
+          max-width: 100vw;
+          min-height: 100vh;
+          overflow-x: hidden;
+          background: var(--bg);
+          color: var(--text);
+          padding-bottom: calc(104px + env(safe-area-inset-bottom, 0px));
+        }
+
+        .mn-shell {
+          width: min(100%, 520px);
+          margin: 0 auto;
+          overflow-x: clip;
+        }
+
+        .mn-header {
+          position: sticky;
+          top: 0;
+          z-index: 100;
+          background: rgba(245,245,245,.96);
+          backdrop-filter: blur(18px);
+          -webkit-backdrop-filter: blur(18px);
+          padding: calc(env(safe-area-inset-top, 0px) + 12px) 12px 10px;
+          border-bottom: 1px solid rgba(17,17,17,.04);
+        }
+
+        .mn-logo-btn {
+          display: block;
+          width: 100%;
+          border: none;
+          background: transparent;
+          padding: 0;
+          text-align: center;
+          cursor: pointer;
+        }
+
+        .mn-logo-name {
+          display: block;
+          color: #111;
+          font-family: 'Cormorant Garamond', Georgia, serif;
+          font-size: clamp(21px, 5.8vw, 27px);
+          line-height: .95;
+          font-weight: 700;
+          letter-spacing: 0.08em;
+          white-space: nowrap;
+        }
+
+        .mn-search {
+          margin-top: 11px;
+          height: 44px;
+          border-radius: 16px;
+          background: #fff;
+          border: 1px solid var(--line);
+          display: flex;
+          align-items: center;
+          gap: 9px;
+          padding: 0 12px;
+          color: #8b8b8b;
+        }
+
+        .mn-search input {
+          flex: 1;
+          min-width: 0;
+          height: 100%;
+          border: none;
+          outline: none;
+          background: transparent;
+          color: #111;
+          font-size: 14px;
+          font-weight: 500;
+        }
+
+        .mn-search input::placeholder { color: #9a9a9a; }
+
+        .mn-clear {
+          width: 30px;
+          height: 30px;
+          border: none;
+          border-radius: 999px;
+          background: #f0f0f0;
+          color: #555;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+        }
+
+        .mn-main { padding-top: 12px; }
+
+        .mn-tabs {
+          margin: 0 12px;
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 6px;
+          padding: 4px;
+          border-radius: 16px;
+          background: #e9e9e9;
+        }
+
+        .mn-tab {
+          height: 38px;
+          border: none;
+          border-radius: 13px;
+          background: transparent;
+          color: #666;
+          font-size: 14px;
+          font-weight: 700;
+          cursor: pointer;
+        }
+
+        .mn-tab.active {
+          background: #fff;
+          color: #111;
+          box-shadow: 0 2px 10px rgba(0,0,0,.06);
+        }
+
+        .mn-cats {
+          margin: 12px 0 0;
+          padding: 0 12px 2px;
+          display: flex;
+          gap: 8px;
+          overflow-x: auto;
+          scrollbar-width: none;
+        }
+
+        .mn-cats::-webkit-scrollbar { display: none; }
+
+        .mn-cat {
+          flex: 0 0 auto;
+          min-width: 72px;
+          height: 36px;
+          border: 1px solid var(--line);
+          border-radius: 999px;
+          background: #fff;
+          color: #111;
+          padding: 0 13px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          text-align: center;
+          cursor: pointer;
+        }
+
+        .mn-cat.active {
+          background: #111;
+          color: #fff;
+          border-color: #111;
+        }
+
+        .mn-cat-name {
+          max-width: 100%;
+          font-size: 12px;
+          line-height: 1;
+          font-weight: 600;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .mn-promo {
+          margin: 14px 12px 0;
+          width: calc(100% - 24px);
+          height: 128px;
+          position: relative;
+          overflow: hidden;
+          border: none;
+          border-radius: 18px;
+          background: #111;
+          display: block;
+          padding: 0;
+          text-align: left;
+          cursor: pointer;
+        }
+
+        .mn-promo img {
+          position: absolute;
+          inset: 0;
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          opacity: .72;
+        }
+
+        .mn-promo::after {
+          content: "";
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(90deg, rgba(0,0,0,.72), rgba(0,0,0,.25) 65%, rgba(0,0,0,0));
+        }
+
+        .mn-promo-content {
+          position: relative;
+          z-index: 2;
+          height: 100%;
+          padding: 14px;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          align-items: flex-start;
+        }
+
+        .mn-promo-label {
+          color: rgba(255,255,255,.82);
+          font-size: 10px;
+          font-weight: 700;
+          letter-spacing: .12em;
+          text-transform: uppercase;
+        }
+
+        .mn-promo-title {
+          color: #fff;
+          font-size: 25px;
+          line-height: .95;
+          font-weight: 800;
+          letter-spacing: -0.06em;
+        }
+
+        .mn-promo-cta {
+          height: 34px;
+          padding: 0 12px;
+          border-radius: 999px;
+          background: #fff;
+          color: #111;
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+          font-size: 12px;
+          font-weight: 700;
+        }
+
+        .mn-catalog-head {
+          margin: 18px 12px 0;
+          display: flex;
+          align-items: flex-end;
+          justify-content: space-between;
+          gap: 10px;
+        }
+
+        .mn-title {
+          margin: 0;
+          color: #111;
+          font-size: 22px;
+          line-height: 1;
+          font-weight: 800;
+          letter-spacing: -0.055em;
+        }
+
+        .mn-subtitle {
+          margin-top: 5px;
+          color: #777;
+          font-size: 12px;
+          line-height: 1.2;
+          font-weight: 500;
+        }
+
+        .mn-reset {
+          border: none;
+          background: transparent;
+          color: #111;
+          font-size: 12px;
+          font-weight: 700;
+          cursor: pointer;
+          padding: 5px 0;
+          white-space: nowrap;
+        }
+
+        .mn-filters {
+          margin: 10px 12px 0;
+          padding: 9px;
+          border-radius: 16px;
+          background: #fff;
+          border: 1px solid var(--line);
+        }
+
+        .mn-chip-row {
+          display: flex;
+          gap: 6px;
+          overflow-x: auto;
+          scrollbar-width: none;
+        }
+
+        .mn-chip-row::-webkit-scrollbar { display: none; }
+
+        .mn-chip {
+          flex: 0 0 auto;
+          height: 34px;
+          padding: 0 11px;
+          border-radius: 11px;
+          border: 1px solid var(--line);
+          background: #f6f6f6;
+          color: #555;
+          font-size: 12px;
+          font-weight: 600;
+          cursor: pointer;
+          white-space: nowrap;
+        }
+
+        .mn-chip.active {
+          background: #111;
+          border-color: #111;
+          color: #fff;
+        }
+
+        .mn-filter-grid {
+          margin-top: 7px;
+          display: grid;
+          grid-template-columns: minmax(0,1fr) minmax(0,1fr) 40px;
+          gap: 6px;
+        }
+
+        .mn-control { position: relative; min-width: 0; }
+
+        .mn-select, .mn-filter-btn {
+          height: 40px;
+          border-radius: 12px;
+          border: 1px solid var(--line);
+          background: #fff;
+          color: #111;
+          cursor: pointer;
+        }
+
+        .mn-select {
+          width: 100%;
+          padding: 0 9px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 6px;
+          font-size: 12px;
+          font-weight: 600;
+        }
+
+        .mn-select span {
+          min-width: 0;
+          flex: 1;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          text-align: left;
+        }
+
+        .mn-filter-btn {
+          width: 40px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .mn-select.is-open, .mn-filter-btn.is-open {
+          background: #111;
+          border-color: #111;
+          color: #fff;
+        }
+
+        .mn-dropdown {
+          position: absolute;
+          top: 46px;
+          left: 0;
+          right: 0;
+          z-index: 300;
+          padding: 6px;
+          border-radius: 14px;
+          background: #fff;
+          border: 1px solid var(--line);
+          box-shadow: 0 14px 40px rgba(0,0,0,.16);
+          max-height: 238px;
+          overflow-y: auto;
+          scrollbar-width: none;
+        }
+
+        .mn-dropdown::-webkit-scrollbar { display: none; }
+
+        .mn-dropdown button {
+          display: block;
+          width: 100%;
+          min-height: 38px;
+          border: none;
+          border-radius: 10px;
+          background: transparent;
+          color: #111;
+          text-align: left;
+          padding: 0 10px;
+          font-size: 13px;
+          font-weight: 600;
+          cursor: pointer;
+        }
+
+        .mn-dropdown button.active {
+          background: #111;
+          color: #fff;
+        }
+
+        .mn-grid {
+          margin: 12px 12px 0;
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0,1fr));
+          gap: 9px;
+        }
+
+        .mn-card {
+          min-width: 0;
+          overflow: hidden;
+          border-radius: 15px;
+          background: #fff;
+          border: 1px solid rgba(17,17,17,.06);
+          cursor: pointer;
+          text-align: left;
+          transform: none !important;
+        }
+
+        .mn-card:active { transform: none !important; }
+
+        .mn-img-wrap {
+          position: relative;
+          aspect-ratio: 3 / 4;
+          overflow: hidden;
+          background: #eee;
+          touch-action: pan-y;
+        }
+
+        .mn-img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          display: block;
+          transform: none !important;
+        }
+
+        .mn-heart {
+          position: absolute;
+          top: 7px;
+          right: 7px;
+          z-index: 10;
+          width: 34px;
+          height: 34px;
+          border-radius: 999px;
+          border: 1px solid rgba(0,0,0,.06);
+          background: rgba(255,255,255,.94);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+        }
+
+        .mn-dots {
+          position: absolute;
+          left: 8px;
+          right: 8px;
+          bottom: 8px;
+          display: flex;
+          gap: 4px;
+        }
+
+        .mn-dot {
+          flex: 1;
+          height: 3px;
+          border-radius: 999px;
+          background: rgba(255,255,255,.45);
+        }
+
+        .mn-dot.active { background: #fff; }
+
+        .mn-body { padding: 9px 9px 10px; }
+
+        .mn-brand-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 6px;
+        }
+
+        .mn-brand {
+          min-width: 0;
+          color: #777;
+          font-family: 'Cormorant Garamond', Georgia, serif;
+          font-size: 13px;
+          line-height: 1;
+          font-weight: 600;
+          letter-spacing: .035em;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .mn-foreign {
+          flex: 0 0 auto;
+          color: #666;
+          background: #f1f1f1;
+          border-radius: 999px;
+          padding: 3px 6px;
+          font-size: 9px;
+          line-height: 1;
+          font-weight: 500;
+          white-space: nowrap;
+        }
+
+        .mn-name {
+          margin-top: 5px;
+          min-height: 32px;
+          color: #111;
+          font-size: 13px;
+          line-height: 1.23;
+          font-weight: 600;
+          letter-spacing: -0.02em;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+
+        .mn-swatches {
+          min-height: 17px;
+          margin-top: 7px;
+          display: flex;
+          align-items: center;
+          gap: 5px;
+        }
+
+        .mn-swatch {
+          width: 13px;
+          height: 13px;
+          border-radius: 999px;
+          border: 2px solid #fff;
+          box-shadow: 0 0 0 1px rgba(17,17,17,.16);
+          cursor: pointer;
+        }
+
+        .mn-swatch.active { box-shadow: 0 0 0 2px #111; }
+        .mn-extra { color: #888; font-size: 10px; font-weight: 600; }
+
+        .mn-price-row {
+          margin-top: 8px;
+          display: flex;
+          align-items: baseline;
+          flex-wrap: wrap;
+          gap: 5px;
+        }
+
+        .mn-old-price {
+          color: #9a9a9a;
+          font-size: 11px;
+          line-height: 1;
+          font-weight: 500;
+          text-decoration: line-through;
+        }
+
+        .mn-discount-inline {
+          color: var(--red);
+          font-size: 11px;
+          line-height: 1;
+          font-weight: 700;
+        }
+
+        .mn-price {
+          color: var(--green);
+          font-size: 17px;
+          line-height: 1;
+          font-weight: 800;
+          letter-spacing: -0.045em;
+        }
+
+        .mn-delivery {
+          margin-top: 7px;
+          color: #8b8b8b;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          font-size: 10px;
+          line-height: 1;
+          font-weight: 500;
+        }
+
+        .mn-empty {
+          margin: 12px;
+          padding: 32px 18px;
+          border-radius: 18px;
+          background: #fff;
+          border: 1px solid var(--line);
+          text-align: center;
+        }
+
+        .mn-empty-title {
+          color: #111;
+          font-size: 21px;
+          line-height: 1.1;
+          font-weight: 800;
+          letter-spacing: -0.045em;
+        }
+
+        .mn-empty-sub {
+          max-width: 250px;
+          margin: 8px auto 0;
+          color: #777;
+          font-size: 13px;
+          line-height: 1.4;
+          font-weight: 500;
+        }
+
+        .mn-empty-action {
+          margin-top: 15px;
+          height: 42px;
+          padding: 0 16px;
+          border: none;
+          border-radius: 13px;
+          background: #111;
+          color: #fff;
+          font-size: 13px;
+          font-weight: 700;
+          cursor: pointer;
+        }
+
+        @media (max-width: 370px) {
+          .mn-header { padding-left: 10px; padding-right: 10px; }
+          .mn-logo-name { font-size: 21px; }
+          .mn-cats { padding-left: 10px; padding-right: 10px; }
+          .mn-cat { min-width: 68px; height: 34px; }
+          .mn-promo, .mn-filters, .mn-grid, .mn-catalog-head, .mn-tabs { margin-left: 10px; margin-right: 10px; }
+          .mn-promo { width: calc(100% - 20px); }
+          .mn-grid { gap: 8px; }
+          .mn-body { padding: 8px; }
+          .mn-name { font-size: 12px; min-height: 30px; }
+          .mn-price { font-size: 16px; }
+          .mn-filter-grid { grid-template-columns: minmax(0,1fr) 40px; }
+          .mn-filter-grid .mn-control:nth-child(2) { grid-column: 1 / -1; grid-row: 2; }
+          .mn-filter-grid .mn-control:nth-child(3) { grid-column: 2; grid-row: 1; }
+        }
+      `}</style>
+
+      <div className="mn-page">
+        <div className="mn-shell">
+          <header className="mn-header">
+            <button className="mn-logo-btn" type="button" onClick={resetPage} aria-label="На главную">
+              <span className="mn-logo-name">MONTREAUX</span>
+            </button>
+
+            <div className="mn-search">
+              <IconSearch />
               <input
                 placeholder="Искать одежду, бренд или категорию"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full bg-transparent text-[14px] font-medium text-black outline-none placeholder:text-gray-400"
+                aria-label="Поиск товаров"
               />
-
-              {search.trim() ? (
-                <button type="button" onClick={() => setSearch("")} className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-500" aria-label="Очистить поиск">
-                  <CloseIcon />
+              {search.trim() && (
+                <button type="button" className="mn-clear" onClick={() => setSearch("")} aria-label="Очистить поиск">
+                  <IconClose />
                 </button>
-              ) : null}
+              )}
             </div>
-          </div>
-        </section>
+          </header>
 
-        <section className="mt-4">
-          <div className="rounded-[20px] bg-[#E9E9E9] p-1">
-            <div className="grid grid-cols-2 gap-1">
-              {departments.map((department) => (
+          <main className="mn-main">
+            <div className="mn-tabs" role="tablist" aria-label="Раздел магазина">
+              {departments.map((dep) => (
                 <button
-                  key={department}
+                  key={dep}
                   type="button"
+                  role="tab"
+                  aria-selected={selectedDepartment === dep}
+                  className={`mn-tab${selectedDepartment === dep ? " active" : ""}`}
                   onClick={() => {
-                    setSelectedDepartment(department);
+                    setSelectedDepartment(dep);
                     setSelectedBrand("Все бренды");
-                    setSelectedBadge("Все");
+                    setSelectedAvailability("Все товары");
                     setSearch("");
                   }}
-                  className={`rounded-[16px] px-3 py-2.5 text-[13px] font-semibold transition-colors ${
-                    selectedDepartment === department ? "bg-white text-black shadow-[0_4px_12px_rgba(0,0,0,0.07)]" : "text-[#666]"
-                  }`}
                 >
-                  {department}
+                  {dep}
                 </button>
               ))}
             </div>
-          </div>
-        </section>
 
-        <section className="mt-3">
-          <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {currentCategories.map((category) => {
-              const isActive = currentCategory === category;
-
-              return (
+            <div className="mn-cats" aria-label="Категории одежды">
+              {currentCategories.map((cat) => (
                 <button
-                  key={category}
+                  key={cat}
                   type="button"
+                  className={`mn-cat${currentCategory === cat ? " active" : ""}`}
                   onClick={() => {
-                    if (selectedDepartment === "Мужская одежда") {
-                      setSelectedMensCategory(category as MensCategory);
-                    } else {
-                      setSelectedWomensCategory(category as WomensCategory);
-                    }
+                    if (selectedDepartment === "Мужчинам") setSelectedMensCategory(cat as MensCategory);
+                    else setSelectedWomensCategory(cat as WomensCategory);
                   }}
-                  className={`flex w-[78px] shrink-0 flex-col items-center justify-center gap-1.5 rounded-[16px] border px-2 py-2.5 text-center transition-colors ${
-                    isActive ? "border-black bg-black text-white" : "border-black/[0.06] bg-white text-black"
-                  }`}
                 >
-                  <span className={`flex h-8 w-8 items-center justify-center rounded-[11px] ${isActive ? "bg-white/15" : "bg-gray-100"}`}>
-                    <CategoryIcon name={category} />
-                  </span>
-                  <span className="max-w-full truncate text-[10.5px] font-semibold leading-none">{category}</span>
+                  <span className="mn-cat-name">{cat}</span>
                 </button>
-              );
-            })}
-          </div>
-        </section>
-
-        <section className="mt-3 overflow-hidden rounded-[22px] bg-white shadow-[0_10px_28px_rgba(0,0,0,0.05)]">
-          <button type="button" onClick={() => router.push(banners[activeBanner].link)} className="relative block h-[132px] w-full overflow-hidden text-left">
-            <img src={banners[activeBanner].image} alt={banners[activeBanner].alt} className="absolute inset-0 h-full w-full object-cover" />
-            <span className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/25 to-transparent" />
-            <span className="relative z-10 flex h-full flex-col items-start justify-between p-4">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/80">Новая коллекция</span>
-              <span>
-                <span className="block text-[26px] font-bold leading-[0.95] tracking-[-0.055em] text-white">Весна / Лето</span>
-                <span className="block text-[26px] font-bold leading-[0.95] tracking-[-0.055em] text-white">2026</span>
-              </span>
-              <span className="inline-flex h-8 items-center gap-1.5 rounded-full bg-white px-3 text-[12px] font-semibold text-black">
-                Смотреть <ArrowIcon />
-              </span>
-            </span>
-          </button>
-        </section>
-
-        <section className="mt-5">
-          <div className="flex items-end justify-between gap-3">
-            <div>
-              <h2 className="text-[22px] font-bold leading-none tracking-[-0.05em] text-black">Каталог</h2>
-              <p className="mt-1 text-[12px] font-medium text-gray-500">{filteredProducts.length} товаров</p>
+              ))}
             </div>
 
-            {activeFiltersCount > 0 ? (
-              <button type="button" onClick={resetFilters} className="pb-0.5 text-[12px] font-semibold text-black">
-                Сбросить
-              </button>
-            ) : null}
-          </div>
+            <button className="mn-promo" type="button" onClick={() => router.push(banners[0].link)} aria-label="Открыть коллекцию Весна Лето 2026">
+              <img src={banners[0].image} alt={banners[0].alt} onError={(e) => { e.currentTarget.src = "/products/product-1.jpg"; }} />
+              <div className="mn-promo-content">
+                <span className="mn-promo-label">Новая коллекция</span>
+                <div className="mn-promo-title">Весна / Лето 2026</div>
+                <span className="mn-promo-cta">Смотреть <IconArrow /></span>
+              </div>
+            </button>
 
-          <div className="mt-3 rounded-[18px] border border-black/[0.05] bg-white p-2.5">
-            <div className="flex gap-2 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              <button
-                type="button"
-                onClick={() => setSelectedBadge("Все")}
-                className={`h-8 shrink-0 rounded-[11px] px-3 text-[12px] font-semibold ${
-                  selectedBadge === "Все" ? "bg-black text-white" : "bg-[#F5F5F5] text-[#555]"
-                }`}
-              >
-                Все
-              </button>
-
-              {initialBadges
-                .filter((badge) => ["В наличии", "Из-за рубежа"].includes(badge.name))
-                .map((badge) => (
-                  <button
-                    key={badge.id}
-                    type="button"
-                    onClick={() => setSelectedBadge((prev) => (prev === badge.name ? "Все" : badge.name))}
-                    className={`h-8 shrink-0 rounded-[11px] px-3 text-[12px] font-semibold ${
-                      selectedBadge === badge.name ? "bg-black text-white" : "bg-[#F5F5F5] text-[#555]"
-                    }`}
-                  >
-                    {badge.name}
-                  </button>
-                ))}
-            </div>
-
-            <div className="mt-2 grid grid-cols-[1fr_auto] gap-2">
-              <div className="relative min-w-0" ref={brandMenuWrapRef}>
-                <button
-                  type="button"
-                  onClick={() => setShowBrandMenu((prev) => !prev)}
-                  className="flex h-9 w-full items-center justify-between gap-1.5 rounded-[12px] border border-black/[0.06] bg-white px-3 text-[12px] font-semibold text-black"
-                >
-                  <span className="truncate">{selectedBrand}</span>
-                  <ChevronIcon />
-                </button>
-
-                {showBrandMenu && (
-                  <div className="absolute left-0 top-11 z-50 max-h-72 w-full overflow-y-auto rounded-2xl bg-white p-1.5 shadow-[0_16px_40px_rgba(0,0,0,0.14)]">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedBrand("Все бренды");
-                        setShowBrandMenu(false);
-                      }}
-                      className={`w-full rounded-xl px-3 py-2 text-left text-[13px] ${
-                        selectedBrand === "Все бренды" ? "bg-black text-white" : "text-gray-700 hover:bg-gray-50"
-                      }`}
-                    >
-                      Все бренды
-                    </button>
-
-                    {initialBrands.map((brand) => (
-                      <button
-                        key={brand.id}
-                        type="button"
-                        onClick={() => {
-                          setSelectedBrand(brand.name);
-                          setShowBrandMenu(false);
-                        }}
-                        className={`w-full rounded-xl px-3 py-2 text-left text-[13px] ${
-                          selectedBrand === brand.name ? "bg-black text-white" : "text-gray-700 hover:bg-gray-50"
-                        }`}
-                      >
-                        {brand.name}
-                      </button>
-                    ))}
-                  </div>
-                )}
+            <section aria-label="Каталог товаров">
+              <div className="mn-catalog-head">
+                <div>
+                  <h2 className="mn-title">Каталог</h2>
+                  <div className="mn-subtitle">{filteredProducts.length} товаров</div>
+                </div>
+                {activeFiltersCount > 0 && <button className="mn-reset" type="button" onClick={resetFilters}>Сбросить</button>}
               </div>
 
-              <div className="relative shrink-0" ref={sortMenuRef}>
-                <button
-                  type="button"
-                  onClick={() => setShowSortMenu((prev) => !prev)}
-                  className="flex h-9 items-center gap-1.5 rounded-[12px] border border-black/[0.06] bg-white px-3 text-[12px] font-semibold text-black"
-                >
-                  <span>{selectedSort}</span>
-                  <ChevronIcon />
-                </button>
-
-                {showSortMenu && (
-                  <div className="absolute right-0 top-11 z-30 w-44 rounded-2xl bg-white p-1.5 shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
-                    {sortOptions.map((option) => (
-                      <button
-                        key={option}
-                        type="button"
-                        onClick={() => {
-                          setSelectedSort(option);
-                          setShowSortMenu(false);
-                        }}
-                        className={`w-full rounded-xl px-3 py-2 text-left text-[13px] ${
-                          selectedSort === option ? "bg-black text-white" : "text-gray-700 hover:bg-gray-50"
-                        }`}
-                      >
-                        {option}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {filteredProducts.length === 0 ? (
-          <div className="mt-4 rounded-[22px] bg-white p-7 text-center shadow-[0_8px_28px_rgba(0,0,0,0.04)]">
-            <p className="text-[16px] font-semibold text-black">
-              {selectedDepartment === "Женская одежда" ? "Женский раздел пока в разработке" : "Ничего не найдено"}
-            </p>
-
-            <p className="mt-2 text-sm text-gray-400">
-              {selectedDepartment === "Женская одежда" ? "Скоро здесь появятся товары" : "Попробуйте изменить фильтры"}
-            </p>
-          </div>
-        ) : (
-          <div className="mt-3 grid grid-cols-2 gap-2.5">
-            {filteredProducts.map((p) => {
-              const discountPercent = getDiscountPercent(p.oldPrice, p.price);
-              const imageCount = p.images?.length || 1;
-              const currentImageIndex = Math.min(cardImageIndexes[p.id] || 0, imageCount - 1);
-              const currentImage = p.images[currentImageIndex] || p.image || "/products/product-1.jpg";
-              const extraColorsLabel = getExtraColorsLabel(p.colors);
-              const visibleColors = (p.colors || []).slice(0, 3);
-              const isForeign = p.badge.trim().toLowerCase() === "из-за рубежа";
-
-              return (
-                <article
-                  key={p.id}
-                  onClick={() => router.push(`/product?id=${p.id}`)}
-                  onMouseEnter={() => prefetchProduct(p.id)}
-                  onTouchStart={() => prefetchProduct(p.id)}
-                  className="cursor-pointer overflow-hidden rounded-[14px] border border-black/[0.04] bg-white"
-                >
-                  <div
-                    className="relative aspect-[3/4] overflow-hidden bg-[#EAEAEA]"
-                    onTouchStart={(e) => handleCardTouchStart(p.id, e.touches[0]?.clientX ?? 0)}
-                    onTouchEnd={(e) => handleCardTouchEnd(p.id, e.changedTouches[0]?.clientX ?? 0, imageCount)}
-                  >
-                    <img
-                      src={currentImage}
-                      alt={p.name}
-                      className="h-full w-full object-cover"
-                      onError={(e) => {
-                        e.currentTarget.src = "/products/product-1.jpg";
-                      }}
-                    />
-
+              <div className="mn-filters">
+                <div className="mn-chip-row">
+                  {availabilityOptions.map((opt) => (
                     <button
+                      key={opt}
                       type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleFavorite(p.id);
-                      }}
-                      className="absolute right-2 top-2 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 backdrop-blur"
-                      aria-label="Добавить в избранное"
+                      className={`mn-chip${selectedAvailability === opt ? " active" : ""}`}
+                      onClick={() => setSelectedAvailability(opt)}
                     >
-                      <svg width="17" height="17" viewBox="0 0 24 24" fill={favorites.includes(p.id) ? "black" : "none"} stroke="black" strokeWidth="1.7">
-                        <path d="M20.8 4.6c-1.8-1.8-4.7-1.8-6.5 0L12 6.9l-2.3-2.3c-1.8-1.8-4.7-1.8-6.5 0s-1.8 4.7 0 6.5L12 21l8.8-9.9c1.8-1.8 1.8-4.7 0-6.5z" />
-                      </svg>
+                      {opt}
                     </button>
+                  ))}
+                </div>
 
-                    {imageCount > 1 ? (
-                      <div className="pointer-events-none absolute bottom-2 left-2 right-2 z-20 flex items-center gap-1">
-                        {Array.from({ length: Math.min(imageCount, 5) }).map((_, index) => (
-                          <span key={`${p.id}-dot-${index}`} className={`h-[3px] flex-1 rounded-full ${index === currentImageIndex ? "bg-white" : "bg-white/45"}`} />
+                <div className="mn-filter-grid">
+                  <div className="mn-control" ref={brandMenuRef}>
+                    <button type="button" className={`mn-select${showBrandMenu ? " is-open" : ""}`} onClick={() => setShowBrandMenu((p) => !p)} aria-expanded={showBrandMenu}>
+                      <span>{selectedBrand}</span><IconChevron />
+                    </button>
+                    {showBrandMenu && (
+                      <div className="mn-dropdown">
+                        <button className={selectedBrand === "Все бренды" ? "active" : ""} onClick={() => { setSelectedBrand("Все бренды"); setShowBrandMenu(false); }}>Все бренды</button>
+                        {initialBrands.map((b) => (
+                          <button key={b.id} className={selectedBrand === b.name ? "active" : ""} onClick={() => { setSelectedBrand(b.name); setShowBrandMenu(false); }}>{b.name}</button>
                         ))}
                       </div>
-                    ) : null}
+                    )}
                   </div>
 
-                  <div className="px-2.5 pb-2.5 pt-2">
-                    <div className="flex min-h-[16px] items-center justify-between gap-1.5">
-                      <span className="min-w-0 truncate text-[10px] font-normal leading-none text-gray-500">{p.brand}</span>
-                      {isForeign ? (
-                        <span className="shrink-0 rounded-full bg-gray-100 px-1.5 py-[3px] text-[9px] font-medium leading-none text-gray-500">
-                          из-за рубежа
-                        </span>
-                      ) : null}
-                    </div>
-
-                    <h3 className="mt-1.5 min-h-[32px] text-[12.5px] font-medium leading-[1.25] tracking-[-0.01em] text-black line-clamp-2">
-                      {p.name}
-                    </h3>
-
-                    <div className="mt-2 flex min-h-[16px] items-center gap-1.5">
-                      {visibleColors.map((color, index) => (
-                        <span
-                          key={`${p.id}-${color}-${index}`}
-                          className={`block h-3 w-3 rounded-full ${color === "Белый" ? "border border-gray-300" : ""}`}
-                          style={{
-                            backgroundColor: colorSwatches[color] || "#D1D5DB",
-                          }}
-                        />
-                      ))}
-
-                      {extraColorsLabel ? (
-                        <span className="text-[10px] font-medium text-gray-400">{extraColorsLabel}</span>
-                      ) : null}
-                    </div>
-
-                    <div className="mt-2 flex flex-wrap items-baseline gap-x-1.5 gap-y-1">
-                      <span className="text-[16px] font-bold leading-none tracking-[-0.035em] text-[#128243]">
-                        <PriceText value={p.price} />
-                      </span>
-
-                      {p.oldPrice ? (
-                        <span className="text-[11px] font-medium leading-none text-gray-400 line-through">
-                          <PriceText value={p.oldPrice} />
-                        </span>
-                      ) : null}
-
-                      {discountPercent > 0 ? (
-                        <span className="text-[11px] font-semibold leading-none text-[#E13A3A]">-{discountPercent}%</span>
-                      ) : null}
-                    </div>
-
-                    <div className="mt-2 flex items-center gap-1 text-[9.5px] font-medium leading-none text-gray-400">
-                      <DeliveryIcon />
-                      <span>{getDeliveryLabel()}</span>
-                    </div>
+                  <div className="mn-control" ref={sortMenuRef}>
+                    <button type="button" className={`mn-select${showSortMenu ? " is-open" : ""}`} onClick={() => setShowSortMenu((p) => !p)} aria-expanded={showSortMenu}>
+                      <span>{selectedSort}</span><IconChevron />
+                    </button>
+                    {showSortMenu && (
+                      <div className="mn-dropdown" style={{ right: 0, left: "auto", minWidth: "185px" }}>
+                        {sortOptions.map((opt) => (
+                          <button key={opt} className={selectedSort === opt ? "active" : ""} onClick={() => { setSelectedSort(opt); setShowSortMenu(false); }}>{opt}</button>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                </article>
-              );
-            })}
-          </div>
-        )}
 
-        <BottomNav />
-      </main>
+                  <div className="mn-control" ref={availMenuRef}>
+                    <button type="button" className={`mn-filter-btn${showAvailabilityMenu ? " is-open" : ""}`} onClick={() => setShowAvailabilityMenu((p) => !p)} aria-label="Фильтр наличия" aria-expanded={showAvailabilityMenu}>
+                      <IconFilter />
+                    </button>
+                    {showAvailabilityMenu && (
+                      <div className="mn-dropdown" style={{ right: 0, left: "auto", minWidth: "170px" }}>
+                        {availabilityOptions.map((opt) => (
+                          <button key={opt} className={selectedAvailability === opt ? "active" : ""} onClick={() => { setSelectedAvailability(opt); setShowAvailabilityMenu(false); }}>{opt}</button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {filteredProducts.length === 0 ? (
+                <div className="mn-empty">
+                  <div className="mn-empty-title">{selectedDepartment === "Женщинам" ? "Женский раздел скоро откроется" : "Ничего не найдено"}</div>
+                  <div className="mn-empty-sub">{selectedDepartment === "Женщинам" ? "Скоро здесь появятся товары." : "Попробуйте изменить фильтры или очистить поиск."}</div>
+                  <button type="button" className="mn-empty-action" onClick={resetFilters}>Сбросить фильтры</button>
+                </div>
+              ) : (
+                <div className="mn-grid">
+                  {filteredProducts.map((p) => {
+                    const discount = getDiscountPercent(p.oldPrice, p.price);
+                    const selColor = selectedCardColors[p.id] || p.defaultColor || p.colors?.[0] || "";
+                    const gallery = selColor ? p.galleryByColor?.[selColor] || [] : [];
+                    const colorImg = selColor ? p.colorImages?.[selColor] : "";
+                    const imgs = gallery.length > 0 ? gallery : colorImg ? [colorImg] : p.images?.length ? p.images : [p.image];
+                    const total = imgs.length || 1;
+                    const curIdx = Math.min(cardImageIndexes[p.id] || 0, total - 1);
+                    const curImg = imgs[curIdx] || p.image || "/products/product-1.jpg";
+                    const visColors = (p.colors || []).slice(0, 4);
+                    const extraColors = getExtraColorsCount(p.colors || []);
+                    const isForeign = p.badge?.trim().toLowerCase() === "из-за рубежа";
+
+                    return (
+                      <article
+                        key={p.id}
+                        className="mn-card"
+                        onClick={() => router.push(`/product?id=${p.id}`)}
+                        onMouseEnter={() => router.prefetch(`/product?id=${p.id}`)}
+                      >
+                        <div
+                          className="mn-img-wrap"
+                          onTouchStart={(e) => handleTouchStart(p.id, e.touches[0]?.clientX ?? 0)}
+                          onTouchEnd={(e) => handleTouchEnd(p.id, e.changedTouches[0]?.clientX ?? 0, total)}
+                        >
+                          <img src={curImg} alt={p.name} className="mn-img" loading="lazy" onError={(e) => { e.currentTarget.src = "/products/product-1.jpg"; }} />
+
+                          <button type="button" className="mn-heart" onClick={(e) => { e.stopPropagation(); toggleFavorite(p.id); }} aria-label="Добавить в избранное">
+                            <IconHeart active={favorites.includes(p.id)} />
+                          </button>
+
+                          {total > 1 && (
+                            <div className="mn-dots" aria-hidden="true">
+                              {Array.from({ length: Math.min(total, 5) }).map((_, i) => (
+                                <span key={i} className={`mn-dot${i === curIdx ? " active" : ""}`} />
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="mn-body">
+                          <div className="mn-brand-row">
+                            <span className="mn-brand">{p.brand}</span>
+                            {isForeign && <span className="mn-foreign">из-за рубежа</span>}
+                          </div>
+
+                          <div className="mn-name">{p.name}</div>
+
+                          {visColors.length > 0 && (
+                            <div className="mn-swatches" aria-label="Цвета товара">
+                              {visColors.map((color, idx) => (
+                                <button
+                                  key={`${p.id}-${color}-${idx}`}
+                                  type="button"
+                                  className={`mn-swatch${selColor === color ? " active" : ""}`}
+                                  style={{ backgroundColor: colorSwatches[color] || "#ccc" }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedCardColors((prev) => ({ ...prev, [p.id]: color }));
+                                    setCardImageIndexes((prev) => ({ ...prev, [p.id]: 0 }));
+                                  }}
+                                  aria-label={`Цвет ${color}`}
+                                />
+                              ))}
+                              {extraColors > 0 && <span className="mn-extra">+{extraColors}</span>}
+                            </div>
+                          )}
+
+                          <div className="mn-price-row">
+                            {p.oldPrice ? <span className="mn-old-price">{formatPrice(p.oldPrice)} ₽</span> : null}
+                            {discount > 0 && <span className="mn-discount-inline">−{discount}%</span>}
+                            <span className="mn-price">{formatPrice(p.price)} ₽</span>
+                          </div>
+
+                          <div className="mn-delivery">
+                            <IconDelivery />
+                            <span>Доставка 7–14 дней</span>
+                          </div>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+          </main>
+
+          <BottomNav />
+        </div>
+      </div>
     </>
   );
 }
