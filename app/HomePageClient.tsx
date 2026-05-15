@@ -337,7 +337,7 @@ export default function HomePageClient({
           position: sticky;
           top: 0;
           z-index: 100;
-          padding: calc(env(safe-area-inset-top, 0px) + 52px) 12px 10px;
+          padding: calc(env(safe-area-inset-top, 0px) + 66px) 12px 10px;
           background: rgba(244, 244, 242, 0.97);
           border-bottom: 1px solid rgba(18, 18, 18, 0.04);
           backdrop-filter: blur(18px);
@@ -358,11 +358,12 @@ export default function HomePageClient({
           display: block;
           color: #111;
           font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-          font-size: clamp(18px, 5vw, 23px);
+          font-size: clamp(19px, 5.2vw, 24px);
           line-height: 1;
           font-weight: 500;
-          letter-spacing: 0.28em;
+          letter-spacing: 0.24em;
           white-space: nowrap;
+          transform: translateX(4px);
         }
 
         .mn-search {
@@ -486,8 +487,8 @@ export default function HomePageClient({
 
         .mn-promo {
           width: calc(100% - 24px);
-          height: 118px;
-          margin: 13px 12px 0;
+          height: 172px;
+          margin: 14px 12px 0;
           position: relative;
           overflow: hidden;
           display: block;
@@ -536,12 +537,12 @@ export default function HomePageClient({
         }
 
         .mn-promo-title {
-          max-width: 210px;
+          max-width: 235px;
           color: #fff;
-          font-size: 23px;
-          line-height: .96;
-          font-weight: 500;
-          letter-spacing: -0.045em;
+          font-size: 29px;
+          line-height: .95;
+          font-weight: 600;
+          letter-spacing: -0.05em;
         }
 
         .mn-promo-cta {
@@ -558,11 +559,7 @@ export default function HomePageClient({
         }
 
         .mn-catalog-head {
-          margin: 17px 12px 0;
-          display: flex;
-          align-items: flex-end;
-          justify-content: space-between;
-          gap: 10px;
+          display: none;
         }
 
         .mn-title {
@@ -602,10 +599,9 @@ export default function HomePageClient({
         }
 
         .mn-chip-row {
-          display: flex;
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
           gap: 6px;
-          overflow-x: auto;
-          scrollbar-width: none;
         }
 
         .mn-chip-row::-webkit-scrollbar {
@@ -613,9 +609,10 @@ export default function HomePageClient({
         }
 
         .mn-chip {
-          height: 32px;
+          width: 100%;
+          height: 34px;
           flex: 0 0 auto;
-          padding: 0 10px;
+          padding: 0 8px;
           border: 1px solid var(--line);
           border-radius: 10px;
           background: #f7f7f5;
@@ -783,22 +780,27 @@ export default function HomePageClient({
 
         .mn-dots {
           position: absolute;
-          left: 8px;
-          right: 8px;
+          left: 50%;
           bottom: 8px;
+          transform: translateX(-50%);
           display: flex;
+          align-items: center;
+          justify-content: center;
           gap: 4px;
         }
 
         .mn-dot {
-          flex: 1;
-          height: 3px;
+          width: 5px;
+          height: 5px;
+          flex: 0 0 5px;
           border-radius: 999px;
-          background: rgba(255,255,255,.42);
+          background: rgba(255,255,255,.6);
         }
 
         .mn-dot.active {
-          background: #fff;
+          width: 12px;
+          flex-basis: 12px;
+          background: rgba(255,255,255,.72);
         }
 
         .mn-body {
@@ -851,24 +853,24 @@ export default function HomePageClient({
         }
 
         .mn-swatches {
-          min-height: 16px;
+          min-height: 20px;
           margin-top: 7px;
           display: flex;
           align-items: center;
-          gap: 5px;
+          gap: 7px;
         }
 
         .mn-swatch {
-          width: 13px;
-          height: 13px;
+          width: 17px;
+          height: 17px;
           border: 2px solid #fff;
           border-radius: 999px;
-          box-shadow: 0 0 0 1px rgba(17,17,17,.16);
+          box-shadow: 0 0 0 1px rgba(17,17,17,.12);
           cursor: pointer;
         }
 
         .mn-swatch.active {
-          box-shadow: 0 0 0 2px #111;
+          box-shadow: 0 0 0 1.5px rgba(17,17,17,.45);
         }
 
         .mn-extra {
@@ -881,8 +883,9 @@ export default function HomePageClient({
           margin-top: 8px;
           display: flex;
           align-items: baseline;
-          flex-wrap: wrap;
+          flex-wrap: nowrap;
           gap: 5px;
+          min-width: 0;
         }
 
         .mn-old-price {
@@ -901,8 +904,6 @@ export default function HomePageClient({
         }
 
         .mn-price {
-          flex-basis: 100%;
-          margin-top: 1px;
           color: var(--green);
           font-size: 17px;
           line-height: 1;
@@ -964,11 +965,13 @@ export default function HomePageClient({
           .mn-header {
             padding-left: 10px;
             padding-right: 10px;
+            padding-top: calc(env(safe-area-inset-top, 0px) + 62px);
           }
 
           .mn-logo-name {
-            font-size: 18px;
-            letter-spacing: 0.24em;
+            font-size: 20px;
+            letter-spacing: 0.22em;
+            transform: translateX(3px);
           }
 
           .mn-cats {
