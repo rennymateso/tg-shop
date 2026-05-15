@@ -103,13 +103,6 @@ function IconClose() {
   );
 }
 
-function IconArrow() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M5 12h14M12 5l7 7-7 7" />
-    </svg>
-  );
-}
 
 export default function HomePageClient({
   initialProducts,
@@ -450,54 +443,7 @@ export default function HomePageClient({
           width: 100%;
           height: 100%;
           object-fit: cover;
-          opacity: .72;
-        }
-
-        .mn-promo::after {
-          content: "";
-          position: absolute;
-          inset: 0;
-          background: linear-gradient(90deg, rgba(0,0,0,.70), rgba(0,0,0,.22) 65%, rgba(0,0,0,0));
-        }
-
-        .mn-promo-content {
-          position: relative;
-          z-index: 2;
-          height: 100%;
-          padding: 15px;
-          display: flex;
-          flex-direction: column;
-          justify-content: space-between;
-          align-items: flex-start;
-        }
-
-        .mn-promo-label {
-          color: rgba(255,255,255,.78);
-          font-size: 10px;
-          font-weight: 500;
-          letter-spacing: .12em;
-          text-transform: uppercase;
-        }
-
-        .mn-promo-title {
-          color: #fff;
-          font-size: 26px;
-          line-height: .98;
-          font-weight: 600;
-          letter-spacing: -0.04em;
-        }
-
-        .mn-promo-cta {
-          height: 34px;
-          padding: 0 12px;
-          border-radius: 999px;
-          background: #fff;
-          color: #111;
-          display: inline-flex;
-          align-items: center;
-          gap: 7px;
-          font-size: 12px;
-          font-weight: 500;
+          opacity: 1;
         }
 
         .mn-filters {
@@ -909,11 +855,6 @@ export default function HomePageClient({
 
             <button className="mn-promo" type="button" onClick={() => router.push(banners[0].link)} aria-label="Открыть коллекцию Весна Лето 2026">
               <img src={banners[0].image} alt={banners[0].alt} onError={(e) => { e.currentTarget.src = "/products/product-1.jpg"; }} />
-              <div className="mn-promo-content">
-                <span className="mn-promo-label">Новая коллекция</span>
-                <div className="mn-promo-title">Весна / Лето 2026</div>
-                <span className="mn-promo-cta">Смотреть <IconArrow /></span>
-              </div>
             </button>
 
             <section aria-label="Каталог товаров">
