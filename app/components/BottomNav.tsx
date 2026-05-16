@@ -11,6 +11,19 @@ type NavItem = {
   href: string;
 };
 
+type ProfileLike = {
+  photo_url?: string;
+  photoUrl?: string;
+  avatar?: string;
+  avatar_url?: string;
+  user?: {
+    photo_url?: string;
+    photoUrl?: string;
+    avatar?: string;
+    avatar_url?: string;
+  };
+};
+
 const navItems: NavItem[] = [
   { key: "home", label: "Главная", href: "/" },
   { key: "favorites", label: "Избранное", href: "/favorites" },
@@ -39,101 +52,124 @@ function getArrayCount(value: unknown): number {
 }
 
 function getCartCount() {
+  if (typeof window === "undefined") return 0;
+
   const cart = safeJsonParse<unknown>(localStorage.getItem("cart"), []);
   const cartItems = safeJsonParse<unknown>(localStorage.getItem("cartItems"), []);
 
-  const cartCount = getArrayCount(cart);
-  const cartItemsCount = getArrayCount(cartItems);
-
-  return Math.max(cartCount, cartItemsCount);
+  return Math.max(getArrayCount(cart), getArrayCount(cartItems));
 }
 
 function getFavoritesCount() {
+  if (typeof window === "undefined") return 0;
+
   const favorites = safeJsonParse<unknown>(localStorage.getItem("favorites"), []);
   return getArrayCount(favorites);
 }
 
-function IconHome({ active }: { active: boolean }) {
+function getProfilePhoto() {
+  if (typeof window === "undefined") return "";
+
+  const keys = [
+    "customer_profile_cache",
+    "telegram_user",
+    "telegramUser",
+    "user",
+    "profile",
+  ];
+
+  for (const key of keys) {
+    const data = safeJsonParse<ProfileLike | null>(localStorage.getItem(key), null);
+    const photo =
+      data?.photo_url ||
+      data?.photoUrl ||
+      data?.avatar ||
+      data?.avatar_url ||
+      data?.user?.photo_url ||
+      data?.user?.photoUrl ||
+      data?.user?.avatar ||
+      data?.user?.avatar_url;
+
+    if (typeof photo === "string" && photo.trim()) {
+      return photo;
+    }
+  }
+
+  const tgPhoto = window.Telegram?.WebApp?.initDataUnsafe?.user?.photo_url;
+  return typeof tgPhoto === "string" ? tgPhoto : "";
+}
+
+declare global {
+  interface Window {
+    Telegram?: {
+      WebApp?: {
+        initDataUnsafe?: {
+          user?: {
+            photo_url?: string;
+          };
+        };
+      };
+    };
+  }
+}
+
+function HomeIcon() {
   return (
-    <svg width="25" height="25" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M4 10.6 12 4l8 6.6V20a1.5 1.5 0 0 1-1.5 1.5H5.5A1.5 1.5 0 0 1 4 20v-9.4Z"
-        stroke="currentColor"
-        strokeWidth={active ? 2.15 : 1.9}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M9.2 21.5v-6.4h5.6v6.4"
-        stroke="currentColor"
-        strokeWidth={active ? 2.15 : 1.9}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+    <svg className="mn-nav-svg" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M4.5 10.4 12 4.2l7.5 6.2v8.7a1.4 1.4 0 0 1-1.4 1.4H5.9a1.4 1.4 0 0 1-1.4-1.4v-8.7Z" />
+      <path d="M9.2 20.5v-6.1h5.6v6.1" />
     </svg>
   );
 }
 
-function IconHeart({ active }: { active: boolean }) {
+function HeartIcon() {
   return (
-    <svg width="26" height="26" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} aria-hidden="true">
-      <path
-        d="M20.4 5.1c-1.7-1.7-4.4-1.7-6.1 0L12 7.4 9.7 5.1c-1.7-1.7-4.4-1.7-6.1 0-1.7 1.7-1.7 4.4 0 6.1L12 20.2l8.4-9c1.7-1.7 1.7-4.4 0-6.1Z"
-        stroke="currentColor"
-        strokeWidth={active ? 1.65 : 1.9}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+    <svg className="mn-nav-svg mn-nav-heart" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M20.3 5.2c-1.7-1.6-4.3-1.6-6 0L12 7.5 9.7 5.2c-1.7-1.6-4.3-1.6-6 0-1.7 1.7-1.7 4.4 0 6l8.3 8.5 8.3-8.5c1.7-1.6 1.7-4.3 0-6Z" />
     </svg>
   );
 }
 
-function IconBag({ active }: { active: boolean }) {
+function BagIcon() {
   return (
-    <svg width="25" height="25" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M6.4 8.2h11.2l.9 11.1a1.7 1.7 0 0 1-1.7 1.8H7.2a1.7 1.7 0 0 1-1.7-1.8l.9-11.1Z"
-        stroke="currentColor"
-        strokeWidth={active ? 2.15 : 1.9}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M9 8.2V7a3 3 0 0 1 6 0v1.2"
-        stroke="currentColor"
-        strokeWidth={active ? 2.15 : 1.9}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+    <svg className="mn-nav-svg" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M6.3 8.1h11.4l.8 10.9a1.55 1.55 0 0 1-1.55 1.7h-9.9A1.55 1.55 0 0 1 5.5 19l.8-10.9Z" />
+      <path d="M9.1 8.1V6.9a2.9 2.9 0 0 1 5.8 0v1.2" />
     </svg>
   );
 }
 
-function IconUser({ active }: { active: boolean }) {
+function UserIcon() {
   return (
-    <svg width="25" height="25" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <circle
-        cx="12"
-        cy="8"
-        r="3.8"
-        stroke="currentColor"
-        strokeWidth={active ? 2.15 : 1.9}
-      />
-      <path
-        d="M4.8 20.5a7.2 7.2 0 0 1 14.4 0"
-        stroke="currentColor"
-        strokeWidth={active ? 2.15 : 1.9}
-        strokeLinecap="round"
-      />
+    <svg className="mn-nav-svg" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="7.8" r="3.55" />
+      <path d="M5 20.2c.7-3.35 3.45-5.65 7-5.65s6.3 2.3 7 5.65" />
     </svg>
   );
 }
 
-function NavIcon({ type, active }: { type: NavKey; active: boolean }) {
-  if (type === "home") return <IconHome active={active} />;
-  if (type === "favorites") return <IconHeart active={active} />;
-  if (type === "cart") return <IconBag active={active} />;
-  return <IconUser active={active} />;
+function NavIcon({
+  type,
+  active,
+  profilePhoto,
+}: {
+  type: NavKey;
+  active: boolean;
+  profilePhoto: string;
+}) {
+  if (type === "home") return <HomeIcon />;
+  if (type === "favorites") return <HeartIcon />;
+  if (type === "cart") return <BagIcon />;
+
+  if (profilePhoto) {
+    return (
+      <span className={`mn-profile-photo${active ? " active" : ""}`}>
+        <img src={profilePhoto} alt="" />
+      </span>
+    );
+  }
+
+  return <UserIcon />;
 }
 
 function isActivePath(pathname: string, href: string) {
@@ -147,6 +183,7 @@ export default function BottomNav() {
 
   const [favoritesCount, setFavoritesCount] = useState(0);
   const [cartCount, setCartCount] = useState(0);
+  const [profilePhoto, setProfilePhoto] = useState("");
 
   const counts = useMemo<Record<NavKey, number>>(
     () => ({
@@ -158,24 +195,27 @@ export default function BottomNav() {
     [favoritesCount, cartCount]
   );
 
-  const syncCounts = () => {
+  const syncState = () => {
     setFavoritesCount(getFavoritesCount());
     setCartCount(getCartCount());
+    setProfilePhoto(getProfilePhoto());
   };
 
   useEffect(() => {
-    syncCounts();
+    syncState();
 
-    const handleStorage = () => syncCounts();
+    const handleUpdate = () => syncState();
 
-    window.addEventListener("storage", handleStorage);
-    window.addEventListener("favorites-updated", handleStorage);
-    window.addEventListener("cart-updated", handleStorage);
+    window.addEventListener("storage", handleUpdate);
+    window.addEventListener("favorites-updated", handleUpdate);
+    window.addEventListener("cart-updated", handleUpdate);
+    window.addEventListener("profile-updated", handleUpdate);
 
     return () => {
-      window.removeEventListener("storage", handleStorage);
-      window.removeEventListener("favorites-updated", handleStorage);
-      window.removeEventListener("cart-updated", handleStorage);
+      window.removeEventListener("storage", handleUpdate);
+      window.removeEventListener("favorites-updated", handleUpdate);
+      window.removeEventListener("cart-updated", handleUpdate);
+      window.removeEventListener("profile-updated", handleUpdate);
     };
   }, []);
 
@@ -185,23 +225,23 @@ export default function BottomNav() {
         .mn-bottom-nav-wrap {
           position: fixed;
           left: 50%;
-          bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+          bottom: calc(env(safe-area-inset-bottom, 0px) + 11px);
           z-index: 500;
-          width: min(calc(100vw - 28px), 430px);
+          width: min(calc(100vw - 30px), 420px);
           transform: translateX(-50%);
           pointer-events: none;
         }
 
         .mn-bottom-nav {
-          height: 74px;
-          padding: 8px 12px 9px;
-          border-radius: 28px;
+          height: 72px;
+          padding: 8px 13px 9px;
+          border-radius: 30px;
           background: rgba(255,255,255,.96);
           box-shadow:
-            0 16px 42px rgba(0,0,0,.13),
-            0 2px 10px rgba(0,0,0,.04);
-          backdrop-filter: blur(18px);
-          -webkit-backdrop-filter: blur(18px);
+            0 18px 46px rgba(0,0,0,.13),
+            0 3px 12px rgba(0,0,0,.04);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
           display: grid;
           grid-template-columns: repeat(4, minmax(0, 1fr));
           align-items: center;
@@ -211,21 +251,18 @@ export default function BottomNav() {
         .mn-bottom-nav-item {
           position: relative;
           min-width: 0;
-          height: 58px;
+          height: 55px;
           border: 0;
           border-radius: 18px;
           background: transparent;
-          color: #9a9a9a;
+          color: #8f8f8f;
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: center;
           gap: 5px;
           cursor: pointer;
-          transition:
-            color .18s ease,
-            transform .18s ease,
-            background .18s ease;
+          transition: color .16s ease, transform .16s ease;
         }
 
         .mn-bottom-nav-item:active {
@@ -238,35 +275,78 @@ export default function BottomNav() {
 
         .mn-bottom-nav-icon {
           position: relative;
-          width: 28px;
-          height: 28px;
+          width: 29px;
+          height: 29px;
           display: inline-flex;
           align-items: center;
           justify-content: center;
         }
 
+        .mn-nav-svg {
+          width: 27px;
+          height: 27px;
+          stroke: currentColor;
+          stroke-width: 1.55;
+          stroke-linecap: round;
+          stroke-linejoin: round;
+          vector-effect: non-scaling-stroke;
+        }
+
+        .mn-bottom-nav-item.active .mn-nav-svg {
+          stroke-width: 1.8;
+        }
+
+        .mn-nav-heart {
+          width: 28px;
+          height: 28px;
+        }
+
         .mn-bottom-nav-label {
           max-width: 100%;
-          font-size: 11.5px;
+          font-size: 11.6px;
           line-height: 1;
-          font-weight: 500;
-          letter-spacing: -0.02em;
+          font-weight: 400;
+          letter-spacing: -0.025em;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
         }
 
         .mn-bottom-nav-item.active .mn-bottom-nav-label {
-          font-weight: 650;
+          color: #111;
+          font-weight: 600;
+        }
+
+        .mn-profile-photo {
+          width: 29px;
+          height: 29px;
+          border-radius: 999px;
+          overflow: hidden;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          background: #efefef;
+          box-shadow: 0 0 0 1px rgba(0,0,0,.06);
+        }
+
+        .mn-profile-photo.active {
+          box-shadow: 0 0 0 2px rgba(17,17,17,.78);
+        }
+
+        .mn-profile-photo img {
+          width: 100%;
+          height: 100%;
+          display: block;
+          object-fit: cover;
         }
 
         .mn-bottom-nav-badge {
           position: absolute;
           top: -5px;
           right: -8px;
-          min-width: 17px;
-          height: 17px;
-          padding: 0 5px;
+          min-width: 16px;
+          height: 16px;
+          padding: 0 4px;
           border-radius: 999px;
           background: #111;
           color: #fff;
@@ -274,26 +354,25 @@ export default function BottomNav() {
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          font-size: 9px;
+          font-size: 8.5px;
           line-height: 1;
-          font-weight: 700;
+          font-weight: 600;
         }
 
         @media (max-width: 370px) {
           .mn-bottom-nav-wrap {
-            width: min(calc(100vw - 20px), 410px);
+            width: min(calc(100vw - 22px), 405px);
             bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
           }
 
           .mn-bottom-nav {
-            height: 70px;
-            padding: 7px 9px 8px;
-            border-radius: 25px;
+            height: 69px;
+            padding: 7px 10px 8px;
+            border-radius: 27px;
           }
 
           .mn-bottom-nav-item {
-            height: 55px;
-            border-radius: 16px;
+            height: 53px;
             gap: 4px;
           }
 
@@ -301,9 +380,15 @@ export default function BottomNav() {
             font-size: 10.8px;
           }
 
-          .mn-bottom-nav-icon {
-            width: 26px;
-            height: 26px;
+          .mn-bottom-nav-icon,
+          .mn-profile-photo {
+            width: 27px;
+            height: 27px;
+          }
+
+          .mn-nav-svg {
+            width: 25.5px;
+            height: 25.5px;
           }
         }
       `}</style>
@@ -324,7 +409,7 @@ export default function BottomNav() {
                 aria-current={active ? "page" : undefined}
               >
                 <span className="mn-bottom-nav-icon">
-                  <NavIcon type={item.key} active={active} />
+                  <NavIcon type={item.key} active={active} profilePhoto={profilePhoto} />
                   {count > 0 && item.key !== "home" && item.key !== "profile" ? (
                     <span className="mn-bottom-nav-badge">{count > 9 ? "9+" : count}</span>
                   ) : null}
