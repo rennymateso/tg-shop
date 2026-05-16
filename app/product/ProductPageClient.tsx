@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type MouseEvent, type TouchEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent,
+  type TouchEvent,
+} from "react";
 import { useRouter } from "next/navigation";
 import BottomNav from "../components/BottomNav";
 
@@ -31,18 +38,6 @@ type CartItem = {
   size: string;
   color: string;
   quantity: number;
-};
-
-const colorSwatches: Record<string, string> = {
-  Черный: "#111111",
-  Белый: "#F5F5F5",
-  Серый: "#A7A7A7",
-  Синий: "#243B63",
-  Бежевый: "#D8CBB8",
-  Зеленый: "#68745D",
-  Коричневый: "#7A5230",
-  Красный: "#B23A3A",
-  Розовый: "#EBC4C8",
 };
 
 const topSizes = [
@@ -101,7 +96,17 @@ function getProductCount(cart: CartItem[], productId: string) {
 
 function IconBack() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="21"
+      height="21"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.85"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
       <path d="M15 18 9 12l6-6" />
     </svg>
   );
@@ -109,7 +114,17 @@ function IconBack() {
 
 function IconHeart({ active }: { active: boolean }) {
   return (
-    <svg width="21" height="21" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="21"
+      height="21"
+      viewBox="0 0 24 24"
+      fill={active ? "currentColor" : "none"}
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
       <path d="M20.8 4.6c-1.8-1.8-4.7-1.8-6.5 0L12 6.9 9.7 4.6c-1.8-1.8-4.7-1.8-6.5 0s-1.8 4.7 0 6.5L12 21l8.8-9.9c1.8-1.8 1.8-4.7 0-6.5Z" />
     </svg>
   );
@@ -117,10 +132,58 @@ function IconHeart({ active }: { active: boolean }) {
 
 function IconShare() {
   return (
-    <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="21"
+      height="21"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
       <path d="M12 16V4" />
       <path d="m7 9 5-5 5 5" />
       <path d="M20 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-4" />
+    </svg>
+  );
+}
+
+function IconLock() {
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <rect x="5" y="10" width="14" height="10" rx="2" />
+      <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+    </svg>
+  );
+}
+
+function IconShieldMini() {
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M12 3 19 6v5c0 4.6-2.9 8.4-7 10-4.1-1.6-7-5.4-7-10V6l7-3Z" />
+      <path d="m9 12 2 2 4-4" />
     </svg>
   );
 }
@@ -136,7 +199,9 @@ export default function ProductPageClient({
 
   const [product] = useState<Product | null>(initialProduct);
   const [selectedSize, setSelectedSize] = useState(getDefaultSize(initialProduct));
-  const [selectedColor, setSelectedColor] = useState(initialProduct?.defaultColor || initialProduct?.colors?.[0] || "");
+  const [selectedColor, setSelectedColor] = useState(
+    initialProduct?.defaultColor || initialProduct?.colors?.[0] || ""
+  );
   const [favorites, setFavorites] = useState<string[]>([]);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [cartProductCount, setCartProductCount] = useState(0);
@@ -296,8 +361,8 @@ export default function ProductPageClient({
 
     const newCount = getProductCount(cart, product.id);
     setCartProductCount(newCount);
-
     setSelectedSize(defaultSize);
+
     return newCount;
   };
 
@@ -345,7 +410,7 @@ export default function ProductPageClient({
 
         <main className="pp-empty-page">
           <div className="pp-empty-card">
-            <p style={{ fontSize: 16, fontWeight: 600, color: "#111" }}>Товар не найден</p>
+            <p style={{ fontSize: 16, fontWeight: 500, color: "#111" }}>Товар не найден</p>
             {initialError && (
               <p style={{ marginTop: 8, wordBreak: "break-word", fontSize: 12, color: "#999" }}>
                 {initialError}
@@ -363,7 +428,7 @@ export default function ProductPageClient({
                 background: "#111",
                 color: "#fff",
                 fontSize: 13,
-                fontWeight: 600,
+                fontWeight: 500,
               }}
             >
               Назад
@@ -399,7 +464,7 @@ export default function ProductPageClient({
           background: #f5f5f5;
           color: #111;
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", sans-serif;
-          padding-bottom: calc(190px + env(safe-area-inset-bottom, 0px));
+          padding-bottom: calc(238px + env(safe-area-inset-bottom, 0px));
         }
 
         .pp-shell {
@@ -410,9 +475,9 @@ export default function ProductPageClient({
 
         .pp-hero {
           position: relative;
-          margin-top: calc(env(safe-area-inset-top, 0px) + 92px);
-          height: min(53vh, 520px);
-          min-height: 390px;
+          margin-top: calc(env(safe-area-inset-top, 0px) + 128px);
+          height: min(46vh, 450px);
+          min-height: 320px;
           overflow: hidden;
           background: #ededed;
           border-radius: 0 0 24px 24px;
@@ -429,7 +494,7 @@ export default function ProductPageClient({
         .pp-topbar {
           position: fixed;
           left: 50%;
-          top: calc(env(safe-area-inset-top, 0px) + 52px);
+          top: calc(env(safe-area-inset-top, 0px) + 72px);
           z-index: 70;
           width: min(calc(100vw - 24px), 496px);
           transform: translateX(-50%);
@@ -451,7 +516,7 @@ export default function ProductPageClient({
           height: 42px;
           border: 0;
           border-radius: 999px;
-          background: rgba(255,255,255,.88);
+          background: rgba(255,255,255,.9);
           color: #111;
           display: inline-flex;
           align-items: center;
@@ -479,7 +544,7 @@ export default function ProductPageClient({
           gap: 5px;
           padding: 4px 6px;
           border-radius: 999px;
-          background: rgba(0,0,0,.10);
+          background: rgba(0,0,0,.08);
           backdrop-filter: blur(8px);
           -webkit-backdrop-filter: blur(8px);
         }
@@ -490,23 +555,23 @@ export default function ProductPageClient({
           border: 0;
           padding: 0;
           border-radius: 999px;
-          background: rgba(255,255,255,.38);
+          background: rgba(255,255,255,.36);
           cursor: pointer;
         }
 
         .pp-dot.active {
           width: 12px;
-          background: rgba(255,255,255,.68);
+          background: rgba(255,255,255,.64);
         }
 
         .pp-card {
           position: relative;
           z-index: 12;
-          margin-top: -20px;
-          border-radius: 28px 28px 0 0;
+          margin-top: -14px;
+          border-radius: 26px 26px 0 0;
           background: #fff;
-          padding: 24px 16px 28px;
-          box-shadow: 0 -10px 34px rgba(0,0,0,.06);
+          padding: 22px 16px 28px;
+          box-shadow: 0 -8px 26px rgba(0,0,0,.05);
         }
 
         .pp-brand-row {
@@ -543,28 +608,28 @@ export default function ProductPageClient({
           margin-top: 10px;
           display: grid;
           grid-template-columns: minmax(0, 1fr) auto;
-          gap: 12px;
+          gap: 10px;
           align-items: start;
         }
 
         .pp-title {
           color: #111;
-          font-size: 27px;
-          line-height: 1.05;
-          font-weight: 650;
+          font-size: 25px;
+          line-height: 1.07;
+          font-weight: 500;
           letter-spacing: -0.055em;
           margin: 0;
         }
 
         .pp-foreign {
           margin-top: 3px;
-          padding: 8px 11px;
+          padding: 8px 10px;
           border-radius: 999px;
           background: #f2f2f2;
           color: #5f5f5f;
           font-size: 12px;
           line-height: 1;
-          font-weight: 500;
+          font-weight: 400;
           white-space: nowrap;
         }
 
@@ -581,7 +646,7 @@ export default function ProductPageClient({
           color: #9b9b9b;
           font-size: 15px;
           line-height: 1;
-          font-weight: 500;
+          font-weight: 400;
           text-decoration: line-through;
         }
 
@@ -589,37 +654,33 @@ export default function ProductPageClient({
           color: #e13a3a;
           font-size: 15px;
           line-height: 1;
-          font-weight: 650;
+          font-weight: 500;
         }
 
         .pp-price {
-          color: #128243;
-          font-size: 30px;
+          color: #12B76A;
+          font-size: 29px;
           line-height: 1;
-          font-weight: 720;
+          font-weight: 600;
           letter-spacing: -.055em;
         }
 
         .pp-section {
-          margin-top: 22px;
-          padding-top: 18px;
-          border-top: 1px solid rgba(0,0,0,.08);
-        }
-
-        .pp-section:first-of-type {
           margin-top: 20px;
+          padding-top: 17px;
+          border-top: 1px solid rgba(0,0,0,.08);
         }
 
         .pp-section-title {
           color: #111;
           font-size: 15px;
           line-height: 1;
-          font-weight: 600;
+          font-weight: 500;
         }
 
         .pp-section-muted {
           color: #999;
-          font-weight: 450;
+          font-weight: 400;
         }
 
         .pp-sizes {
@@ -630,7 +691,7 @@ export default function ProductPageClient({
         }
 
         .pp-size {
-          min-height: 52px;
+          min-height: 50px;
           border: 1px solid rgba(0,0,0,.10);
           border-radius: 12px;
           background: #fff;
@@ -647,7 +708,7 @@ export default function ProductPageClient({
         .pp-size-label {
           font-size: 14px;
           line-height: 1;
-          font-weight: 650;
+          font-weight: 500;
         }
 
         .pp-size-sub {
@@ -656,7 +717,7 @@ export default function ProductPageClient({
           opacity: .48;
           font-size: 10px;
           line-height: 1;
-          font-weight: 500;
+          font-weight: 400;
         }
 
         .pp-color-images {
@@ -675,8 +736,8 @@ export default function ProductPageClient({
 
         .pp-color-img {
           flex: 0 0 auto;
-          width: 62px;
-          height: 78px;
+          width: 56px;
+          height: 70px;
           border: 1px solid rgba(0,0,0,.10);
           border-radius: 13px;
           background: #f2f2f2;
@@ -712,7 +773,7 @@ export default function ProductPageClient({
           padding: 0;
           font-size: 13px;
           line-height: 1;
-          font-weight: 600;
+          font-weight: 500;
           cursor: pointer;
         }
 
@@ -729,51 +790,56 @@ export default function ProductPageClient({
           padding: 8px 11px;
           font-size: 12px;
           line-height: 1;
-          font-weight: 500;
+          font-weight: 400;
         }
 
         .pp-buybar {
           position: fixed;
           left: 50%;
-          bottom: calc(env(safe-area-inset-bottom, 0px) + 92px);
+          bottom: calc(env(safe-area-inset-bottom, 0px) + 104px);
           z-index: 80;
           width: min(calc(100vw - 28px), 492px);
           transform: translateX(-50%);
+          padding: 10px 0 0;
+          background: linear-gradient(180deg, rgba(245,245,245,0), rgba(245,245,245,.96) 26%, rgba(245,245,245,.96));
+        }
+
+        .pp-buybar-row {
           display: grid;
           grid-template-columns: 1fr 1fr;
           gap: 10px;
         }
 
         .pp-action-btn {
-          height: 56px;
+          height: 52px;
           border: 0;
-          border-radius: 16px;
+          border-radius: 15px;
           color: #fff;
           font-size: 14px;
           line-height: 1;
-          font-weight: 650;
+          font-weight: 500;
           cursor: pointer;
-          box-shadow: 0 12px 30px rgba(0,0,0,.14);
+          box-shadow: 0 10px 24px rgba(0,0,0,.10);
+        }
+
+        .pp-buy-btn {
+          background: #12B76A;
         }
 
         .pp-cart-btn {
           background: #111;
         }
 
-        .pp-buy-btn {
-          background: #128243;
-        }
-
         .pp-counter {
-          height: 56px;
-          border-radius: 16px;
+          height: 52px;
+          border-radius: 15px;
           background: #111;
           color: #fff;
           display: grid;
-          grid-template-columns: 44px 1fr 44px;
+          grid-template-columns: 42px 1fr 42px;
           align-items: center;
           overflow: hidden;
-          box-shadow: 0 12px 30px rgba(0,0,0,.14);
+          box-shadow: 0 10px 24px rgba(0,0,0,.10);
         }
 
         .pp-counter button {
@@ -781,7 +847,7 @@ export default function ProductPageClient({
           border: 0;
           background: transparent;
           color: #fff;
-          font-size: 22px;
+          font-size: 21px;
           line-height: 1;
           cursor: pointer;
         }
@@ -790,18 +856,37 @@ export default function ProductPageClient({
           text-align: center;
           font-size: 13px;
           line-height: 1;
-          font-weight: 650;
+          font-weight: 500;
           white-space: nowrap;
+        }
+
+        .pp-security {
+          margin-top: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 12px;
+          color: #8b8b8b;
+          font-size: 11px;
+          line-height: 1;
+          font-weight: 400;
+          white-space: nowrap;
+        }
+
+        .pp-security-item {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
         }
 
         @media (max-width: 370px) {
           .pp-hero {
-            margin-top: calc(env(safe-area-inset-top, 0px) + 88px);
-            min-height: 360px;
+            margin-top: calc(env(safe-area-inset-top, 0px) + 120px);
+            min-height: 300px;
           }
 
           .pp-topbar {
-            top: calc(env(safe-area-inset-top, 0px) + 48px);
+            top: calc(env(safe-area-inset-top, 0px) + 68px);
             width: min(calc(100vw - 20px), 496px);
           }
 
@@ -811,7 +896,7 @@ export default function ProductPageClient({
           }
 
           .pp-title {
-            font-size: 24px;
+            font-size: 23px;
           }
 
           .pp-price {
@@ -823,19 +908,29 @@ export default function ProductPageClient({
           }
 
           .pp-color-img {
-            width: 56px;
-            height: 72px;
+            width: 52px;
+            height: 66px;
           }
 
           .pp-buybar {
             width: min(calc(100vw - 20px), 492px);
+            bottom: calc(env(safe-area-inset-bottom, 0px) + 102px);
+          }
+
+          .pp-buybar-row {
             gap: 8px;
           }
 
           .pp-action-btn,
           .pp-counter {
-            height: 54px;
-            border-radius: 15px;
+            height: 50px;
+            border-radius: 14px;
+            font-size: 13px;
+          }
+
+          .pp-security {
+            gap: 8px;
+            font-size: 10px;
           }
         }
       `}</style>
@@ -971,7 +1066,6 @@ export default function ProductPageClient({
                         alt={color}
                         onError={(e) => {
                           e.currentTarget.src = "/products/product-1.jpg";
-                          e.currentTarget.style.backgroundColor = colorSwatches[color] || "#ddd";
                         }}
                       />
                     </button>
@@ -1015,33 +1109,46 @@ export default function ProductPageClient({
         </div>
 
         <div className="pp-buybar">
-          {cartProductCount > 0 ? (
-            <div className="pp-counter" aria-label="Количество в корзине">
-              <button type="button" onClick={decreaseProductCount} aria-label="Уменьшить количество">
-                −
-              </button>
-              <span>{cartProductCount} в корзине</span>
-              <button type="button" onClick={addCurrentSelectionToCart} aria-label="Увеличить количество">
-                +
-              </button>
-            </div>
-          ) : (
+          <div className="pp-buybar-row">
             <button
               type="button"
-              onClick={addCurrentSelectionToCart}
-              className="pp-action-btn pp-cart-btn"
+              onClick={buyNow}
+              className="pp-action-btn pp-buy-btn"
             >
-              Добавить в корзину
+              Купить сейчас
             </button>
-          )}
 
-          <button
-            type="button"
-            onClick={buyNow}
-            className="pp-action-btn pp-buy-btn"
-          >
-            Купить сейчас
-          </button>
+            {cartProductCount > 0 ? (
+              <div className="pp-counter" aria-label="Количество в корзине">
+                <button type="button" onClick={decreaseProductCount} aria-label="Уменьшить количество">
+                  −
+                </button>
+                <span>{cartProductCount} в корзине</span>
+                <button type="button" onClick={addCurrentSelectionToCart} aria-label="Увеличить количество">
+                  +
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={addCurrentSelectionToCart}
+                className="pp-action-btn pp-cart-btn"
+              >
+                Добавить в корзину
+              </button>
+            )}
+          </div>
+
+          <div className="pp-security" aria-label="Информация о безопасности">
+            <span className="pp-security-item">
+              <IconShieldMini />
+              Ваши данные защищены
+            </span>
+            <span className="pp-security-item">
+              <IconLock />
+              Безопасная оплата
+            </span>
+          </div>
         </div>
 
         <BottomNav />
