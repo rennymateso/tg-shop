@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Heart, House, ShoppingBag } from "lucide-react";
 import {
   syncTelegramCustomer,
   type CustomerProfile,
@@ -22,9 +21,7 @@ function getCartCount() {
   try {
     const raw = localStorage.getItem("cart") || "[]";
     const cart = JSON.parse(raw) as CartItem[];
-
     if (!Array.isArray(cart)) return 0;
-
     return cart.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
   } catch {
     return 0;
@@ -35,9 +32,7 @@ function getFavoritesCount() {
   try {
     const raw = localStorage.getItem("favorites") || "[]";
     const favorites = JSON.parse(raw) as string[];
-
     if (!Array.isArray(favorites)) return 0;
-
     return favorites.length;
   } catch {
     return 0;
@@ -47,7 +42,8 @@ function getFavoritesCount() {
 function getCachedCustomer() {
   try {
     const raw = localStorage.getItem("customer_profile_cache") || "null";
-    return JSON.parse(raw) as CustomerProfile | null;
+    const parsed = JSON.parse(raw) as CustomerProfile | null;
+    return parsed;
   } catch {
     return null;
   }
@@ -55,23 +51,8 @@ function getCachedCustomer() {
 
 function setCachedCustomer(customer: CustomerProfile | null) {
   if (!customer) return;
-
   localStorage.setItem("customer_profile_cache", JSON.stringify(customer));
   window.dispatchEvent(new Event("customer-profile-updated"));
-}
-
-function createProfilePlaceholder(initial: string) {
-  const safeInitial = (initial || "P").slice(0, 1).toUpperCase();
-
-  const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 56 56">
-      <rect width="56" height="56" rx="28" fill="#eeeeee"/>
-      <text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle"
-        font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="500" fill="#8f8f8f">${safeInitial}</text>
-    </svg>
-  `;
-
-  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 }
 
 export default function BottomNav() {
@@ -116,17 +97,14 @@ export default function BottomNav() {
   useEffect(() => {
     const loadCustomer = async () => {
       const cached = getCachedCustomer();
-
       if (cached) {
         setCustomer(cached);
       }
 
       const webApp = getTelegramWebApp();
-
       if (!webApp?.initData) return;
 
       const profile = await syncTelegramCustomer();
-
       if (profile) {
         setCustomer(profile);
         setCachedCustomer(profile);
@@ -161,236 +139,75 @@ export default function BottomNav() {
     return String(favoritesCount);
   }, [favoritesCount]);
 
-  const isActive = (path: string) => pathname === path;
+  const activeClass = (path: string) =>
+    pathname === path ? "text-blue-500" : "text-gray-400";
 
   const profileInitial =
     customer?.first_name?.trim()?.charAt(0)?.toUpperCase() || "P";
 
-  const profilePhoto = customer?.photo_url || createProfilePlaceholder(profileInitial);
-
   return (
-    <>
-      <style>{`
-        .mn-tabbar {
-          position: fixed;
-          left: 0;
-          right: 0;
-          bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
-          z-index: 50;
-          background: #ffffff;
-          border-top: 1px solid rgba(0, 0, 0, 0.08);
-          padding: 7px 16px 9px;
-          -webkit-font-smoothing: antialiased;
-        }
+    <div className="fixed bottom-4 left-4 right-4 z-50 flex justify-between rounded-[34px] border border-gray-100 bg-white px-4 py-3 shadow-2xl">
+      <button
+        onClick={() => router.push("/")}
+        className={`flex flex-1 flex-col items-center gap-1 ${activeClass("/")}`}
+      >
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M3 10.4 12 3l9 7.4V21a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V10.4Z" />
+        </svg>
+        <span className="text-[13px]">Главная</span>
+      </button>
 
-        .mn-tabbar-inner {
-          width: min(100%, 430px);
-          margin: 0 auto;
-          display: grid;
-          grid-template-columns: repeat(4, minmax(0, 1fr));
-          align-items: end;
-        }
+      <button
+        onClick={() => router.push("/favorites")}
+        className={`relative flex flex-1 flex-col items-center gap-1 ${activeClass("/favorites")}`}
+      >
+        {favoritesBadge && (
+          <span className="absolute right-[calc(50%-24px)] top-0 min-w-[18px] rounded-full bg-black px-1.5 py-[1px] text-center text-[10px] font-medium leading-[16px] text-white">
+            {favoritesBadge}
+          </span>
+        )}
 
-        .mn-tabbar-item {
-          position: relative;
-          min-width: 0;
-          height: 52px;
-          border: 0;
-          padding: 0;
-          background: transparent;
-          color: #8f8f8f;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: flex-end;
-          gap: 5px;
-          cursor: pointer;
-          font-family: Arial, Helvetica, sans-serif;
-          transition: color 0.16s ease, opacity 0.16s ease;
-        }
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 21l-1.4-1.3C5.4 15 2 11.9 2 8.1 2 5 4.4 3 7.4 3c1.7 0 3.4.8 4.6 2.1C13.2 3.8 14.9 3 16.6 3 19.6 3 22 5 22 8.1c0 3.8-3.4 6.9-8.6 11.6z" />
+        </svg>
+        <span className="text-[13px]">Избранное</span>
+      </button>
 
-        .mn-tabbar-item:active {
-          opacity: 0.72;
-        }
+      <button
+        onClick={() => router.push("/cart")}
+        className={`relative flex flex-1 flex-col items-center gap-1 ${activeClass("/cart")}`}
+      >
+        {cartBadge && (
+          <span className="absolute right-[calc(50%-24px)] top-0 min-w-[18px] rounded-full bg-black px-1.5 py-[1px] text-center text-[10px] font-medium leading-[16px] text-white">
+            {cartBadge}
+          </span>
+        )}
 
-        .mn-tabbar-item.is-active {
-          color: #111111;
-        }
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M7 18c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm10 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM7.2 14h9.9c.8 0 1.5-.5 1.8-1.2L22 6H6.2L5.3 4H2v2h2l3.6 7.6-1.3 2.4c-.2.3-.3.7-.3 1 0 1.1.9 2 2 2H20v-2H8.4c-.1 0-.2-.1-.2-.2v-.1l1-1.7z" />
+        </svg>
+        <span className="text-[13px]">Корзина</span>
+      </button>
 
-        .mn-tabbar-icon {
-          position: relative;
-          width: 29px;
-          height: 29px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .mn-tabbar-icon svg {
-          width: 28px;
-          height: 28px;
-          stroke-width: 1.65;
-        }
-
-        .mn-home-door-mask {
-          position: absolute;
-          left: 50%;
-          bottom: 3px;
-          width: 9px;
-          height: 3px;
-          transform: translateX(-50%);
-          background: #ffffff;
-          pointer-events: none;
-        }
-
-        .mn-tabbar-label {
-          max-width: 100%;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-          font-size: 12px;
-          line-height: 1;
-          font-weight: 400;
-          letter-spacing: -0.02em;
-        }
-
-        .mn-tabbar-item.is-active .mn-tabbar-label {
-          font-weight: 700;
-        }
-
-        .mn-tabbar-profile-photo {
-          width: 28px;
-          height: 28px;
-          display: block;
-          border-radius: 50%;
-          object-fit: cover;
-          background: #eeeeee;
-        }
-
-        .mn-tabbar-item.is-active .mn-tabbar-profile-photo {
-          box-shadow: 0 0 0 1.5px #111111;
-        }
-
-        .mn-tabbar-badge {
-          position: absolute;
-          top: -4px;
-          right: -8px;
-          min-width: 16px;
-          height: 16px;
-          padding: 0 4px;
-          border-radius: 999px;
-          background: #111111;
-          color: #ffffff;
-          border: 2px solid #ffffff;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 8.5px;
-          line-height: 1;
-          font-weight: 700;
-        }
-
-        .mn-home-indicator {
-          width: 128px;
-          height: 5px;
-          border-radius: 999px;
-          background: #000000;
-          margin: 8px auto 0;
-        }
-
-        @media (max-width: 370px) {
-          .mn-tabbar {
-            padding-left: 10px;
-            padding-right: 10px;
-            bottom: calc(env(safe-area-inset-bottom, 0px) + 9px);
-          }
-
-          .mn-tabbar-label {
-            font-size: 11.2px;
-          }
-
-          .mn-tabbar-icon svg {
-            width: 27px;
-            height: 27px;
-          }
-
-          .mn-home-door-mask {
-            bottom: 3px;
-            width: 8px;
-          }
-        }
-      `}</style>
-
-      <nav className="mn-tabbar" aria-label="Нижнее меню">
-        <div className="mn-tabbar-inner">
-          <button
-            type="button"
-            onClick={() => router.push("/")}
-            className={`mn-tabbar-item ${isActive("/") ? "is-active" : ""}`}
-            aria-current={isActive("/") ? "page" : undefined}
-            aria-label="Главная"
-          >
-            <span className="mn-tabbar-icon">
-              <House />
-              <span className="mn-home-door-mask" aria-hidden="true" />
-            </span>
-            <span className="mn-tabbar-label">Главная</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => router.push("/favorites")}
-            className={`mn-tabbar-item ${isActive("/favorites") ? "is-active" : ""}`}
-            aria-current={isActive("/favorites") ? "page" : undefined}
-            aria-label="Избранное"
-          >
-            <span className="mn-tabbar-icon">
-              <Heart />
-              {favoritesBadge ? (
-                <span className="mn-tabbar-badge">{favoritesBadge}</span>
-              ) : null}
-            </span>
-            <span className="mn-tabbar-label">Избранное</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => router.push("/cart")}
-            className={`mn-tabbar-item ${isActive("/cart") ? "is-active" : ""}`}
-            aria-current={isActive("/cart") ? "page" : undefined}
-            aria-label="Корзина"
-          >
-            <span className="mn-tabbar-icon">
-              <ShoppingBag />
-              {cartBadge ? (
-                <span className="mn-tabbar-badge">{cartBadge}</span>
-              ) : null}
-            </span>
-            <span className="mn-tabbar-label">Корзина</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => router.push("/profile")}
-            className={`mn-tabbar-item ${isActive("/profile") ? "is-active" : ""}`}
-            aria-current={isActive("/profile") ? "page" : undefined}
-            aria-label="Профиль"
-          >
-            <span className="mn-tabbar-icon">
-              <img
-                src={profilePhoto}
-                alt="Профиль"
-                className="mn-tabbar-profile-photo"
-                width={28}
-                height={28}
-              />
-            </span>
-            <span className="mn-tabbar-label">Профиль</span>
-          </button>
+      <button
+        onClick={() => router.push("/profile")}
+        className={`flex flex-1 flex-col items-center gap-1 ${activeClass("/profile")}`}
+      >
+        <div className="h-7 w-7 overflow-hidden rounded-full border border-current bg-[#F5F5F5]">
+          {customer?.photo_url ? (
+            <img
+              src={customer.photo_url}
+              alt="Профиль"
+              className="h-full w-full rounded-full object-cover"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-sm">
+              {profileInitial}
+            </div>
+          )}
         </div>
-
-        <div className="mn-home-indicator" aria-hidden="true" />
-      </nav>
-    </>
+        <span className="text-[13px]">Профиль</span>
+      </button>
+    </div>
   );
 }
