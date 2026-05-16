@@ -2,321 +2,339 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import {
-  syncTelegramCustomer,
-  type CustomerProfile,
-} from "../lib/customer-profile";
-import { getTelegramWebApp } from "../lib/telegram-mini-app";
 
-type CartItem = {
-  id: string;
-  name: string;
-  price: number;
-  size: string;
-  color: string;
-  quantity: number;
+type NavKey = "home" | "favorites" | "cart" | "profile";
+
+type NavItem = {
+  key: NavKey;
+  label: string;
+  href: string;
 };
 
-function getCartCount() {
+const navItems: NavItem[] = [
+  { key: "home", label: "Главная", href: "/" },
+  { key: "favorites", label: "Избранное", href: "/favorites" },
+  { key: "cart", label: "Корзина", href: "/cart" },
+  { key: "profile", label: "Профиль", href: "/profile" },
+];
+
+function safeJsonParse<T>(value: string | null, fallback: T): T {
+  if (!value) return fallback;
+
   try {
-    const raw = localStorage.getItem("cart") || "[]";
-    const cart = JSON.parse(raw) as CartItem[];
-    if (!Array.isArray(cart)) return 0;
-    return cart.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+    return JSON.parse(value) as T;
   } catch {
-    return 0;
+    return fallback;
   }
+}
+
+function getArrayCount(value: unknown): number {
+  if (Array.isArray(value)) return value.length;
+
+  if (value && typeof value === "object") {
+    return Object.keys(value as Record<string, unknown>).length;
+  }
+
+  return 0;
+}
+
+function getCartCount() {
+  const cart = safeJsonParse<unknown>(localStorage.getItem("cart"), []);
+  const cartItems = safeJsonParse<unknown>(localStorage.getItem("cartItems"), []);
+
+  const cartCount = getArrayCount(cart);
+  const cartItemsCount = getArrayCount(cartItems);
+
+  return Math.max(cartCount, cartItemsCount);
 }
 
 function getFavoritesCount() {
-  try {
-    const raw = localStorage.getItem("favorites") || "[]";
-    const favorites = JSON.parse(raw) as string[];
-    if (!Array.isArray(favorites)) return 0;
-    return favorites.length;
-  } catch {
-    return 0;
-  }
+  const favorites = safeJsonParse<unknown>(localStorage.getItem("favorites"), []);
+  return getArrayCount(favorites);
 }
 
-function getCachedCustomer() {
-  try {
-    const raw = localStorage.getItem("customer_profile_cache") || "null";
-    const parsed = JSON.parse(raw) as CustomerProfile | null;
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
-function setCachedCustomer(customer: CustomerProfile | null) {
-  if (!customer) return;
-  localStorage.setItem("customer_profile_cache", JSON.stringify(customer));
-  window.dispatchEvent(new Event("customer-profile-updated"));
-}
-
-function HomeIcon({ active }: { active: boolean }) {
+function IconHome({ active }: { active: boolean }) {
   return (
-    <svg
-      width="25"
-      height="25"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={active ? "2.15" : "1.9"}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M3.5 10.7 12 3.4l8.5 7.3" />
-      <path d="M5.8 9.7v10.1h12.4V9.7" />
-      <path d="M9.7 19.8v-5.6h4.6v5.6" />
+    <svg width="25" height="25" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M4 10.6 12 4l8 6.6V20a1.5 1.5 0 0 1-1.5 1.5H5.5A1.5 1.5 0 0 1 4 20v-9.4Z"
+        stroke="currentColor"
+        strokeWidth={active ? 2.15 : 1.9}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M9.2 21.5v-6.4h5.6v6.4"
+        stroke="currentColor"
+        strokeWidth={active ? 2.15 : 1.9}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
 
-function HeartIcon({ active }: { active: boolean }) {
+function IconHeart({ active }: { active: boolean }) {
   return (
-    <svg
-      width="25"
-      height="25"
-      viewBox="0 0 24 24"
-      fill={active ? "currentColor" : "none"}
-      stroke="currentColor"
-      strokeWidth={active ? "2.05" : "1.9"}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M20.3 5.1a5 5 0 0 0-7.1 0L12 6.3l-1.2-1.2a5 5 0 0 0-7.1 7.1L12 20.5l8.3-8.3a5 5 0 0 0 0-7.1Z" />
+    <svg width="26" height="26" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} aria-hidden="true">
+      <path
+        d="M20.4 5.1c-1.7-1.7-4.4-1.7-6.1 0L12 7.4 9.7 5.1c-1.7-1.7-4.4-1.7-6.1 0-1.7 1.7-1.7 4.4 0 6.1L12 20.2l8.4-9c1.7-1.7 1.7-4.4 0-6.1Z"
+        stroke="currentColor"
+        strokeWidth={active ? 1.65 : 1.9}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
 
-function CartIcon({ active }: { active: boolean }) {
+function IconBag({ active }: { active: boolean }) {
   return (
-    <svg
-      width="25"
-      height="25"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={active ? "2.1" : "1.9"}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M7 8.2h10.6l-1 8.2a2 2 0 0 1-2 1.8H9.2a2 2 0 0 1-2-1.8L6.2 8.2Z" />
-      <path d="M9.2 8.2a2.8 2.8 0 0 1 5.6 0" />
-      <path d="M8.2 20.4h8.6" />
+    <svg width="25" height="25" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M6.4 8.2h11.2l.9 11.1a1.7 1.7 0 0 1-1.7 1.8H7.2a1.7 1.7 0 0 1-1.7-1.8l.9-11.1Z"
+        stroke="currentColor"
+        strokeWidth={active ? 2.15 : 1.9}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M9 8.2V7a3 3 0 0 1 6 0v1.2"
+        stroke="currentColor"
+        strokeWidth={active ? 2.15 : 1.9}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
 
-function ProfileIcon({ active }: { active: boolean }) {
+function IconUser({ active }: { active: boolean }) {
   return (
-    <svg
-      width="25"
-      height="25"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={active ? "2.1" : "1.9"}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <circle cx="12" cy="8.2" r="3.7" />
-      <path d="M5.4 20.2a6.6 6.6 0 0 1 13.2 0" />
+    <svg width="25" height="25" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle
+        cx="12"
+        cy="8"
+        r="3.8"
+        stroke="currentColor"
+        strokeWidth={active ? 2.15 : 1.9}
+      />
+      <path
+        d="M4.8 20.5a7.2 7.2 0 0 1 14.4 0"
+        stroke="currentColor"
+        strokeWidth={active ? 2.15 : 1.9}
+        strokeLinecap="round"
+      />
     </svg>
   );
+}
+
+function NavIcon({ type, active }: { type: NavKey; active: boolean }) {
+  if (type === "home") return <IconHome active={active} />;
+  if (type === "favorites") return <IconHeart active={active} />;
+  if (type === "cart") return <IconBag active={active} />;
+  return <IconUser active={active} />;
+}
+
+function isActivePath(pathname: string, href: string) {
+  if (href === "/") return pathname === "/";
+  return pathname === href || pathname.startsWith(`${href}/`);
 }
 
 export default function BottomNav() {
   const router = useRouter();
   const pathname = usePathname();
 
-  const [cartCount, setCartCount] = useState(0);
   const [favoritesCount, setFavoritesCount] = useState(0);
-  const [customer, setCustomer] = useState<CustomerProfile | null>(null);
+  const [cartCount, setCartCount] = useState(0);
+
+  const counts = useMemo<Record<NavKey, number>>(
+    () => ({
+      home: 0,
+      favorites: favoritesCount,
+      cart: cartCount,
+      profile: 0,
+    }),
+    [favoritesCount, cartCount]
+  );
+
+  const syncCounts = () => {
+    setFavoritesCount(getFavoritesCount());
+    setCartCount(getCartCount());
+  };
 
   useEffect(() => {
-    const syncCounts = () => {
-      setCartCount(getCartCount());
-      setFavoritesCount(getFavoritesCount());
-    };
-
     syncCounts();
 
     const handleStorage = () => syncCounts();
-    const handleFocus = () => syncCounts();
-    const handleCartUpdated = () => syncCounts();
-    const handleFavoritesUpdated = () => syncCounts();
-    const handleVisibility = () => {
-      if (!document.hidden) syncCounts();
-    };
 
     window.addEventListener("storage", handleStorage);
-    window.addEventListener("focus", handleFocus);
-    window.addEventListener("cart-updated", handleCartUpdated);
-    window.addEventListener("favorites-updated", handleFavoritesUpdated);
-    document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("favorites-updated", handleStorage);
+    window.addEventListener("cart-updated", handleStorage);
 
     return () => {
       window.removeEventListener("storage", handleStorage);
-      window.removeEventListener("focus", handleFocus);
-      window.removeEventListener("cart-updated", handleCartUpdated);
-      window.removeEventListener("favorites-updated", handleFavoritesUpdated);
-      document.removeEventListener("visibilitychange", handleVisibility);
-    };
-  }, [pathname]);
-
-  useEffect(() => {
-    const loadCustomer = async () => {
-      const cached = getCachedCustomer();
-      if (cached) {
-        setCustomer(cached);
-      }
-
-      const webApp = getTelegramWebApp();
-      if (!webApp?.initData) return;
-
-      const profile = await syncTelegramCustomer();
-      if (profile) {
-        setCustomer(profile);
-        setCachedCustomer(profile);
-      }
-    };
-
-    loadCustomer();
-
-    const handleProfileUpdated = () => {
-      const cached = getCachedCustomer();
-      setCustomer(cached);
-    };
-
-    window.addEventListener("customer-profile-updated", handleProfileUpdated);
-    window.addEventListener("focus", handleProfileUpdated);
-
-    return () => {
-      window.removeEventListener("customer-profile-updated", handleProfileUpdated);
-      window.removeEventListener("focus", handleProfileUpdated);
+      window.removeEventListener("favorites-updated", handleStorage);
+      window.removeEventListener("cart-updated", handleStorage);
     };
   }, []);
 
-  const cartBadge = useMemo(() => {
-    if (cartCount <= 0) return "";
-    if (cartCount > 99) return "99+";
-    return String(cartCount);
-  }, [cartCount]);
-
-  const favoritesBadge = useMemo(() => {
-    if (favoritesCount <= 0) return "";
-    if (favoritesCount > 99) return "99+";
-    return String(favoritesCount);
-  }, [favoritesCount]);
-
-  const profileInitial =
-    customer?.first_name?.trim()?.charAt(0)?.toUpperCase() || "P";
-
-  const isActive = (path: string) => pathname === path;
-
-  const navItemClass = (path: string) =>
-    `relative flex min-w-0 flex-1 flex-col items-center justify-center gap-[4px] rounded-[22px] py-[7px] transition-colors duration-200 ${
-      isActive(path) ? "text-black" : "text-[#9A9A9A]"
-    }`;
-
-  const iconWrapClass = (path: string) =>
-    `relative flex h-11 w-11 items-center justify-center rounded-[18px] transition-colors duration-200 ${
-      isActive(path) ? "bg-black text-white" : "bg-transparent text-[#8F8F8F]"
-    }`;
-
-  const labelClass = (path: string) =>
-    `text-[10px] leading-none tracking-[-0.02em] ${
-      isActive(path) ? "font-semibold text-black" : "font-medium text-[#A0A0A0]"
-    }`;
-
-  const badgeClass =
-    "absolute -right-1 -top-1 min-w-[17px] rounded-full bg-[#111] px-1.5 text-center text-[9px] font-semibold leading-[17px] text-white ring-2 ring-white";
-
   return (
-    <nav
-      className="
-        fixed left-1/2 z-50
-        w-[calc(100%-32px)] max-w-[390px] -translate-x-1/2
-        bottom-[calc(18px+env(safe-area-inset-bottom,0px))]
-        rounded-[28px]
-        bg-white/96 px-[7px] py-[6px]
-        shadow-[0_18px_44px_rgba(0,0,0,0.16)]
-        backdrop-blur-2xl
-      "
-      aria-label="Нижнее меню"
-    >
-      <div className="grid grid-cols-4 items-center gap-[3px]">
-        <button
-          type="button"
-          onClick={() => router.push("/")}
-          className={navItemClass("/")}
-          aria-label="Главная"
-        >
-          <span className={iconWrapClass("/")}>
-            <HomeIcon active={isActive("/")} />
-          </span>
-          <span className={labelClass("/")}>Главная</span>
-        </button>
+    <>
+      <style>{`
+        .mn-bottom-nav-wrap {
+          position: fixed;
+          left: 50%;
+          bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+          z-index: 500;
+          width: min(calc(100vw - 28px), 430px);
+          transform: translateX(-50%);
+          pointer-events: none;
+        }
 
-        <button
-          type="button"
-          onClick={() => router.push("/favorites")}
-          className={navItemClass("/favorites")}
-          aria-label="Избранное"
-        >
-          <span className={iconWrapClass("/favorites")}>
-            {favoritesBadge && <span className={badgeClass}>{favoritesBadge}</span>}
-            <HeartIcon active={isActive("/favorites")} />
-          </span>
-          <span className={labelClass("/favorites")}>Избранное</span>
-        </button>
+        .mn-bottom-nav {
+          height: 74px;
+          padding: 8px 12px 9px;
+          border-radius: 28px;
+          background: rgba(255,255,255,.96);
+          box-shadow:
+            0 16px 42px rgba(0,0,0,.13),
+            0 2px 10px rgba(0,0,0,.04);
+          backdrop-filter: blur(18px);
+          -webkit-backdrop-filter: blur(18px);
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          align-items: center;
+          pointer-events: auto;
+        }
 
-        <button
-          type="button"
-          onClick={() => router.push("/cart")}
-          className={navItemClass("/cart")}
-          aria-label="Корзина"
-        >
-          <span className={iconWrapClass("/cart")}>
-            {cartBadge && <span className={badgeClass}>{cartBadge}</span>}
-            <CartIcon active={isActive("/cart")} />
-          </span>
-          <span className={labelClass("/cart")}>Корзина</span>
-        </button>
+        .mn-bottom-nav-item {
+          position: relative;
+          min-width: 0;
+          height: 58px;
+          border: 0;
+          border-radius: 18px;
+          background: transparent;
+          color: #9a9a9a;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 5px;
+          cursor: pointer;
+          transition:
+            color .18s ease,
+            transform .18s ease,
+            background .18s ease;
+        }
 
-        <button
-          type="button"
-          onClick={() => router.push("/profile")}
-          className={navItemClass("/profile")}
-          aria-label="Профиль"
-        >
-          <span className={iconWrapClass("/profile")}>
-            {customer?.photo_url ? (
-              <span className="flex h-[29px] w-[29px] items-center justify-center overflow-hidden rounded-full bg-white">
-                <img
-                  src={customer.photo_url}
-                  alt="Профиль"
-                  className="h-full w-full rounded-full object-cover"
-                />
-              </span>
-            ) : isActive("/profile") ? (
-              <span className="text-[14px] font-semibold leading-none">
-                {profileInitial}
-              </span>
-            ) : (
-              <ProfileIcon active={false} />
-            )}
-          </span>
-          <span className={labelClass("/profile")}>Профиль</span>
-        </button>
-      </div>
-    </nav>
+        .mn-bottom-nav-item:active {
+          transform: translateY(1px);
+        }
+
+        .mn-bottom-nav-item.active {
+          color: #111;
+        }
+
+        .mn-bottom-nav-icon {
+          position: relative;
+          width: 28px;
+          height: 28px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .mn-bottom-nav-label {
+          max-width: 100%;
+          font-size: 11.5px;
+          line-height: 1;
+          font-weight: 500;
+          letter-spacing: -0.02em;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .mn-bottom-nav-item.active .mn-bottom-nav-label {
+          font-weight: 650;
+        }
+
+        .mn-bottom-nav-badge {
+          position: absolute;
+          top: -5px;
+          right: -8px;
+          min-width: 17px;
+          height: 17px;
+          padding: 0 5px;
+          border-radius: 999px;
+          background: #111;
+          color: #fff;
+          border: 2px solid #fff;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 9px;
+          line-height: 1;
+          font-weight: 700;
+        }
+
+        @media (max-width: 370px) {
+          .mn-bottom-nav-wrap {
+            width: min(calc(100vw - 20px), 410px);
+            bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+          }
+
+          .mn-bottom-nav {
+            height: 70px;
+            padding: 7px 9px 8px;
+            border-radius: 25px;
+          }
+
+          .mn-bottom-nav-item {
+            height: 55px;
+            border-radius: 16px;
+            gap: 4px;
+          }
+
+          .mn-bottom-nav-label {
+            font-size: 10.8px;
+          }
+
+          .mn-bottom-nav-icon {
+            width: 26px;
+            height: 26px;
+          }
+        }
+      `}</style>
+
+      <nav className="mn-bottom-nav-wrap" aria-label="Нижняя навигация">
+        <div className="mn-bottom-nav">
+          {navItems.map((item) => {
+            const active = isActivePath(pathname || "/", item.href);
+            const count = counts[item.key];
+
+            return (
+              <button
+                key={item.key}
+                type="button"
+                className={`mn-bottom-nav-item${active ? " active" : ""}`}
+                onClick={() => router.push(item.href)}
+                aria-label={item.label}
+                aria-current={active ? "page" : undefined}
+              >
+                <span className="mn-bottom-nav-icon">
+                  <NavIcon type={item.key} active={active} />
+                  {count > 0 && item.key !== "home" && item.key !== "profile" ? (
+                    <span className="mn-bottom-nav-badge">{count > 9 ? "9+" : count}</span>
+                  ) : null}
+                </span>
+                <span className="mn-bottom-nav-label">{item.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+    </>
   );
 }
