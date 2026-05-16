@@ -1,7 +1,5 @@
 "use client";
 
-const restLetters = ["N", "T", "R", "E", "A", "U", "X"];
-
 export default function AppSplash() {
   return (
     <div className="mn-splash" aria-label="Загрузка MONTREAUX">
@@ -25,37 +23,33 @@ export default function AppSplash() {
             calc(env(safe-area-inset-bottom, 0px) + 24px);
           -webkit-font-smoothing: antialiased;
           text-rendering: geometricPrecision;
-          animation: mnSplashFadeOut 0.42s ease forwards;
-          animation-delay: 3.08s;
+          animation: mnSplashExit 0.42s ease forwards;
+          animation-delay: 3.18s;
         }
 
         .mn-splash-inner {
-          position: relative;
           width: 100%;
-          max-width: 430px;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
+          max-width: 390px;
           text-align: center;
           transform: translateY(8px);
         }
 
-        .mn-logo-wrap {
-          width: 100%;
+        .mn-logo-stage {
+          position: relative;
+          width: min(86vw, 342px);
+          height: 70px;
+          margin: 0 auto;
           display: flex;
+          align-items: center;
           justify-content: center;
-          overflow: visible;
         }
 
-        .mn-word {
-          --step: 0.58em;
-          --initial-shift: 2.18em;
+        .mn-logo {
           position: relative;
+          height: 70px;
           display: inline-flex;
           align-items: center;
-          justify-content: flex-start;
-          white-space: nowrap;
+          justify-content: center;
           font-family:
             Inter,
             ui-sans-serif,
@@ -63,64 +57,53 @@ export default function AppSplash() {
             -apple-system,
             BlinkMacSystemFont,
             "Segoe UI",
+            Arial,
             sans-serif;
-          font-size: clamp(38px, 9.9vw, 48px);
-          line-height: 0.92;
+          font-size: clamp(36px, 9.2vw, 48px);
+          line-height: 1;
           font-weight: 800;
-          letter-spacing: 0.075em;
-          transform: translateX(var(--initial-shift));
-          animation: mnWordCenter 1.05s cubic-bezier(.18,.86,.22,1) forwards;
-          animation-delay: 1.02s;
-          will-change: transform;
+          letter-spacing: 0.13em;
+          white-space: nowrap;
+          will-change: transform, opacity, filter;
         }
 
         .mn-mo {
-          position: relative;
-          z-index: 2;
-          display: inline-block;
-          opacity: 0;
-          filter: blur(18px);
-          transform: scale(0.34);
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.13em;
           transform-origin: center;
-          animation: mnMoFlash 1.02s cubic-bezier(.16,.9,.19,1) forwards;
-          will-change: opacity, filter, transform;
+          opacity: 0;
+          filter: blur(14px);
+          transform: scale(0.58);
+          animation: mnMoFlash 0.88s cubic-bezier(.16, 1, .3, 1) forwards;
         }
 
         .mn-rest {
-          position: relative;
-          display: inline-block;
-          width: calc(var(--step) * 7.1);
-          height: 1em;
-          margin-left: 0.08em;
-          vertical-align: top;
-          overflow: visible;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.13em;
+          max-width: 0;
+          overflow: hidden;
+          opacity: 0;
+          transform: translateX(-0.06em);
+          animation: mnRestReveal 1.05s cubic-bezier(.16, 1, .3, 1) forwards;
+          animation-delay: 1.02s;
         }
 
-        .mn-rest-letter {
-          position: absolute;
-          left: 0;
-          top: 0;
+        .mn-rest span {
           display: inline-block;
           opacity: 0;
-          filter: blur(12px);
-          transform: translateX(0) scale(0.98);
-          transform-origin: center;
-          animation: mnRestSpread 0.98s cubic-bezier(.18,.86,.22,1) forwards;
+          filter: blur(9px);
+          transform: translateX(-0.26em) scale(0.98);
+          animation: mnRestLetters 0.95s cubic-bezier(.16, 1, .3, 1) forwards;
           animation-delay: 1.08s;
-          will-change: opacity, filter, transform;
         }
 
-        .mn-rest-letter:nth-child(1) { --x: 0em; }
-        .mn-rest-letter:nth-child(2) { --x: calc(var(--step) * 1); }
-        .mn-rest-letter:nth-child(3) { --x: calc(var(--step) * 2); }
-        .mn-rest-letter:nth-child(4) { --x: calc(var(--step) * 3); }
-        .mn-rest-letter:nth-child(5) { --x: calc(var(--step) * 4); }
-        .mn-rest-letter:nth-child(6) { --x: calc(var(--step) * 5); }
-        .mn-rest-letter:nth-child(7) { --x: calc(var(--step) * 6); }
-
         .mn-tagline {
-          margin-top: 24px;
-          color: rgba(255,255,255,0.42);
+          margin-top: 20px;
+          color: rgba(255,255,255,0.34);
           font-family:
             Inter,
             ui-sans-serif,
@@ -128,33 +111,29 @@ export default function AppSplash() {
             -apple-system,
             BlinkMacSystemFont,
             "Segoe UI",
+            Arial,
             sans-serif;
-          font-size: clamp(11px, 3vw, 14px);
+          font-size: 12px;
           line-height: 1;
           font-weight: 600;
-          letter-spacing: 0.34em;
+          letter-spacing: 0.42em;
           text-transform: uppercase;
           opacity: 0;
           transform: translateY(8px);
-          animation: mnTaglineIn 0.52s ease forwards;
-          animation-delay: 2.16s;
+          animation: mnTaglineIn 0.58s ease forwards;
+          animation-delay: 2.15s;
         }
 
         @keyframes mnMoFlash {
           0% {
             opacity: 0;
-            filter: blur(22px);
-            transform: scale(0.28);
+            filter: blur(16px);
+            transform: scale(0.48);
           }
-          38% {
-            opacity: 0.55;
-            filter: blur(13px);
-            transform: scale(0.64);
-          }
-          72% {
+          48% {
             opacity: 1;
             filter: blur(2px);
-            transform: scale(1.065);
+            transform: scale(1.06);
           }
           100% {
             opacity: 1;
@@ -163,30 +142,32 @@ export default function AppSplash() {
           }
         }
 
-        @keyframes mnWordCenter {
+        @keyframes mnRestReveal {
           0% {
-            transform: translateX(var(--initial-shift));
+            max-width: 0;
+            opacity: 0;
+            transform: translateX(-0.06em);
+          }
+          18% {
+            opacity: 1;
           }
           100% {
+            max-width: 7.4em;
+            opacity: 1;
             transform: translateX(0);
           }
         }
 
-        @keyframes mnRestSpread {
+        @keyframes mnRestLetters {
           0% {
             opacity: 0;
-            filter: blur(14px);
-            transform: translateX(0) scale(0.98);
-          }
-          28% {
-            opacity: 0.92;
-            filter: blur(8px);
-            transform: translateX(0) scale(1);
+            filter: blur(10px);
+            transform: translateX(-0.32em) scale(0.98);
           }
           100% {
             opacity: 1;
             filter: blur(0);
-            transform: translateX(var(--x)) scale(1);
+            transform: translateX(0) scale(1);
           }
         }
 
@@ -201,7 +182,7 @@ export default function AppSplash() {
           }
         }
 
-        @keyframes mnSplashFadeOut {
+        @keyframes mnSplashExit {
           from {
             opacity: 1;
             visibility: visible;
@@ -212,67 +193,69 @@ export default function AppSplash() {
           }
         }
 
-        @media (max-width: 370px) {
-          .mn-word {
-            --step: 0.55em;
-            --initial-shift: 2.04em;
-            font-size: 36px;
-            letter-spacing: 0.065em;
+        @media (max-width: 360px) {
+          .mn-logo-stage {
+            width: min(88vw, 320px);
+            height: 64px;
+          }
+
+          .mn-logo {
+            height: 64px;
+            font-size: 34px;
+            letter-spacing: 0.115em;
+          }
+
+          .mn-mo,
+          .mn-rest {
+            gap: 0.115em;
           }
 
           .mn-tagline {
-            margin-top: 22px;
-            font-size: 10px;
-            letter-spacing: 0.30em;
+            font-size: 11px;
+            letter-spacing: 0.36em;
           }
         }
 
         @media (prefers-reduced-motion: reduce) {
           .mn-splash,
-          .mn-word,
           .mn-mo,
-          .mn-rest-letter,
+          .mn-rest,
+          .mn-rest span,
           .mn-tagline {
             animation: none !important;
           }
 
-          .mn-splash {
-            opacity: 1;
-            visibility: visible;
-          }
-
-          .mn-word {
-            transform: translateX(0);
-          }
-
           .mn-mo,
-          .mn-rest-letter,
+          .mn-rest,
+          .mn-rest span,
           .mn-tagline {
             opacity: 1;
             filter: none;
             transform: none;
           }
 
-          .mn-rest-letter:nth-child(1) { transform: translateX(0em); }
-          .mn-rest-letter:nth-child(2) { transform: translateX(calc(var(--step) * 1)); }
-          .mn-rest-letter:nth-child(3) { transform: translateX(calc(var(--step) * 2)); }
-          .mn-rest-letter:nth-child(4) { transform: translateX(calc(var(--step) * 3)); }
-          .mn-rest-letter:nth-child(5) { transform: translateX(calc(var(--step) * 4)); }
-          .mn-rest-letter:nth-child(6) { transform: translateX(calc(var(--step) * 5)); }
-          .mn-rest-letter:nth-child(7) { transform: translateX(calc(var(--step) * 6)); }
+          .mn-rest {
+            max-width: none;
+          }
         }
       `}</style>
 
       <div className="mn-splash-inner">
-        <div className="mn-logo-wrap">
-          <div className="mn-word" aria-label="MONTREAUX">
-            <span className="mn-mo">MO</span>
+        <div className="mn-logo-stage">
+          <div className="mn-logo" aria-label="MONTREAUX">
+            <span className="mn-mo">
+              <span>M</span>
+              <span>O</span>
+            </span>
+
             <span className="mn-rest" aria-hidden="true">
-              {restLetters.map((letter, index) => (
-                <span className="mn-rest-letter" key={`${letter}-${index}`}>
-                  {letter}
-                </span>
-              ))}
+              <span>N</span>
+              <span>T</span>
+              <span>R</span>
+              <span>E</span>
+              <span>A</span>
+              <span>U</span>
+              <span>X</span>
             </span>
           </div>
         </div>
