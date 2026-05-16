@@ -55,6 +55,42 @@ function setCachedCustomer(customer: CustomerProfile | null) {
   window.dispatchEvent(new Event("customer-profile-updated"));
 }
 
+function HomeIcon({ active }: { active: boolean }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M3.5 10.8 12 4l8.5 6.8" />
+      <path d="M5.5 9.8V20h4.2v-5.8h4.6V20h4.2V9.8" />
+    </svg>
+  );
+}
+
+function FavoriteIcon({ active }: { active: boolean }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M20.8 4.6c-1.8-1.8-4.8-1.8-6.6 0L12 6.8 9.8 4.6C8 2.8 5 2.8 3.2 4.6s-1.8 4.8 0 6.6L12 20l8.8-8.8c1.8-1.8 1.8-4.8 0-6.6Z" />
+    </svg>
+  );
+}
+
+function CartIcon({ active }: { active: boolean }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M6.5 8h14l-1.4 7.2a2 2 0 0 1-2 1.6H9a2 2 0 0 1-2-1.6L5.2 4H2.8" />
+      <circle cx="9.5" cy="20" r="1.2" />
+      <circle cx="17" cy="20" r="1.2" />
+    </svg>
+  );
+}
+
+function ProfileIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="8.2" r="3.6" />
+      <path d="M5.2 20.2a6.8 6.8 0 0 1 13.6 0" />
+    </svg>
+  );
+}
+
 export default function BottomNav() {
   const router = useRouter();
   const pathname = usePathname();
@@ -139,75 +175,103 @@ export default function BottomNav() {
     return String(favoritesCount);
   }, [favoritesCount]);
 
-  const activeClass = (path: string) =>
-    pathname === path ? "text-blue-500" : "text-gray-400";
-
   const profileInitial =
     customer?.first_name?.trim()?.charAt(0)?.toUpperCase() || "P";
 
+  const isActive = (path: string) => pathname === path;
+
+  const itemClass = (active: boolean) =>
+    `relative flex min-w-0 flex-1 flex-col items-center justify-center gap-[3px] rounded-[22px] px-1 py-2 transition-colors ${
+      active ? "text-black" : "text-[#9A9A9A]"
+    }`;
+
+  const labelClass = (active: boolean) =>
+    `max-w-full truncate text-[10.5px] leading-none tracking-[-0.01em] ${
+      active ? "font-medium text-black" : "font-normal text-[#9A9A9A]"
+    }`;
+
+  const badgeClass =
+    "absolute right-[calc(50%-25px)] top-[4px] min-w-[17px] rounded-full bg-black px-1.5 text-center text-[9px] font-medium leading-[17px] text-white ring-2 ring-white";
+
+  const goTo = (path: string) => {
+    if (pathname !== path) router.push(path);
+  };
+
   return (
-    <div className="fixed bottom-4 left-4 right-4 z-50 flex justify-between rounded-[34px] border border-gray-100 bg-white px-4 py-3 shadow-2xl">
-      <button
-        onClick={() => router.push("/")}
-        className={`flex flex-1 flex-col items-center gap-1 ${activeClass("/")}`}
-      >
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M3 10.5L12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" />
-        </svg>
-        <span className="text-[13px]">Главная</span>
-      </button>
+    <nav
+      className="fixed left-3 right-3 z-50 mx-auto max-w-[520px]"
+      style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 10px)" }}
+      aria-label="Нижнее меню"
+    >
+      <div className="rounded-[30px] border border-black/[0.06] bg-white/95 px-2 py-2 shadow-[0_12px_34px_rgba(0,0,0,0.14)] backdrop-blur-xl">
+        <div className="grid grid-cols-4 gap-1">
+          <button
+            type="button"
+            onClick={() => goTo("/")}
+            className={itemClass(isActive("/"))}
+            aria-label="Главная"
+            aria-current={isActive("/") ? "page" : undefined}
+          >
+            {isActive("/") && <span className="absolute top-1 h-[3px] w-5 rounded-full bg-black" />}
+            <HomeIcon active={isActive("/")} />
+            <span className={labelClass(isActive("/"))}>Главная</span>
+          </button>
 
-      <button
-        onClick={() => router.push("/favorites")}
-        className={`relative flex flex-1 flex-col items-center gap-1 ${activeClass("/favorites")}`}
-      >
-        {favoritesBadge && (
-          <span className="absolute right-[calc(50%-24px)] top-0 min-w-[18px] rounded-full bg-black px-1.5 py-[1px] text-center text-[10px] font-medium leading-[16px] text-white">
-            {favoritesBadge}
-          </span>
-        )}
+          <button
+            type="button"
+            onClick={() => goTo("/favorites")}
+            className={itemClass(isActive("/favorites"))}
+            aria-label="Избранное"
+            aria-current={isActive("/favorites") ? "page" : undefined}
+          >
+            {isActive("/favorites") && <span className="absolute top-1 h-[3px] w-5 rounded-full bg-black" />}
+            {favoritesBadge && <span className={badgeClass}>{favoritesBadge}</span>}
+            <FavoriteIcon active={isActive("/favorites")} />
+            <span className={labelClass(isActive("/favorites"))}>Избранное</span>
+          </button>
 
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 21l-1.4-1.3C5.4 15 2 11.9 2 8.1 2 5 4.4 3 7.4 3c1.7 0 3.4.8 4.6 2.1C13.2 3.8 14.9 3 16.6 3 19.6 3 22 5 22 8.1c0 3.8-3.4 6.9-8.6 11.6z" />
-        </svg>
-        <span className="text-[13px]">Избранное</span>
-      </button>
+          <button
+            type="button"
+            onClick={() => goTo("/cart")}
+            className={itemClass(isActive("/cart"))}
+            aria-label="Корзина"
+            aria-current={isActive("/cart") ? "page" : undefined}
+          >
+            {isActive("/cart") && <span className="absolute top-1 h-[3px] w-5 rounded-full bg-black" />}
+            {cartBadge && <span className={badgeClass}>{cartBadge}</span>}
+            <CartIcon active={isActive("/cart")} />
+            <span className={labelClass(isActive("/cart"))}>Корзина</span>
+          </button>
 
-      <button
-        onClick={() => router.push("/cart")}
-        className={`relative flex flex-1 flex-col items-center gap-1 ${activeClass("/cart")}`}
-      >
-        {cartBadge && (
-          <span className="absolute right-[calc(50%-24px)] top-0 min-w-[18px] rounded-full bg-black px-1.5 py-[1px] text-center text-[10px] font-medium leading-[16px] text-white">
-            {cartBadge}
-          </span>
-        )}
+          <button
+            type="button"
+            onClick={() => goTo("/profile")}
+            className={itemClass(isActive("/profile"))}
+            aria-label="Профиль"
+            aria-current={isActive("/profile") ? "page" : undefined}
+          >
+            {isActive("/profile") && <span className="absolute top-1 h-[3px] w-5 rounded-full bg-black" />}
 
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M7 18c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm10 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM7.2 14h9.9c.8 0 1.5-.5 1.8-1.2L22 6H6.2L5.3 4H2v2h2l3.6 7.6-1.3 2.4c-.2.3-.3.7-.3 1 0 1.1.9 2 2 2H20v-2H8.4c-.1 0-.2-.1-.2-.2v-.1l1-1.7z" />
-        </svg>
-        <span className="text-[13px]">Корзина</span>
-      </button>
+            {customer?.photo_url ? (
+              <span className={`h-[22px] w-[22px] overflow-hidden rounded-full border ${isActive("/profile") ? "border-black" : "border-[#BDBDBD]"}`}>
+                <img
+                  src={customer.photo_url}
+                  alt="Профиль"
+                  className="h-full w-full rounded-full object-cover"
+                />
+              </span>
+            ) : customer?.first_name ? (
+              <span className={`flex h-[22px] w-[22px] items-center justify-center rounded-full border text-[11px] font-medium ${isActive("/profile") ? "border-black text-black" : "border-[#BDBDBD] text-[#9A9A9A]"}`}>
+                {profileInitial}
+              </span>
+            ) : (
+              <ProfileIcon />
+            )}
 
-      <button
-        onClick={() => router.push("/profile")}
-        className={`flex flex-1 flex-col items-center gap-1 ${activeClass("/profile")}`}
-      >
-        <div className="h-7 w-7 overflow-hidden rounded-full border border-current bg-[#F5F5F5]">
-          {customer?.photo_url ? (
-            <img
-              src={customer.photo_url}
-              alt="Профиль"
-              className="h-full w-full rounded-full object-cover"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center text-sm">
-              {profileInitial}
-            </div>
-          )}
+            <span className={labelClass(isActive("/profile"))}>Профиль</span>
+          </button>
         </div>
-        <span className="text-[13px]">Профиль</span>
-      </button>
-    </div>
+      </div>
+    </nav>
   );
 }
