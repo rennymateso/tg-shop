@@ -55,6 +55,61 @@ function setCachedCustomer(customer: CustomerProfile | null) {
   window.dispatchEvent(new Event("customer-profile-updated"));
 }
 
+function HomeIcon() {
+  return (
+    <svg
+      width="28"
+      height="28"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.55"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M4 10.4 12 4l8 6.4v9.2A1.4 1.4 0 0 1 18.6 21H5.4A1.4 1.4 0 0 1 4 19.6v-9.2Z" />
+    </svg>
+  );
+}
+
+function HeartIcon() {
+  return (
+    <svg
+      width="28"
+      height="28"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.55"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M20.3 5.2c-1.7-1.7-4.4-1.7-6.1 0L12 7.4 9.8 5.2c-1.7-1.7-4.4-1.7-6.1 0-1.7 1.7-1.7 4.4 0 6.1L12 20l8.3-8.7c1.7-1.7 1.7-4.4 0-6.1Z" />
+    </svg>
+  );
+}
+
+function BagIcon() {
+  return (
+    <svg
+      width="28"
+      height="28"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.55"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M6.3 8.2h11.4l.8 10.8a1.6 1.6 0 0 1-1.6 1.7H7.1A1.6 1.6 0 0 1 5.5 19l.8-10.8Z" />
+      <path d="M9.2 8.2V7a2.8 2.8 0 0 1 5.6 0v1.2" />
+    </svg>
+  );
+}
+
 export default function BottomNav() {
   const router = useRouter();
   const pathname = usePathname();
@@ -140,7 +195,10 @@ export default function BottomNav() {
   }, [favoritesCount]);
 
   const activeClass = (path: string) =>
-    pathname === path ? "text-blue-500" : "text-gray-400";
+    pathname === path ? "text-black" : "text-gray-400";
+
+  const activeLabelClass = (path: string) =>
+    pathname === path ? "font-semibold text-black" : "font-normal text-gray-400";
 
   const profileInitial =
     customer?.first_name?.trim()?.charAt(0)?.toUpperCase() || "P";
@@ -148,18 +206,20 @@ export default function BottomNav() {
   return (
     <div className="fixed bottom-4 left-4 right-4 z-50 flex justify-between rounded-[34px] border border-gray-100 bg-white px-4 py-3 shadow-2xl">
       <button
+        type="button"
         onClick={() => router.push("/")}
         className={`flex flex-1 flex-col items-center gap-1 ${activeClass("/")}`}
+        aria-label="Главная"
       >
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-          <path d="M3 10.4 12 3l9 7.4V21a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V10.4Z" />
-        </svg>
-        <span className="text-[13px]">Главная</span>
+        <HomeIcon />
+        <span className={`text-[13px] ${activeLabelClass("/")}`}>Главная</span>
       </button>
 
       <button
+        type="button"
         onClick={() => router.push("/favorites")}
         className={`relative flex flex-1 flex-col items-center gap-1 ${activeClass("/favorites")}`}
+        aria-label="Избранное"
       >
         {favoritesBadge && (
           <span className="absolute right-[calc(50%-24px)] top-0 min-w-[18px] rounded-full bg-black px-1.5 py-[1px] text-center text-[10px] font-medium leading-[16px] text-white">
@@ -167,15 +227,17 @@ export default function BottomNav() {
           </span>
         )}
 
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 21l-1.4-1.3C5.4 15 2 11.9 2 8.1 2 5 4.4 3 7.4 3c1.7 0 3.4.8 4.6 2.1C13.2 3.8 14.9 3 16.6 3 19.6 3 22 5 22 8.1c0 3.8-3.4 6.9-8.6 11.6z" />
-        </svg>
-        <span className="text-[13px]">Избранное</span>
+        <HeartIcon />
+        <span className={`text-[13px] ${activeLabelClass("/favorites")}`}>
+          Избранное
+        </span>
       </button>
 
       <button
+        type="button"
         onClick={() => router.push("/cart")}
         className={`relative flex flex-1 flex-col items-center gap-1 ${activeClass("/cart")}`}
+        aria-label="Корзина"
       >
         {cartBadge && (
           <span className="absolute right-[calc(50%-24px)] top-0 min-w-[18px] rounded-full bg-black px-1.5 py-[1px] text-center text-[10px] font-medium leading-[16px] text-white">
@@ -183,15 +245,17 @@ export default function BottomNav() {
           </span>
         )}
 
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M7 18c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm10 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM7.2 14h9.9c.8 0 1.5-.5 1.8-1.2L22 6H6.2L5.3 4H2v2h2l3.6 7.6-1.3 2.4c-.2.3-.3.7-.3 1 0 1.1.9 2 2 2H20v-2H8.4c-.1 0-.2-.1-.2-.2v-.1l1-1.7z" />
-        </svg>
-        <span className="text-[13px]">Корзина</span>
+        <BagIcon />
+        <span className={`text-[13px] ${activeLabelClass("/cart")}`}>
+          Корзина
+        </span>
       </button>
 
       <button
+        type="button"
         onClick={() => router.push("/profile")}
         className={`flex flex-1 flex-col items-center gap-1 ${activeClass("/profile")}`}
+        aria-label="Профиль"
       >
         <div className="h-7 w-7 overflow-hidden rounded-full border border-current bg-[#F5F5F5]">
           {customer?.photo_url ? (
@@ -206,7 +270,9 @@ export default function BottomNav() {
             </div>
           )}
         </div>
-        <span className="text-[13px]">Профиль</span>
+        <span className={`text-[13px] ${activeLabelClass("/profile")}`}>
+          Профиль
+        </span>
       </button>
     </div>
   );
