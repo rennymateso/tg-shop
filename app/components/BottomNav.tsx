@@ -11,19 +11,6 @@ type NavItem = {
   href: string;
 };
 
-type ProfileLike = {
-  photo_url?: string;
-  photoUrl?: string;
-  avatar?: string;
-  avatar_url?: string;
-  user?: {
-    photo_url?: string;
-    photoUrl?: string;
-    avatar?: string;
-    avatar_url?: string;
-  };
-};
-
 const navItems: NavItem[] = [
   { key: "home", label: "Главная", href: "/" },
   { key: "favorites", label: "Избранное", href: "/favorites" },
@@ -67,10 +54,26 @@ function getFavoritesCount() {
   return getArrayCount(favorites);
 }
 
+function getValueFromObject(source: unknown, keys: string[]) {
+  if (!source || typeof source !== "object") return "";
+
+  const objectSource = source as Record<string, unknown>;
+
+  for (const key of keys) {
+    const value = objectSource[key];
+
+    if (typeof value === "string" && value.trim()) {
+      return value;
+    }
+  }
+
+  return "";
+}
+
 function getProfilePhoto() {
   if (typeof window === "undefined") return "";
 
-  const keys = [
+  const storageKeys = [
     "customer_profile_cache",
     "telegram_user",
     "telegramUser",
@@ -78,29 +81,35 @@ function getProfilePhoto() {
     "profile",
   ];
 
-  for (const key of keys) {
-    const data = safeJsonParse<ProfileLike | null>(localStorage.getItem(key), null);
-    const photo =
-      data?.photo_url ||
-      data?.photoUrl ||
-      data?.avatar ||
-      data?.avatar_url ||
-      data?.user?.photo_url ||
-      data?.user?.photoUrl ||
-      data?.user?.avatar ||
-      data?.user?.avatar_url;
+  for (const key of storageKeys) {
+    const data = safeJsonParse<Record<string, unknown> | null>(
+      localStorage.getItem(key),
+      null
+    );
 
-    if (typeof photo === "string" && photo.trim()) {
-      return photo;
-    }
+    const directPhoto = getValueFromObject(data, [
+      "photo_url",
+      "photoUrl",
+      "avatar",
+      "avatar_url",
+      "photo",
+    ]);
+
+    if (directPhoto) return directPhoto;
+
+    const nestedUser = data?.user;
+    const nestedPhoto = getValueFromObject(nestedUser, [
+      "photo_url",
+      "photoUrl",
+      "avatar",
+      "avatar_url",
+      "photo",
+    ]);
+
+    if (nestedPhoto) return nestedPhoto;
   }
 
-  const tgPhoto = window.Telegram?.WebApp?.initDataUnsafe?.user?.photo_url;
-  return typeof tgPhoto === "string" ? tgPhoto : "";
-}
-
-declare global {
-  interface Window {
+  const telegramWindow = window as unknown as {
     Telegram?: {
       WebApp?: {
         initDataUnsafe?: {
@@ -110,7 +119,9 @@ declare global {
         };
       };
     };
-  }
+  };
+
+  return telegramWindow.Telegram?.WebApp?.initDataUnsafe?.user?.photo_url || "";
 }
 
 function HomeIcon() {
@@ -289,7 +300,6 @@ export default function BottomNav() {
           stroke-width: 1.55;
           stroke-linecap: round;
           stroke-linejoin: round;
-          vector-effect: non-scaling-stroke;
         }
 
         .mn-bottom-nav-item.active .mn-nav-svg {
@@ -414,6 +424,7 @@ export default function BottomNav() {
                     <span className="mn-bottom-nav-badge">{count > 9 ? "9+" : count}</span>
                   ) : null}
                 </span>
+
                 <span className="mn-bottom-nav-label">{item.label}</span>
               </button>
             );
