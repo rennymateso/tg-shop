@@ -1,7 +1,6 @@
 "use client";
 
-const firstLetters = ["M", "O"];
-const restLetters = ["N", "T", "R", "E", "A", "U", "X"];
+const letters = ["M", "O", "N", "T", "R", "E", "A", "U", "X"];
 
 export default function AppSplash() {
   return (
@@ -11,9 +10,9 @@ export default function AppSplash() {
           position: fixed;
           inset: 0;
           z-index: 9999;
+          width: 100%;
           min-height: 100vh;
           min-height: 100dvh;
-          width: 100%;
           overflow: hidden;
           background: #000;
           color: #fff;
@@ -22,40 +21,37 @@ export default function AppSplash() {
           justify-content: center;
           padding:
             calc(env(safe-area-inset-top, 0px) + 24px)
-            24px
+            18px
             calc(env(safe-area-inset-bottom, 0px) + 24px);
           -webkit-font-smoothing: antialiased;
           text-rendering: geometricPrecision;
-          animation: mnSplashExit 0.55s ease forwards;
+          animation: mnSplashFadeOut 0.45s ease forwards;
           animation-delay: 2.65s;
-        }
-
-        .mn-splash::before {
-          content: "";
-          position: absolute;
-          inset: -28%;
-          background:
-            radial-gradient(circle at 50% 46%, rgba(255,255,255,0.09), transparent 22%),
-            radial-gradient(circle at 50% 58%, rgba(255,255,255,0.045), transparent 18%);
-          opacity: 0;
-          animation: mnGlow 2.15s ease forwards;
         }
 
         .mn-splash-inner {
           position: relative;
-          z-index: 2;
           width: 100%;
-          max-width: 360px;
+          max-width: 430px;
           text-align: center;
-          transform: translateY(2px);
+          transform: translateY(4px);
         }
 
-        .mn-splash-logo {
+        .mn-logo-window {
+          position: relative;
+          width: 100%;
+          height: clamp(56px, 15vw, 82px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          overflow: visible;
+        }
+
+        .mn-logo-word {
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          gap: clamp(2px, 0.8vw, 5px);
-          max-width: 100%;
+          gap: clamp(2px, 0.9vw, 6px);
           white-space: nowrap;
           font-family:
             Inter,
@@ -64,57 +60,44 @@ export default function AppSplash() {
             -apple-system,
             BlinkMacSystemFont,
             "Segoe UI",
+            Arial,
             sans-serif;
-          font-size: clamp(30px, 8.4vw, 46px);
-          line-height: 0.95;
-          font-weight: 760;
-          letter-spacing: 0.075em;
-        }
-
-        .mn-splash-first {
-          display: inline-flex;
-          gap: clamp(2px, 0.8vw, 5px);
-          animation: mnFirstMove 0.72s cubic-bezier(.2,.9,.18,1) forwards;
-          animation-delay: 0.82s;
+          font-size: clamp(34px, 9.4vw, 52px);
+          line-height: 0.9;
+          font-weight: 800;
+          letter-spacing: 0.055em;
+          transform: translateX(38%);
+          animation: mnWordShift 0.82s cubic-bezier(.22,.9,.18,1) forwards;
+          animation-delay: 0.72s;
           will-change: transform;
         }
 
-        .mn-splash-rest {
-          display: inline-flex;
-          gap: clamp(2px, 0.8vw, 5px);
-        }
-
-        .mn-splash-letter {
+        .mn-letter {
           display: inline-block;
-          will-change: transform, opacity, filter;
-        }
-
-        .mn-splash-first .mn-splash-letter {
           opacity: 0;
-          filter: blur(6px);
-          transform: translateY(14px) scale(0.95);
-          animation: mnLetterIn 0.62s cubic-bezier(.2,.9,.18,1) forwards;
+          transform: translateX(18px);
+          filter: blur(7px);
+          will-change: opacity, transform, filter;
         }
 
-        .mn-splash-first .mn-splash-letter:nth-child(1) { animation-delay: 0.08s; }
-        .mn-splash-first .mn-splash-letter:nth-child(2) { animation-delay: 0.16s; }
-
-        .mn-splash-rest .mn-splash-letter {
-          opacity: 0;
-          filter: blur(6px);
-          transform: translateX(-8px) translateY(8px) scale(0.96);
-          animation: mnRestLetterIn 0.55s cubic-bezier(.2,.9,.18,1) forwards;
+        .mn-letter:nth-child(1),
+        .mn-letter:nth-child(2) {
+          opacity: 1;
+          transform: translateX(0);
+          filter: blur(0);
+          animation: mnMoPulse 0.5s ease forwards;
+          animation-delay: 0.08s;
         }
 
-        .mn-splash-rest .mn-splash-letter:nth-child(1) { animation-delay: 0.98s; }
-        .mn-splash-rest .mn-splash-letter:nth-child(2) { animation-delay: 1.06s; }
-        .mn-splash-rest .mn-splash-letter:nth-child(3) { animation-delay: 1.14s; }
-        .mn-splash-rest .mn-splash-letter:nth-child(4) { animation-delay: 1.22s; }
-        .mn-splash-rest .mn-splash-letter:nth-child(5) { animation-delay: 1.30s; }
-        .mn-splash-rest .mn-splash-letter:nth-child(6) { animation-delay: 1.38s; }
-        .mn-splash-rest .mn-splash-letter:nth-child(7) { animation-delay: 1.46s; }
+        .mn-letter:nth-child(3) { animation: mnLetterJoin 0.58s cubic-bezier(.22,.9,.18,1) forwards; animation-delay: 0.80s; }
+        .mn-letter:nth-child(4) { animation: mnLetterJoin 0.58s cubic-bezier(.22,.9,.18,1) forwards; animation-delay: 0.88s; }
+        .mn-letter:nth-child(5) { animation: mnLetterJoin 0.58s cubic-bezier(.22,.9,.18,1) forwards; animation-delay: 0.96s; }
+        .mn-letter:nth-child(6) { animation: mnLetterJoin 0.58s cubic-bezier(.22,.9,.18,1) forwards; animation-delay: 1.04s; }
+        .mn-letter:nth-child(7) { animation: mnLetterJoin 0.58s cubic-bezier(.22,.9,.18,1) forwards; animation-delay: 1.12s; }
+        .mn-letter:nth-child(8) { animation: mnLetterJoin 0.58s cubic-bezier(.22,.9,.18,1) forwards; animation-delay: 1.20s; }
+        .mn-letter:nth-child(9) { animation: mnLetterJoin 0.58s cubic-bezier(.22,.9,.18,1) forwards; animation-delay: 1.28s; }
 
-        .mn-splash-tagline {
+        .mn-tagline {
           margin-top: 18px;
           color: rgba(255,255,255,0.48);
           font-family:
@@ -124,71 +107,67 @@ export default function AppSplash() {
             -apple-system,
             BlinkMacSystemFont,
             "Segoe UI",
+            Arial,
             sans-serif;
-          font-size: clamp(10px, 2.7vw, 13px);
+          font-size: clamp(11px, 3vw, 14px);
           line-height: 1;
           font-weight: 600;
-          letter-spacing: 0.26em;
+          letter-spacing: 0.28em;
           text-transform: uppercase;
           opacity: 0;
           transform: translateY(8px);
-          animation: mnTaglineIn 0.62s ease forwards;
-          animation-delay: 1.72s;
+          animation: mnTaglineIn 0.6s ease forwards;
+          animation-delay: 1.42s;
         }
 
-        .mn-splash-line {
-          width: 0;
-          height: 1px;
-          margin: 16px auto 0;
+        .mn-glow {
+          position: absolute;
+          left: 50%;
+          top: 50%;
+          width: 260px;
+          height: 120px;
+          transform: translate(-50%, -50%);
           border-radius: 999px;
-          background: linear-gradient(
-            90deg,
-            transparent,
-            rgba(255,255,255,0.46),
-            transparent
-          );
+          background: radial-gradient(circle, rgba(255,255,255,0.10), transparent 66%);
           opacity: 0;
-          animation: mnLineIn 0.72s ease forwards;
-          animation-delay: 1.86s;
+          animation: mnGlowIn 1.35s ease forwards;
+          animation-delay: 0.3s;
+          pointer-events: none;
         }
 
-        @keyframes mnLetterIn {
+        @keyframes mnWordShift {
+          from { transform: translateX(38%); }
+          to { transform: translateX(0); }
+        }
+
+        @keyframes mnMoPulse {
           0% {
             opacity: 0;
-            filter: blur(6px);
-            transform: translateY(14px) scale(0.95);
-          }
-          72% {
-            opacity: 1;
-            filter: blur(0);
-            transform: translateY(-1px) scale(1.01);
+            transform: translateY(8px) scale(0.96);
+            filter: blur(5px);
           }
           100% {
             opacity: 1;
-            filter: blur(0);
             transform: translateY(0) scale(1);
+            filter: blur(0);
           }
         }
 
-        @keyframes mnRestLetterIn {
+        @keyframes mnLetterJoin {
           0% {
             opacity: 0;
-            filter: blur(6px);
-            transform: translateX(-8px) translateY(8px) scale(0.96);
+            transform: translateX(18px);
+            filter: blur(7px);
+          }
+          68% {
+            opacity: 1;
+            transform: translateX(-1px);
+            filter: blur(0);
           }
           100% {
             opacity: 1;
+            transform: translateX(0);
             filter: blur(0);
-            transform: translateX(0) translateY(0) scale(1);
-          }
-        }
-
-        @keyframes mnFirstMove {
-          from {
-            transform: translateX(0);
-          }
-          to {
-            transform: translateX(0);
           }
         }
 
@@ -203,24 +182,13 @@ export default function AppSplash() {
           }
         }
 
-        @keyframes mnLineIn {
-          from {
-            width: 0;
-            opacity: 0;
-          }
-          to {
-            width: min(150px, 40vw);
-            opacity: 1;
-          }
+        @keyframes mnGlowIn {
+          0% { opacity: 0; transform: translate(-50%, -50%) scale(0.84); }
+          45% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+          100% { opacity: 0.55; transform: translate(-50%, -50%) scale(1.08); }
         }
 
-        @keyframes mnGlow {
-          0% { opacity: 0; transform: scale(0.94); }
-          48% { opacity: 1; transform: scale(1); }
-          100% { opacity: 0.58; transform: scale(1.03); }
-        }
-
-        @keyframes mnSplashExit {
+        @keyframes mnSplashFadeOut {
           from {
             opacity: 1;
             visibility: visible;
@@ -232,63 +200,53 @@ export default function AppSplash() {
         }
 
         @media (max-width: 360px) {
-          .mn-splash-logo {
-            font-size: 30px;
-            letter-spacing: 0.065em;
+          .mn-logo-word {
+            font-size: 33px;
+            letter-spacing: 0.045em;
             gap: 2px;
           }
 
-          .mn-splash-tagline {
-            font-size: 10px;
-            letter-spacing: 0.23em;
+          .mn-tagline {
+            font-size: 10.5px;
+            letter-spacing: 0.24em;
           }
         }
 
         @media (prefers-reduced-motion: reduce) {
           .mn-splash,
-          .mn-splash::before,
-          .mn-splash-first,
-          .mn-splash-letter,
-          .mn-splash-tagline,
-          .mn-splash-line {
+          .mn-logo-word,
+          .mn-letter,
+          .mn-tagline,
+          .mn-glow {
             animation: none !important;
           }
 
-          .mn-splash-letter,
-          .mn-splash-tagline,
-          .mn-splash-line {
-            opacity: 1;
-            filter: none;
-            transform: none;
+          .mn-logo-word {
+            transform: translateX(0);
           }
 
-          .mn-splash-line {
-            width: min(150px, 40vw);
+          .mn-letter,
+          .mn-tagline {
+            opacity: 1;
+            transform: none;
+            filter: none;
           }
         }
       `}</style>
 
       <div className="mn-splash-inner">
-        <div className="mn-splash-logo" aria-label="MONTREAUX">
-          <span className="mn-splash-first" aria-hidden="true">
-            {firstLetters.map((letter, index) => (
-              <span className="mn-splash-letter" key={`first-${letter}-${index}`}>
+        <div className="mn-logo-window">
+          <div className="mn-glow" />
+          <div className="mn-logo-word" aria-label="MONTREAUX">
+            {letters.map((letter, index) => (
+              <span className="mn-letter" key={`${letter}-${index}`}>
                 {letter}
               </span>
             ))}
-          </span>
-
-          <span className="mn-splash-rest" aria-hidden="true">
-            {restLetters.map((letter, index) => (
-              <span className="mn-splash-letter" key={`rest-${letter}-${index}`}>
-                {letter}
-              </span>
-            ))}
-          </span>
+          </div>
         </div>
 
-        <div className="mn-splash-tagline">FASHION</div>
-        <div className="mn-splash-line" />
+        <div className="mn-tagline">FASHION</div>
       </div>
     </div>
   );
