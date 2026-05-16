@@ -10,9 +10,9 @@ export default function AppSplash() {
           position: fixed;
           inset: 0;
           z-index: 9999;
-          width: 100%;
           min-height: 100vh;
           min-height: 100dvh;
+          width: 100%;
           overflow: hidden;
           background: #000;
           color: #fff;
@@ -25,33 +25,22 @@ export default function AppSplash() {
             calc(env(safe-area-inset-bottom, 0px) + 24px);
           -webkit-font-smoothing: antialiased;
           text-rendering: geometricPrecision;
-          animation: mnSplashFadeOut 0.38s ease forwards;
-          animation-delay: 3.12s;
+          animation: mnSplashExit 0.42s ease forwards;
+          animation-delay: 3.05s;
         }
 
-        .mn-splash-box {
+        .mn-splash-inner {
           width: 100%;
-          max-width: 430px;
           text-align: center;
           transform: translateY(2px);
         }
 
-        .mn-logo-line {
-          width: 100%;
-          min-height: 58px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          overflow: hidden;
-        }
-
-        .mn-logo-word {
+        .mn-splash-logo {
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          max-width: 94vw;
+          max-width: 92vw;
           white-space: nowrap;
-          color: #fff;
           font-family:
             Inter,
             ui-sans-serif,
@@ -61,50 +50,50 @@ export default function AppSplash() {
             "Segoe UI",
             Arial,
             sans-serif;
-          font-size: clamp(34px, 9vw, 44px);
-          line-height: 1;
-          font-weight: 760;
-          letter-spacing: 0.13em;
+          font-size: clamp(34px, 8.8vw, 44px);
+          line-height: 0.95;
+          font-weight: 800;
+          letter-spacing: 0.035em;
+          color: #f7f7f7;
+          transform-origin: center center;
         }
 
-        .mn-logo-mo {
-          display: inline-block;
-          transform-origin: center;
-          opacity: 0;
-          filter: blur(12px);
-          transform: scale(0.42);
-          animation: mnMoFromFar 0.86s cubic-bezier(.18,.9,.2,1) forwards;
-        }
-
-        .mn-logo-rest {
+        .mn-initial {
           display: inline-flex;
           align-items: center;
+          justify-content: center;
+          gap: 0.08em;
+          opacity: 0;
+          filter: blur(10px);
+          transform: scale(0.58);
+          animation: mnMOIn 0.72s cubic-bezier(.16,.9,.2,1) forwards;
+          will-change: transform, opacity, filter;
+        }
+
+        .mn-rest {
+          display: inline-flex;
+          align-items: center;
+          overflow: hidden;
           max-width: 0;
-          overflow: hidden;
-          white-space: nowrap;
-          animation: mnOpenRest 1.18s cubic-bezier(.2,.82,.2,1) forwards;
-          animation-delay: 0.92s;
-        }
-
-        .mn-rest-letter {
-          display: inline-block;
+          margin-left: 0;
           opacity: 0;
-          filter: blur(9px);
-          transform: translateX(13px);
-          animation: mnLetterIn 0.48s ease forwards;
+          filter: blur(8px);
+          transform: translateX(8px);
+          animation: mnLetterReveal 0.42s cubic-bezier(.18,.82,.22,1) forwards;
+          will-change: max-width, margin-left, opacity, filter, transform;
         }
 
-        .mn-rest-letter:nth-child(1) { animation-delay: 1.02s; }
-        .mn-rest-letter:nth-child(2) { animation-delay: 1.16s; }
-        .mn-rest-letter:nth-child(3) { animation-delay: 1.30s; }
-        .mn-rest-letter:nth-child(4) { animation-delay: 1.44s; }
-        .mn-rest-letter:nth-child(5) { animation-delay: 1.58s; }
-        .mn-rest-letter:nth-child(6) { animation-delay: 1.72s; }
-        .mn-rest-letter:nth-child(7) { animation-delay: 1.86s; }
+        .mn-rest:nth-of-type(2) { animation-delay: 0.88s; }
+        .mn-rest:nth-of-type(3) { animation-delay: 1.03s; }
+        .mn-rest:nth-of-type(4) { animation-delay: 1.18s; }
+        .mn-rest:nth-of-type(5) { animation-delay: 1.33s; }
+        .mn-rest:nth-of-type(6) { animation-delay: 1.48s; }
+        .mn-rest:nth-of-type(7) { animation-delay: 1.63s; }
+        .mn-rest:nth-of-type(8) { animation-delay: 1.78s; }
 
-        .mn-splash-tagline {
-          margin-top: 17px;
-          color: rgba(255,255,255,.48);
+        .mn-tagline {
+          margin-top: 20px;
+          color: rgba(255,255,255,0.42);
           font-family:
             Inter,
             ui-sans-serif,
@@ -114,27 +103,27 @@ export default function AppSplash() {
             "Segoe UI",
             Arial,
             sans-serif;
-          font-size: 12px;
+          font-size: clamp(11px, 2.8vw, 13px);
           line-height: 1;
-          font-weight: 560;
-          letter-spacing: .32em;
+          font-weight: 600;
+          letter-spacing: 0.36em;
           text-transform: uppercase;
           opacity: 0;
           transform: translateY(8px);
-          animation: mnTaglineIn .48s ease forwards;
-          animation-delay: 2.15s;
+          animation: mnTaglineIn 0.46s ease forwards;
+          animation-delay: 2.08s;
         }
 
-        @keyframes mnMoFromFar {
+        @keyframes mnMOIn {
           0% {
             opacity: 0;
             filter: blur(12px);
-            transform: scale(0.42);
+            transform: scale(0.5);
           }
-          62% {
+          65% {
             opacity: 1;
             filter: blur(1px);
-            transform: scale(1.08);
+            transform: scale(1.055);
           }
           100% {
             opacity: 1;
@@ -143,18 +132,21 @@ export default function AppSplash() {
           }
         }
 
-        @keyframes mnOpenRest {
-          0% { max-width: 0; }
-          100% { max-width: 18em; }
-        }
-
-        @keyframes mnLetterIn {
+        @keyframes mnLetterReveal {
           0% {
+            max-width: 0;
+            margin-left: 0;
             opacity: 0;
-            filter: blur(9px);
-            transform: translateX(13px);
+            filter: blur(8px);
+            transform: translateX(8px);
+          }
+          70% {
+            opacity: 1;
+            filter: blur(1px);
           }
           100% {
+            max-width: 1.05em;
+            margin-left: 0.08em;
             opacity: 1;
             filter: blur(0);
             transform: translateX(0);
@@ -162,17 +154,17 @@ export default function AppSplash() {
         }
 
         @keyframes mnTaglineIn {
-          0% {
+          from {
             opacity: 0;
             transform: translateY(8px);
           }
-          100% {
+          to {
             opacity: 1;
             transform: translateY(0);
           }
         }
 
-        @keyframes mnSplashFadeOut {
+        @keyframes mnSplashExit {
           from {
             opacity: 1;
             visibility: visible;
@@ -184,55 +176,56 @@ export default function AppSplash() {
         }
 
         @media (max-width: 360px) {
-          .mn-logo-word {
-            font-size: 32px;
-            letter-spacing: .105em;
+          .mn-splash-logo {
+            font-size: 33px;
+            letter-spacing: 0.025em;
           }
 
-          .mn-splash-tagline {
-            font-size: 11px;
-            letter-spacing: .28em;
+          .mn-tagline {
+            margin-top: 18px;
+            font-size: 10px;
+            letter-spacing: 0.32em;
           }
         }
 
         @media (prefers-reduced-motion: reduce) {
           .mn-splash,
-          .mn-logo-mo,
-          .mn-logo-rest,
-          .mn-rest-letter,
-          .mn-splash-tagline {
+          .mn-initial,
+          .mn-rest,
+          .mn-tagline {
             animation: none !important;
           }
 
-          .mn-logo-mo,
-          .mn-rest-letter,
-          .mn-splash-tagline {
+          .mn-initial,
+          .mn-rest,
+          .mn-tagline {
             opacity: 1;
             filter: none;
             transform: none;
           }
 
-          .mn-logo-rest {
-            max-width: 18em;
+          .mn-rest {
+            max-width: 1.05em;
+            margin-left: 0.08em;
           }
         }
       `}</style>
 
-      <div className="mn-splash-box">
-        <div className="mn-logo-line">
-          <div className="mn-logo-word" aria-label="MONTREAUX">
-            <span className="mn-logo-mo">MO</span>
-            <span className="mn-logo-rest" aria-hidden="true">
-              {restLetters.map((letter, index) => (
-                <span className="mn-rest-letter" key={`${letter}-${index}`}>
-                  {letter}
-                </span>
-              ))}
+      <div className="mn-splash-inner">
+        <div className="mn-splash-logo" aria-label="MONTREAUX">
+          <span className="mn-initial">
+            <span>M</span>
+            <span>O</span>
+          </span>
+
+          {restLetters.map((letter) => (
+            <span className="mn-rest" key={letter}>
+              {letter}
             </span>
-          </div>
+          ))}
         </div>
 
-        <div className="mn-splash-tagline">FASHION</div>
+        <div className="mn-tagline">FASHION</div>
       </div>
     </div>
   );
