@@ -1,7 +1,5 @@
 "use client";
 
-const tailLetters = ["O", "N", "T", "R", "E", "A", "U", "X"];
-
 export default function AppSplash() {
   return (
     <div className="mn-splash" aria-label="Загрузка MONTREAUX">
@@ -10,9 +8,9 @@ export default function AppSplash() {
           position: fixed;
           inset: 0;
           z-index: 9999;
+          width: 100%;
           min-height: 100vh;
           min-height: 100dvh;
-          width: 100%;
           overflow: hidden;
           background: #000;
           color: #fff;
@@ -21,32 +19,33 @@ export default function AppSplash() {
           justify-content: center;
           padding:
             calc(env(safe-area-inset-top, 0px) + 24px)
-            22px
+            24px
             calc(env(safe-area-inset-bottom, 0px) + 24px);
           -webkit-font-smoothing: antialiased;
           text-rendering: geometricPrecision;
-          animation: mnSplashExit 0.45s ease forwards;
-          animation-delay: 3.15s;
+          animation: mnSplashFadeOut 0.34s ease forwards;
+          animation-delay: 3.16s;
         }
 
         .mn-splash-inner {
           width: 100%;
-          max-width: 430px;
+          max-width: 420px;
           text-align: center;
-          transform: translateY(6px);
+          transform: translateY(2px);
         }
 
         .mn-logo-wrap {
-          width: 100%;
-          display: flex;
-          justify-content: center;
+          display: inline-flex;
           align-items: center;
+          justify-content: center;
+          max-width: calc(100vw - 36px);
+          overflow: visible;
         }
 
         .mn-logo {
           display: inline-flex;
           align-items: baseline;
-          justify-content: center;
+          justify-content: flex-start;
           white-space: nowrap;
           color: #fff;
           font-family:
@@ -57,52 +56,38 @@ export default function AppSplash() {
             BlinkMacSystemFont,
             "Segoe UI",
             sans-serif;
-          font-size: clamp(38px, 10.2vw, 54px);
+          font-size: clamp(36px, 10.2vw, 50px);
           line-height: 0.95;
           font-weight: 800;
-          letter-spacing: 0.085em;
-          transform-origin: center center;
+          letter-spacing: 0.075em;
+          transform: translateX(39%);
+          animation: mnLogoSettle 1.18s cubic-bezier(.22, .85, .24, 1) forwards;
+          animation-delay: 0.72s;
+          will-change: transform;
         }
 
-        .mn-start-letter {
+        .mn-logo-m {
           display: inline-block;
           opacity: 0;
           transform: scale(0.62);
-          animation: mnFirstLetterIn 0.95s cubic-bezier(.16,.96,.24,1) forwards;
-          animation-delay: 0.08s;
+          animation: mnMEnter 0.72s cubic-bezier(.16, .9, .25, 1) forwards;
           will-change: transform, opacity;
         }
 
-        .mn-tail {
-          display: inline-flex;
-          align-items: baseline;
+        .mn-logo-tail {
+          display: inline-block;
           overflow: hidden;
           max-width: 0;
           opacity: 0;
-          transform: translateX(-4px);
-          animation: mnTailOpen 1.35s cubic-bezier(.18,.82,.22,1) forwards;
-          animation-delay: 1.05s;
+          transform: translateX(-0.18em);
+          animation: mnTailReveal 1.38s cubic-bezier(.2, .82, .22, 1) forwards;
+          animation-delay: 0.86s;
           will-change: max-width, opacity, transform;
-        }
-
-        .mn-tail-inner {
-          display: inline-flex;
-          align-items: baseline;
-          gap: clamp(4px, 1vw, 7px);
-          transform: translateX(-26px);
-          opacity: 0;
-          animation: mnTailSlide 1.35s cubic-bezier(.18,.82,.22,1) forwards;
-          animation-delay: 1.05s;
-          will-change: transform, opacity;
-        }
-
-        .mn-tail-letter {
-          display: inline-block;
         }
 
         .mn-tagline {
           margin-top: 22px;
-          color: rgba(255,255,255,0.42);
+          color: rgba(255,255,255,0.34);
           font-family:
             Inter,
             ui-sans-serif,
@@ -111,25 +96,25 @@ export default function AppSplash() {
             BlinkMacSystemFont,
             "Segoe UI",
             sans-serif;
-          font-size: clamp(11px, 3vw, 14px);
+          font-size: clamp(11px, 3vw, 13px);
           line-height: 1;
           font-weight: 600;
-          letter-spacing: 0.32em;
+          letter-spacing: 0.34em;
           text-transform: uppercase;
           opacity: 0;
           transform: translateY(8px);
-          animation: mnTaglineIn 0.55s ease forwards;
-          animation-delay: 2.25s;
+          animation: mnTaglineIn 0.5s ease forwards;
+          animation-delay: 2.12s;
         }
 
-        @keyframes mnFirstLetterIn {
+        @keyframes mnMEnter {
           0% {
             opacity: 0;
             transform: scale(0.62);
           }
-          58% {
+          62% {
             opacity: 1;
-            transform: scale(1.08);
+            transform: scale(1.045);
           }
           100% {
             opacity: 1;
@@ -137,31 +122,26 @@ export default function AppSplash() {
           }
         }
 
-        @keyframes mnTailOpen {
+        @keyframes mnLogoSettle {
+          0% {
+            transform: translateX(39%);
+          }
+          100% {
+            transform: translateX(0);
+          }
+        }
+
+        @keyframes mnTailReveal {
           0% {
             max-width: 0;
             opacity: 0;
-            transform: translateX(-4px);
+            transform: translateX(-0.18em);
           }
           18% {
             opacity: 1;
           }
           100% {
-            max-width: min(330px, 78vw);
-            opacity: 1;
-            transform: translateX(0);
-          }
-        }
-
-        @keyframes mnTailSlide {
-          0% {
-            opacity: 0;
-            transform: translateX(-26px);
-          }
-          22% {
-            opacity: 1;
-          }
-          100% {
+            max-width: 8.2em;
             opacity: 1;
             transform: translateX(0);
           }
@@ -178,7 +158,7 @@ export default function AppSplash() {
           }
         }
 
-        @keyframes mnSplashExit {
+        @keyframes mnSplashFadeOut {
           from {
             opacity: 1;
             visibility: visible;
@@ -189,42 +169,50 @@ export default function AppSplash() {
           }
         }
 
-        @media (max-width: 370px) {
+        @media (max-width: 360px) {
           .mn-logo {
-            font-size: 37px;
-            letter-spacing: 0.07em;
+            font-size: 34px;
+            letter-spacing: 0.062em;
+            transform: translateX(38%);
           }
 
-          .mn-tail-inner {
-            gap: 4px;
+          @keyframes mnLogoSettle {
+            0% {
+              transform: translateX(38%);
+            }
+            100% {
+              transform: translateX(0);
+            }
           }
 
           .mn-tagline {
-            font-size: 11px;
-            letter-spacing: 0.26em;
+            font-size: 10px;
+            letter-spacing: 0.3em;
           }
         }
 
         @media (prefers-reduced-motion: reduce) {
           .mn-splash,
-          .mn-start-letter,
-          .mn-tail,
-          .mn-tail-inner,
+          .mn-logo,
+          .mn-logo-m,
+          .mn-logo-tail,
           .mn-tagline {
             animation: none !important;
           }
 
-          .mn-start-letter,
-          .mn-tail,
-          .mn-tail-inner,
+          .mn-logo {
+            transform: translateX(0);
+          }
+
+          .mn-logo-m,
+          .mn-logo-tail,
           .mn-tagline {
             opacity: 1;
             transform: none;
           }
 
-          .mn-tail {
-            max-width: none;
-            overflow: visible;
+          .mn-logo-tail {
+            max-width: 8.2em;
           }
         }
       `}</style>
@@ -232,17 +220,8 @@ export default function AppSplash() {
       <div className="mn-splash-inner">
         <div className="mn-logo-wrap">
           <div className="mn-logo" aria-label="MONTREAUX">
-            <span className="mn-start-letter">M</span>
-
-            <span className="mn-tail" aria-hidden="true">
-              <span className="mn-tail-inner">
-                {tailLetters.map((letter, index) => (
-                  <span className="mn-tail-letter" key={`${letter}-${index}`}>
-                    {letter}
-                  </span>
-                ))}
-              </span>
-            </span>
+            <span className="mn-logo-m">M</span>
+            <span className="mn-logo-tail">ONTREAUX</span>
           </div>
         </div>
 
