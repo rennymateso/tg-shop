@@ -57,28 +57,77 @@ function setCachedCustomer(customer: CustomerProfile | null) {
 
 function HomeIcon({ active }: { active: boolean }) {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 10.8 12 3l9 7.8" />
-      <path d="M5.5 9.6V21h4.8v-6.2h3.4V21h4.8V9.6" />
+    <svg
+      width="25"
+      height="25"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={active ? "2.15" : "1.9"}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M3.5 10.7 12 3.4l8.5 7.3" />
+      <path d="M5.8 9.7v10.1h12.4V9.7" />
+      <path d="M9.7 19.8v-5.6h4.6v5.6" />
     </svg>
   );
 }
 
 function HeartIcon({ active }: { active: boolean }) {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M20.8 4.6c-1.8-1.8-4.7-1.8-6.5 0L12 6.9 9.7 4.6c-1.8-1.8-4.7-1.8-6.5 0s-1.8 4.7 0 6.5L12 21l8.8-9.9c1.8-1.8 1.8-4.7 0-6.5Z" />
+    <svg
+      width="25"
+      height="25"
+      viewBox="0 0 24 24"
+      fill={active ? "currentColor" : "none"}
+      stroke="currentColor"
+      strokeWidth={active ? "2.05" : "1.9"}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M20.3 5.1a5 5 0 0 0-7.1 0L12 6.3l-1.2-1.2a5 5 0 0 0-7.1 7.1L12 20.5l8.3-8.3a5 5 0 0 0 0-7.1Z" />
     </svg>
   );
 }
 
 function CartIcon({ active }: { active: boolean }) {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
-      <path d="M3 6h18" />
-      <path d="M16 10a4 4 0 0 1-8 0" />
-      {active && <path d="M9 15h6" />}
+    <svg
+      width="25"
+      height="25"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={active ? "2.1" : "1.9"}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M7 8.2h10.6l-1 8.2a2 2 0 0 1-2 1.8H9.2a2 2 0 0 1-2-1.8L6.2 8.2Z" />
+      <path d="M9.2 8.2a2.8 2.8 0 0 1 5.6 0" />
+      <path d="M8.2 20.4h8.6" />
+    </svg>
+  );
+}
+
+function ProfileIcon({ active }: { active: boolean }) {
+  return (
+    <svg
+      width="25"
+      height="25"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={active ? "2.1" : "1.9"}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="8.2" r="3.7" />
+      <path d="M5.4 20.2a6.6 6.6 0 0 1 13.2 0" />
     </svg>
   );
 }
@@ -173,33 +222,37 @@ export default function BottomNav() {
   const isActive = (path: string) => pathname === path;
 
   const navItemClass = (path: string) =>
-    `relative flex flex-1 flex-col items-center justify-center gap-[3px] rounded-[22px] py-2 transition-colors ${
-      isActive(path) ? "text-black" : "text-[#9B9B9B]"
+    `relative flex min-w-0 flex-1 flex-col items-center justify-center gap-[4px] rounded-[22px] py-[7px] transition-colors duration-200 ${
+      isActive(path) ? "text-black" : "text-[#9A9A9A]"
     }`;
 
   const iconWrapClass = (path: string) =>
-    `relative flex h-9 w-9 items-center justify-center rounded-[16px] transition-colors ${
-      isActive(path) ? "bg-[#F1F1F1]" : "bg-transparent"
+    `relative flex h-11 w-11 items-center justify-center rounded-[18px] transition-colors duration-200 ${
+      isActive(path) ? "bg-black text-white" : "bg-transparent text-[#8F8F8F]"
     }`;
 
   const labelClass = (path: string) =>
-    `text-[10px] leading-none tracking-[-0.01em] ${
-      isActive(path) ? "font-medium text-black" : "font-normal text-[#9B9B9B]"
+    `text-[10px] leading-none tracking-[-0.02em] ${
+      isActive(path) ? "font-semibold text-black" : "font-medium text-[#A0A0A0]"
     }`;
+
+  const badgeClass =
+    "absolute -right-1 -top-1 min-w-[17px] rounded-full bg-[#111] px-1.5 text-center text-[9px] font-semibold leading-[17px] text-white ring-2 ring-white";
 
   return (
     <nav
       className="
-        fixed left-3 right-3 z-50
-        bottom-[calc(22px+env(safe-area-inset-bottom,0px))]
-        rounded-[30px]
-        bg-white/95 px-2 py-2
-        shadow-[0_14px_40px_rgba(0,0,0,0.13)]
-        backdrop-blur-xl
+        fixed left-1/2 z-50
+        w-[calc(100%-32px)] max-w-[390px] -translate-x-1/2
+        bottom-[calc(18px+env(safe-area-inset-bottom,0px))]
+        rounded-[28px]
+        bg-white/96 px-[7px] py-[6px]
+        shadow-[0_18px_44px_rgba(0,0,0,0.16)]
+        backdrop-blur-2xl
       "
       aria-label="Нижнее меню"
     >
-      <div className="flex items-center justify-between gap-1">
+      <div className="grid grid-cols-4 items-center gap-[3px]">
         <button
           type="button"
           onClick={() => router.push("/")}
@@ -219,11 +272,7 @@ export default function BottomNav() {
           aria-label="Избранное"
         >
           <span className={iconWrapClass("/favorites")}>
-            {favoritesBadge && (
-              <span className="absolute -right-1 -top-1 min-w-[17px] rounded-full bg-black px-1.5 text-center text-[9px] font-medium leading-[17px] text-white">
-                {favoritesBadge}
-              </span>
-            )}
+            {favoritesBadge && <span className={badgeClass}>{favoritesBadge}</span>}
             <HeartIcon active={isActive("/favorites")} />
           </span>
           <span className={labelClass("/favorites")}>Избранное</span>
@@ -236,11 +285,7 @@ export default function BottomNav() {
           aria-label="Корзина"
         >
           <span className={iconWrapClass("/cart")}>
-            {cartBadge && (
-              <span className="absolute -right-1 -top-1 min-w-[17px] rounded-full bg-black px-1.5 text-center text-[9px] font-medium leading-[17px] text-white">
-                {cartBadge}
-              </span>
-            )}
+            {cartBadge && <span className={badgeClass}>{cartBadge}</span>}
             <CartIcon active={isActive("/cart")} />
           </span>
           <span className={labelClass("/cart")}>Корзина</span>
@@ -253,21 +298,21 @@ export default function BottomNav() {
           aria-label="Профиль"
         >
           <span className={iconWrapClass("/profile")}>
-            <span
-              className={`flex h-[23px] w-[23px] items-center justify-center overflow-hidden rounded-full ${
-                isActive("/profile") ? "bg-black text-white" : "bg-[#F1F1F1] text-[#777]"
-              }`}
-            >
-              {customer?.photo_url ? (
+            {customer?.photo_url ? (
+              <span className="flex h-[29px] w-[29px] items-center justify-center overflow-hidden rounded-full bg-white">
                 <img
                   src={customer.photo_url}
                   alt="Профиль"
                   className="h-full w-full rounded-full object-cover"
                 />
-              ) : (
-                <span className="text-[11px] font-medium">{profileInitial}</span>
-              )}
-            </span>
+              </span>
+            ) : isActive("/profile") ? (
+              <span className="text-[14px] font-semibold leading-none">
+                {profileInitial}
+              </span>
+            ) : (
+              <ProfileIcon active={false} />
+            )}
           </span>
           <span className={labelClass("/profile")}>Профиль</span>
         </button>
