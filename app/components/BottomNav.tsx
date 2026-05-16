@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { House, Heart, ShoppingBag } from "lucide-react";
+import { Heart, House, ShoppingBag } from "lucide-react";
 import {
   syncTelegramCustomer,
   type CustomerProfile,
@@ -47,8 +47,7 @@ function getFavoritesCount() {
 function getCachedCustomer() {
   try {
     const raw = localStorage.getItem("customer_profile_cache") || "null";
-    const parsed = JSON.parse(raw) as CustomerProfile | null;
-    return parsed;
+    return JSON.parse(raw) as CustomerProfile | null;
   } catch {
     return null;
   }
@@ -62,15 +61,17 @@ function setCachedCustomer(customer: CustomerProfile | null) {
 }
 
 function createProfilePlaceholder(initial: string) {
-  const safeInitial = encodeURIComponent(initial || "P");
+  const safeInitial = (initial || "P").slice(0, 1).toUpperCase();
 
-  return `data:image/svg+xml;utf8,${encodeURIComponent(`
+  const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 56 56">
       <rect width="56" height="56" rx="28" fill="#eeeeee"/>
       <text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle"
         font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="500" fill="#8f8f8f">${safeInitial}</text>
     </svg>
-  `)}`;
+  `;
+
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 }
 
 export default function BottomNav() {
@@ -163,9 +164,7 @@ export default function BottomNav() {
   const isActive = (path: string) => pathname === path;
 
   const profileInitial =
-    customer?.first_name?.trim()?.charAt(0)?.toUpperCase() ||
-    customer?.username?.trim()?.charAt(0)?.toUpperCase() ||
-    "P";
+    customer?.first_name?.trim()?.charAt(0)?.toUpperCase() || "P";
 
   const profilePhoto = customer?.photo_url || createProfilePlaceholder(profileInitial);
 
@@ -176,11 +175,11 @@ export default function BottomNav() {
           position: fixed;
           left: 0;
           right: 0;
-          bottom: 0;
+          bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
           z-index: 50;
           background: #ffffff;
           border-top: 1px solid rgba(0, 0, 0, 0.08);
-          padding: 7px 16px calc(env(safe-area-inset-bottom, 0px) + 9px);
+          padding: 7px 16px 9px;
           -webkit-font-smoothing: antialiased;
         }
 
@@ -230,7 +229,18 @@ export default function BottomNav() {
         .mn-tabbar-icon svg {
           width: 28px;
           height: 28px;
-          stroke-width: 1.75;
+          stroke-width: 1.65;
+        }
+
+        .mn-home-door-mask {
+          position: absolute;
+          left: 50%;
+          bottom: 3px;
+          width: 9px;
+          height: 3px;
+          transform: translateX(-50%);
+          background: #ffffff;
+          pointer-events: none;
         }
 
         .mn-tabbar-label {
@@ -292,6 +302,7 @@ export default function BottomNav() {
           .mn-tabbar {
             padding-left: 10px;
             padding-right: 10px;
+            bottom: calc(env(safe-area-inset-bottom, 0px) + 9px);
           }
 
           .mn-tabbar-label {
@@ -301,6 +312,11 @@ export default function BottomNav() {
           .mn-tabbar-icon svg {
             width: 27px;
             height: 27px;
+          }
+
+          .mn-home-door-mask {
+            bottom: 3px;
+            width: 8px;
           }
         }
       `}</style>
@@ -316,6 +332,7 @@ export default function BottomNav() {
           >
             <span className="mn-tabbar-icon">
               <House />
+              <span className="mn-home-door-mask" aria-hidden="true" />
             </span>
             <span className="mn-tabbar-label">Главная</span>
           </button>
