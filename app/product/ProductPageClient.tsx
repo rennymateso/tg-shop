@@ -38,6 +38,92 @@ function getDiscountPercent(oldPrice: number | null, price: number) {
   return Math.round(((oldPrice - price) / oldPrice) * 100);
 }
 
+
+function TelegramViewportDebug() {
+  const [data, setData] = useState({
+    width: 0,
+    innerHeight: 0,
+    clientHeight: 0,
+    tgViewport: 0,
+    tgStable: 0,
+    platform: "",
+  });
+
+  useEffect(() => {
+    const update = () => {
+      const tg = (
+        window as unknown as {
+          Telegram?: {
+            WebApp?: {
+              viewportHeight?: number;
+              viewportStableHeight?: number;
+              platform?: string;
+              onEvent?: (event: string, callback: () => void) => void;
+              offEvent?: (event: string, callback: () => void) => void;
+            };
+          };
+        }
+      ).Telegram?.WebApp;
+
+      setData({
+        width: window.innerWidth,
+        innerHeight: window.innerHeight,
+        clientHeight: document.documentElement.clientHeight,
+        tgViewport: tg?.viewportHeight || 0,
+        tgStable: tg?.viewportStableHeight || 0,
+        platform: tg?.platform || "",
+      });
+    };
+
+    update();
+
+    const tg = (
+      window as unknown as {
+        Telegram?: {
+          WebApp?: {
+            onEvent?: (event: string, callback: () => void) => void;
+            offEvent?: (event: string, callback: () => void) => void;
+          };
+        };
+      }
+    ).Telegram?.WebApp;
+
+    window.addEventListener("resize", update);
+    tg?.onEvent?.("viewportChanged", update);
+
+    return () => {
+      window.removeEventListener("resize", update);
+      tg?.offEvent?.("viewportChanged", update);
+    };
+  }, []);
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        left: 8,
+        bottom: 8,
+        zIndex: 99999,
+        background: "rgba(0,0,0,.84)",
+        color: "#fff",
+        fontSize: 11,
+        lineHeight: 1.45,
+        padding: 10,
+        borderRadius: 10,
+        maxWidth: 270,
+        fontFamily: "Arial, sans-serif",
+      }}
+    >
+      <div>width: {data.width}</div>
+      <div>innerHeight: {data.innerHeight}</div>
+      <div>clientHeight: {data.clientHeight}</div>
+      <div>tg viewport: {data.tgViewport}</div>
+      <div>tg stable: {data.tgStable}</div>
+      <div>platform: {data.platform}</div>
+    </div>
+  );
+}
+
 export default function ProductPageClient({
   initialProduct,
   initialError,
@@ -247,6 +333,7 @@ export default function ProductPageClient({
         </div>
 
         <BottomNav />
+        <TelegramViewportDebug />
       </main>
     );
   }
@@ -500,6 +587,7 @@ export default function ProductPageClient({
       </div>
 
       <BottomNav />
+      <TelegramViewportDebug />
     </main>
   );
 }
