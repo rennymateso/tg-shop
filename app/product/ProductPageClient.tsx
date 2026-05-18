@@ -393,7 +393,7 @@ export default function ProductPageClient({
         .pd-topbar {
           position: fixed;
           left: 50%;
-          top: 84px;
+          top: 12px;
           z-index: 70;
           width: min(358px, calc(100vw - 32px));
           transform: translateX(-50%);
@@ -434,10 +434,10 @@ export default function ProductPageClient({
         .pd-hero {
           position: relative;
           margin-top: 0;
-          height: 468px;
+          height: 610px;
           overflow: hidden;
           background: #ececec;
-          border-radius: 0 0 24px 24px;
+          border-radius: 0;
         }
 
         .pd-hero::after {
@@ -451,7 +451,7 @@ export default function ProductPageClient({
         .pd-hero-img {
           width: 100%;
           height: 100%;
-          object-fit: cover;
+          object-fit: contain;
           display: block;
           user-select: none;
         }
@@ -487,8 +487,8 @@ export default function ProductPageClient({
         }
 
         .pd-card {
-          margin-top: -18px;
-          border-radius: 26px 26px 0 0;
+          margin-top: 0;
+          border-radius: 0;
           background: #fff;
           padding: 19px 16px 24px;
           box-shadow: 0 -8px 24px rgba(0,0,0,.05);
@@ -734,7 +734,7 @@ export default function ProductPageClient({
         .pd-buybar {
           position: fixed;
           left: 50%;
-          bottom: 100px;
+          bottom: 86px;
           z-index: 80;
           width: min(362px, calc(100vw - 28px));
           transform: translateX(-50%);
@@ -823,12 +823,12 @@ export default function ProductPageClient({
           }
 
           .pd-topbar {
-            top: 80px;
+            top: 12px;
             width: min(342px, calc(100vw - 28px));
           }
 
           .pd-hero {
-            height: 440px;
+            height: 570px;
           }
 
           .pd-title {
