@@ -382,7 +382,7 @@ export default function ProductPageClient({
           background: #f5f5f5;
           color: #111;
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", sans-serif;
-          padding-bottom: 228px;
+          padding-bottom: 204px;
         }
 
         .pd-shell {
@@ -393,7 +393,7 @@ export default function ProductPageClient({
         .pd-topbar {
           position: fixed;
           left: 50%;
-          top: 72px;
+          top: 84px;
           z-index: 70;
           width: min(358px, calc(100vw - 32px));
           transform: translateX(-50%);
@@ -411,8 +411,8 @@ export default function ProductPageClient({
         }
 
         .pd-icon-btn {
-          width: 40px;
-          height: 40px;
+          width: 38px;
+          height: 38px;
           border: 0;
           border-radius: 999px;
           background: rgba(255,255,255,.92);
@@ -433,11 +433,19 @@ export default function ProductPageClient({
 
         .pd-hero {
           position: relative;
-          margin-top: 124px;
-          height: 374px;
+          margin-top: 0;
+          height: 468px;
           overflow: hidden;
           background: #ececec;
-          border-radius: 0 0 22px 22px;
+          border-radius: 0 0 24px 24px;
+        }
+
+        .pd-hero::after {
+          content: "";
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+          background: linear-gradient(180deg, rgba(0,0,0,.18) 0%, rgba(0,0,0,0) 18%, rgba(0,0,0,0) 78%, rgba(0,0,0,.08) 100%);
         }
 
         .pd-hero-img {
@@ -479,10 +487,10 @@ export default function ProductPageClient({
         }
 
         .pd-card {
-          margin-top: -12px;
-          border-radius: 24px 24px 0 0;
+          margin-top: -18px;
+          border-radius: 26px 26px 0 0;
           background: #fff;
-          padding: 20px 16px 26px;
+          padding: 19px 16px 24px;
           box-shadow: 0 -8px 24px rgba(0,0,0,.05);
         }
 
@@ -509,7 +517,7 @@ export default function ProductPageClient({
         .pd-article {
           flex: 0 0 auto;
           color: #aaa;
-          font-size: 10.5px;
+          font-size: 10.2px;
           line-height: 1;
           font-weight: 400;
           letter-spacing: .06em;
@@ -577,8 +585,8 @@ export default function ProductPageClient({
         }
 
         .pd-section {
-          margin-top: 18px;
-          padding-top: 16px;
+          margin-top: 17px;
+          padding-top: 15px;
           border-top: 1px solid rgba(0,0,0,.075);
         }
 
@@ -602,7 +610,7 @@ export default function ProductPageClient({
         }
 
         .pd-size {
-          min-height: 48px;
+          min-height: 46px;
           border: 1px solid rgba(0,0,0,.1);
           border-radius: 12px;
           background: #fff;
@@ -635,7 +643,7 @@ export default function ProductPageClient({
           margin-top: 12px;
           display: flex;
           align-items: center;
-          gap: 9px;
+          gap: 8px;
           overflow-x: auto;
           padding-bottom: 2px;
           scrollbar-width: none;
@@ -647,8 +655,8 @@ export default function ProductPageClient({
 
         .pd-color {
           flex: 0 0 auto;
-          width: 54px;
-          height: 68px;
+          width: 52px;
+          height: 65px;
           border: 1px solid rgba(0,0,0,.10);
           border-radius: 13px;
           background: #f2f2f2;
@@ -668,20 +676,39 @@ export default function ProductPageClient({
           display: block;
         }
 
-        .pd-composition {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
+        .pd-composition-card {
+          margin-top: 12px;
+          border-radius: 16px;
+          background: #f7f7f7;
+          overflow: hidden;
         }
 
-        .pd-composition span {
-          border-radius: 999px;
-          background: #f5f5f5;
-          color: #555;
-          padding: 8px 11px;
+        .pd-composition-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          padding: 12px 13px;
+          border-bottom: 1px solid rgba(0,0,0,.055);
+        }
+
+        .pd-composition-row:last-child {
+          border-bottom: 0;
+        }
+
+        .pd-composition-label {
+          color: #777;
           font-size: 12px;
           line-height: 1;
           font-weight: 400;
+        }
+
+        .pd-composition-value {
+          color: #111;
+          font-size: 12.5px;
+          line-height: 1;
+          font-weight: 400;
+          text-align: right;
         }
 
         .pd-description {
@@ -707,26 +734,26 @@ export default function ProductPageClient({
         .pd-buybar {
           position: fixed;
           left: 50%;
-          bottom: 104px;
+          bottom: 100px;
           z-index: 80;
           width: min(362px, calc(100vw - 28px));
           transform: translateX(-50%);
-          padding-top: 10px;
-          background: linear-gradient(180deg, rgba(245,245,245,0), rgba(245,245,245,.96) 32%, rgba(245,245,245,.96));
+          padding-top: 8px;
+          background: linear-gradient(180deg, rgba(245,245,245,0), rgba(245,245,245,.94) 34%, rgba(245,245,245,.94));
         }
 
         .pd-buyrow {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 9px;
+          gap: 8px;
         }
 
         .pd-action {
-          height: 52px;
+          height: 46px;
           border: 0;
           border-radius: 15px;
           color: #fff;
-          font-size: 13.5px;
+          font-size: 13px;
           line-height: 1;
           font-weight: 500;
           cursor: pointer;
@@ -742,12 +769,12 @@ export default function ProductPageClient({
         }
 
         .pd-counter {
-          height: 52px;
+          height: 46px;
           border-radius: 15px;
           background: #111;
           color: #fff;
           display: grid;
-          grid-template-columns: 40px 1fr 40px;
+          grid-template-columns: 38px 1fr 38px;
           align-items: center;
           overflow: hidden;
           box-shadow: 0 10px 24px rgba(0,0,0,.10);
@@ -765,20 +792,20 @@ export default function ProductPageClient({
 
         .pd-counter span {
           text-align: center;
-          font-size: 12.5px;
+          font-size: 12px;
           line-height: 1;
           font-weight: 500;
           white-space: nowrap;
         }
 
         .pd-security {
-          margin-top: 8px;
+          margin-top: 6px;
           display: flex;
           align-items: center;
           justify-content: center;
           gap: 10px;
           color: #8b8b8b;
-          font-size: 10.5px;
+          font-size: 10.2px;
           line-height: 1;
           font-weight: 400;
           white-space: nowrap;
@@ -796,13 +823,12 @@ export default function ProductPageClient({
           }
 
           .pd-topbar {
-            top: 68px;
+            top: 80px;
             width: min(342px, calc(100vw - 28px));
           }
 
           .pd-hero {
-            margin-top: 118px;
-            height: 344px;
+            height: 440px;
           }
 
           .pd-title {
@@ -835,38 +861,7 @@ export default function ProductPageClient({
 
       <main className="pd-page">
         <div className="pd-shell">
-          <div className="pd-topbar">
-            <button
-              type="button"
-              className="pd-icon-btn"
-              onClick={() => router.back()}
-              aria-label="Назад"
-            >
-              <IconBack />
-            </button>
-
-            <div className="pd-actions">
-              <button
-                type="button"
-                onClick={toggleFavorite}
-                aria-label="В избранное"
-                className={`pd-icon-btn${favorites.includes(product.id) ? " active" : ""}`}
-              >
-                <IconHeart active={favorites.includes(product.id)} />
-              </button>
-
-              <button
-                type="button"
-                onClick={handleShare}
-                className="pd-icon-btn"
-                aria-label="Поделиться"
-              >
-                <IconShare />
-              </button>
-            </div>
-          </div>
-
-          <section
+                    <section
             className="pd-hero"
             onTouchStart={onTouchStart}
             onTouchEnd={onTouchEnd}
@@ -899,6 +894,37 @@ export default function ProductPageClient({
               </div>
             )}
           </section>
+
+          <div className="pd-topbar">
+            <button
+              type="button"
+              className="pd-icon-btn"
+              onClick={() => router.back()}
+              aria-label="Назад"
+            >
+              <IconBack />
+            </button>
+
+            <div className="pd-actions">
+              <button
+                type="button"
+                onClick={toggleFavorite}
+                aria-label="В избранное"
+                className={`pd-icon-btn${favorites.includes(product.id) ? " active" : ""}`}
+              >
+                <IconHeart active={favorites.includes(product.id)} />
+              </button>
+
+              <button
+                type="button"
+                onClick={handleShare}
+                className="pd-icon-btn"
+                aria-label="Поделиться"
+              >
+                <IconShare />
+              </button>
+            </div>
+          </div>
 
           <section className="pd-card">
             <div className="pd-brand-row">
@@ -974,11 +1000,18 @@ export default function ProductPageClient({
 
             {product.composition.length > 0 && (
               <div className="pd-section">
-                <div className="pd-section-title" style={{ marginBottom: 12 }}>Состав</div>
-                <div className="pd-composition">
-                  {product.composition.map((item) => (
-                    <span key={item}>{item}</span>
+                <div className="pd-section-title">Состав и характеристики</div>
+                <div className="pd-composition-card">
+                  {product.composition.map((item, index) => (
+                    <div key={`${item}-${index}`} className="pd-composition-row">
+                      <span className="pd-composition-label">Материал {index + 1}</span>
+                      <span className="pd-composition-value">{item}</span>
+                    </div>
                   ))}
+                  <div className="pd-composition-row">
+                    <span className="pd-composition-label">Категория</span>
+                    <span className="pd-composition-value">{product.category}</span>
+                  </div>
                 </div>
               </div>
             )}
