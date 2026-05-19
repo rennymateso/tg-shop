@@ -469,20 +469,20 @@ export default function ProductPageClient({
           <div className="mb-4">
             <div className="flex items-end gap-2">
               {product.oldPrice && (
-                <span className="pb-[2px] text-[15px] font-normal leading-none text-[#A0A7B5] line-through decoration-[1px]">
+                <span className="pb-[1px] text-[12px] font-medium leading-none text-[#A0A7B5] line-through decoration-[1px]">
                   {formatPrice(product.oldPrice)} ₽
                 </span>
               )}
 
-              <span className="text-[25px] font-semibold leading-none tracking-[-0.04em] text-[#16A34A]">
-                {formatPrice(product.price)} ₽
-              </span>
-
               {discountPercent > 0 && (
-                <span className="pb-[3px] text-[14px] font-semibold leading-none text-[#FF2F7D]">
+                <span className="pb-[1px] text-[12px] font-semibold leading-none text-[#FF2F7D]">
                   -{discountPercent}%
                 </span>
               )}
+
+              <span className="text-[17px] font-bold leading-none tracking-[-0.035em] text-[#16A34A]">
+                {formatPrice(product.price)} ₽
+              </span>
             </div>
 
             <div className="mt-4 h-px w-full bg-[#ECECEC]" />
