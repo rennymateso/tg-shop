@@ -480,7 +480,7 @@ export default function ProductPageClient({
                 </span>
               ) : null}
 
-              <span className="text-[16px] font-bold leading-none tracking-[-0.035em] text-[#128243]">
+              <span className="text-[16px] font-bold leading-none tracking-[-0.035em] text-[#16A34A]">
                 {formatPrice(product.price)} ₽
               </span>
             </div>
