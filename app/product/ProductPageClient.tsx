@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useRef, useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import BottomNav from "../components/BottomNav";
 
 export type Product = {
@@ -38,6 +37,62 @@ function getDiscountPercent(oldPrice: number | null, price: number) {
   return Math.round(((oldPrice - price) / oldPrice) * 100);
 }
 
+function formatPrice(value: number | null | undefined) {
+  if (!value) return "";
+  return value.toLocaleString("ru-RU");
+}
+
+function getCartProductCount(productId: string) {
+  try {
+    const cart = JSON.parse(localStorage.getItem("cart") || "[]") as CartItem[];
+    if (!Array.isArray(cart)) return 0;
+
+    return cart
+      .filter((item) => item.id === productId)
+      .reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+  } catch {
+    return 0;
+  }
+}
+
+function ShieldIcon() {
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M12 3 19 6v5c0 4.6-2.9 8.4-7 10-4.1-1.6-7-5.4-7-10V6l7-3Z" />
+      <path d="m9 12 2 2 4-4" />
+    </svg>
+  );
+}
+
+function LockIcon() {
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <rect x="5" y="10" width="14" height="10" rx="2" />
+      <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+    </svg>
+  );
+}
+
 export default function ProductPageClient({
   initialProduct,
   initialError,
@@ -45,17 +100,24 @@ export default function ProductPageClient({
   initialProduct: Product | null;
   initialError: string;
 }) {
-  const router = useRouter();
-
   const [product] = useState<Product | null>(initialProduct);
-  const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
+
+  const getInitialSize = () => {
+    if (!initialProduct) return "S";
+    if (initialProduct.sizes?.includes("S")) return "S";
+    return initialProduct.sizes?.[0] || "S";
+  };
+
+  const [selectedSize, setSelectedSize] = useState<string>(getInitialSize);
   const [selectedColor, setSelectedColor] = useState(
-    initialProduct?.defaultColor || ""
+    initialProduct?.defaultColor || initialProduct?.colors?.[0] || ""
   );
   const [favorites, setFavorites] = useState<string[]>([]);
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [justAdded, setJustAdded] = useState(false);
+  const [cartProductCount, setCartProductCount] = useState(0);
+  const [showSizeTable, setShowSizeTable] = useState(false);
 
   const touchStartXRef = useRef<number | null>(null);
   const addedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -64,6 +126,26 @@ export default function ProductPageClient({
     const data = JSON.parse(localStorage.getItem("favorites") || "[]");
     setFavorites(Array.isArray(data) ? data : []);
   }, []);
+
+  useEffect(() => {
+    if (!product) return;
+
+    const syncCount = () => {
+      setCartProductCount(getCartProductCount(product.id));
+    };
+
+    syncCount();
+
+    window.addEventListener("cart-updated", syncCount);
+    window.addEventListener("storage", syncCount);
+    window.addEventListener("focus", syncCount);
+
+    return () => {
+      window.removeEventListener("cart-updated", syncCount);
+      window.removeEventListener("storage", syncCount);
+      window.removeEventListener("focus", syncCount);
+    };
+  }, [product]);
 
   useEffect(() => {
     return () => {
@@ -75,8 +157,15 @@ export default function ProductPageClient({
 
   const galleryImages = useMemo(() => {
     if (!product) return [];
+
     const colorGallery = product.galleryByColor?.[selectedColor] || [];
+
     if (colorGallery.length > 0) return colorGallery;
+
+    const colorImage = selectedColor ? product.colorImages?.[selectedColor] : "";
+
+    if (colorImage) return [colorImage];
+
     return product.images?.length ? product.images : [product.image];
   }, [product, selectedColor]);
 
@@ -113,25 +202,15 @@ export default function ProductPageClient({
   ];
 
   const sizes = product?.type === "bottom" ? bottomSizes : topSizes;
-
   const article = product ? `ART-${product.id}` : "";
   const description = product?.description || "";
-  const canOrder = selectedSizes.length > 0 && !!selectedColor;
+  const canOrder = !!selectedSize && !!selectedColor;
   const discountPercent = product
     ? getDiscountPercent(product.oldPrice, product.price)
     : 0;
 
-  const toggleSize = (value: string) => {
-    setSelectedSizes((prev) =>
-      prev.includes(value)
-        ? prev.filter((item) => item !== value)
-        : [...prev, value]
-    );
-  };
-
   const selectColor = (value: string) => {
     setSelectedColor(value);
-    setSelectedSizes([]);
     setActiveImageIndex(0);
     setJustAdded(false);
   };
@@ -190,35 +269,32 @@ export default function ProductPageClient({
       localStorage.getItem("cart") || "[]"
     );
 
-    const newItems: CartItem[] = selectedSizes.map((size) => ({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      size,
-      color: selectedColor,
-      quantity: 1,
-    }));
-
     const updatedCart = [...existingCart];
 
-    newItems.forEach((newItem) => {
-      const existingIndex = updatedCart.findIndex(
-        (item) =>
-          item.id === newItem.id &&
-          item.size === newItem.size &&
-          item.color === newItem.color
-      );
+    const existingIndex = updatedCart.findIndex(
+      (item) =>
+        item.id === product.id &&
+        item.size === selectedSize &&
+        item.color === selectedColor
+    );
 
-      if (existingIndex >= 0) {
-        updatedCart[existingIndex].quantity += newItem.quantity;
-      } else {
-        updatedCart.push(newItem);
-      }
-    });
+    if (existingIndex >= 0) {
+      updatedCart[existingIndex].quantity += 1;
+    } else {
+      updatedCart.push({
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        size: selectedSize,
+        color: selectedColor,
+        quantity: 1,
+      });
+    }
 
     localStorage.setItem("cart", JSON.stringify(updatedCart));
     window.dispatchEvent(new Event("cart-updated"));
 
+    setCartProductCount(getCartProductCount(product.id));
     setJustAdded(true);
 
     if (addedTimerRef.current) {
@@ -227,7 +303,7 @@ export default function ProductPageClient({
 
     addedTimerRef.current = setTimeout(() => {
       setJustAdded(false);
-    }, 1800);
+    }, 1500);
   };
 
   if (!product) {
@@ -253,29 +329,6 @@ export default function ProductPageClient({
 
   return (
     <main className="min-h-screen bg-[#F5F5F5] px-4 pt-[76px] pb-32">
-      <div className="mb-4 flex items-center justify-end">
-        <button
-          onClick={toggleFavorite}
-          aria-label="В избранное"
-          className={`flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-2xl transition-all duration-200 active:scale-[0.99] ${
-            favorites.includes(product.id)
-              ? "bg-black text-white"
-              : "bg-white text-black shadow-[0_4px_16px_rgba(0,0,0,0.04)]"
-          }`}
-        >
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill={favorites.includes(product.id) ? "currentColor" : "none"}
-            stroke="currentColor"
-            strokeWidth="1.8"
-          >
-            <path d="M20.8 4.6c-1.8-1.8-4.7-1.8-6.5 0L12 6.9l-2.3-2.3c-1.8-1.8-4.7-1.8-6.5 0s-1.8 4.7 0 6.5L12 21l8.8-9.9c1.8-1.8 1.8-4.7 0-6.5z" />
-          </svg>
-        </button>
-      </div>
-
       <div className="overflow-hidden rounded-[24px] bg-white shadow-[0_10px_30px_rgba(0,0,0,0.05)]">
         <div
           className="relative aspect-[3/4] overflow-hidden bg-[#ECECEC]"
@@ -291,6 +344,31 @@ export default function ProductPageClient({
               e.currentTarget.src = "/products/product-1.jpg";
             }}
           />
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleFavorite();
+            }}
+            aria-label="В избранное"
+            className={`absolute right-3 top-3 z-20 flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-full transition-all duration-200 active:scale-[0.98] ${
+              favorites.includes(product.id)
+                ? "bg-black text-white"
+                : "bg-white/90 text-black shadow-[0_4px_16px_rgba(0,0,0,0.08)] backdrop-blur"
+            }`}
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill={favorites.includes(product.id) ? "currentColor" : "none"}
+              stroke="currentColor"
+              strokeWidth="1.8"
+            >
+              <path d="M20.8 4.6c-1.8-1.8-4.7-1.8-6.5 0L12 6.9l-2.3-2.3c-1.8-1.8-4.7-1.8-6.5 0s-1.8 4.7 0 6.5L12 21l8.8-9.9c1.8-1.8 1.8-4.7 0-6.5z" />
+            </svg>
+          </button>
 
           <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-1.5">
             {galleryImages.map((_, index) => (
@@ -314,56 +392,68 @@ export default function ProductPageClient({
 
         <div className="p-5">
           <div className="mb-2 flex items-center justify-between gap-3">
-            <div className="text-[11px] uppercase tracking-[0.16em] text-gray-400">
-              {product.brand}
+            <div className="min-w-0">
+              <div className="text-[11px] uppercase tracking-[0.16em] text-gray-400">
+                {product.brand}
+              </div>
+
+              <h1 className="mt-2 text-[24px] font-medium leading-tight text-black">
+                {product.name}
+              </h1>
             </div>
 
-            <div className="text-[11px] uppercase tracking-[0.16em] text-gray-400">
+            <div className="shrink-0 text-[10px] uppercase tracking-[0.12em] text-gray-400">
               {article}
             </div>
           </div>
 
-          <div className="mb-3 flex items-start justify-between gap-3">
+          <div className="mb-3 mt-4 flex items-start justify-between gap-3">
             <div className="flex items-center gap-2">
               {product.oldPrice && (
                 <span className="text-[14px] font-normal leading-none text-gray-400 line-through">
-                  {product.oldPrice} ₽
+                  {formatPrice(product.oldPrice)} ₽
                 </span>
               )}
 
-              <span className="text-[21px] font-semibold leading-none tracking-[-0.02em] text-[#16A34A]">
-                {product.price} ₽
+              <span className="text-[22px] font-semibold leading-none tracking-[-0.02em] text-black">
+                {formatPrice(product.price)} ₽
               </span>
 
               {discountPercent > 0 && (
-                <span className="rounded-full bg-[#E8F7EE] px-1.5 py-0.5 text-[10px] font-medium text-[#16A34A]">
+                <span className="rounded-full bg-[#F5F5F5] px-1.5 py-0.5 text-[10px] font-medium text-[#D92D20]">
                   -{discountPercent}%
                 </span>
               )}
             </div>
 
             {product.badge ? (
-              <div
-                className={`shrink-0 rounded-full px-3 py-1 text-[10px] font-medium ${
-                  product.badge === "Из-за рубежа"
-                    ? "bg-black text-white"
-                    : "bg-[#F5F5F5] text-black"
-                }`}
-              >
+              <div className="shrink-0 rounded-full bg-[#F2F2F2] px-3 py-1 text-[10px] font-medium text-[#666]">
                 {product.badge}
               </div>
             ) : null}
           </div>
 
           <div className="mt-5">
-            <p className="mb-2 text-sm text-gray-500">Размер</p>
+            <div className="mb-2 flex items-end justify-between gap-3">
+              <p className="text-sm text-gray-500">Размер</p>
+
+              <button
+                type="button"
+                onClick={() => setShowSizeTable(true)}
+                className="text-[11px] text-gray-400 underline underline-offset-2"
+              >
+                таблица размеров
+              </button>
+            </div>
+
             <div className="grid grid-cols-5 gap-1.5">
               {sizes.map((s) => (
                 <button
                   key={s.label}
-                  onClick={() => toggleSize(s.label)}
+                  type="button"
+                  onClick={() => setSelectedSize(s.label)}
                   className={`rounded-xl border px-1.5 py-2 text-center transition-all duration-200 active:scale-95 ${
-                    selectedSizes.includes(s.label)
+                    selectedSize === s.label
                       ? "border-black bg-black text-white"
                       : "border-gray-200 bg-white text-black"
                   }`}
@@ -371,9 +461,7 @@ export default function ProductPageClient({
                   <div className="text-[11px] font-medium">{s.label}</div>
                   <div
                     className={`mt-0.5 text-[9px] ${
-                      selectedSizes.includes(s.label)
-                        ? "text-white/70"
-                        : "text-gray-400"
+                      selectedSize === s.label ? "text-white/70" : "text-gray-400"
                     }`}
                   >
                     {s.sub}
@@ -383,9 +471,7 @@ export default function ProductPageClient({
             </div>
 
             <div className="mt-2 text-[12px] text-gray-400">
-              {selectedSizes.length > 0
-                ? `Выбрано размеров: ${selectedSizes.join(", ")}`
-                : "Можно выбрать несколько размеров"}
+              Выбран размер: {selectedSize}
             </div>
           </div>
 
@@ -404,6 +490,7 @@ export default function ProductPageClient({
                 return (
                   <button
                     key={c}
+                    type="button"
                     onClick={() => selectColor(c)}
                     className={`overflow-hidden rounded-2xl border bg-white transition-all duration-200 active:scale-95 ${
                       isSelected
@@ -432,26 +519,37 @@ export default function ProductPageClient({
           </div>
 
           {product.composition.length > 0 && (
-            <div className="mt-5">
-              <p className="mb-2 text-sm text-gray-500">Состав</p>
-              <div className="flex flex-wrap gap-2">
-                {product.composition.map((item) => (
-                  <span
-                    key={item}
-                    className="rounded-full bg-[#F5F5F5] px-3 py-1.5 text-[12px] text-gray-700"
+            <div className="mt-6 rounded-[22px] bg-[#F7F7F7] p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <p className="text-sm font-medium text-black">Состав и уход</p>
+                <span className="text-[11px] text-gray-400">информация о товаре</span>
+              </div>
+
+              <div className="space-y-2">
+                {product.composition.map((item, index) => (
+                  <div
+                    key={`${item}-${index}`}
+                    className="flex items-center justify-between rounded-2xl bg-white px-3 py-2.5"
                   >
-                    {item}
-                  </span>
+                    <span className="text-[12px] text-gray-400">
+                      Материал {index + 1}
+                    </span>
+                    <span className="text-[13px] text-gray-700">{item}</span>
+                  </div>
                 ))}
+
+                <div className="flex items-center justify-between rounded-2xl bg-white px-3 py-2.5">
+                  <span className="text-[12px] text-gray-400">Категория</span>
+                  <span className="text-[13px] text-gray-700">{product.category}</span>
+                </div>
+
+                <div className="flex items-center justify-between rounded-2xl bg-white px-3 py-2.5">
+                  <span className="text-[12px] text-gray-400">Доставка</span>
+                  <span className="text-[13px] text-gray-700">7–14 дней</span>
+                </div>
               </div>
             </div>
           )}
-
-          <div className="mt-5">
-            <h1 className="text-[24px] font-medium leading-tight text-black">
-              {product.name}
-            </h1>
-          </div>
 
           <div className="mt-5">
             <p className="text-[14px] leading-6 text-gray-600">
@@ -462,6 +560,7 @@ export default function ProductPageClient({
 
             {description.length > 110 && (
               <button
+                type="button"
                 onClick={() => setShowFullDescription((prev) => !prev)}
                 className="mt-2 text-[13px] text-black underline underline-offset-2"
               >
@@ -470,34 +569,87 @@ export default function ProductPageClient({
             )}
           </div>
 
-          <div className="mt-6 flex items-center justify-between rounded-2xl bg-[#F7F7F7] px-4 py-3">
-            <span className="text-sm text-gray-500">Товаров к добавлению</span>
-            <span className="text-[18px] font-semibold tracking-[-0.02em] text-black">
-              {selectedSizes.length * (selectedColor ? 1 : 0)}
-            </span>
-          </div>
-
           <div className="mt-5">
             <button
+              type="button"
               onClick={addToCart}
               disabled={!canOrder}
-              className={`w-full rounded-2xl py-3.5 text-sm font-medium transition-all duration-200 ${
-                !canOrder
-                  ? "bg-gray-200 text-gray-500"
-                  : justAdded
+              className={`relative w-full rounded-2xl py-3.5 text-sm font-medium transition-all duration-200 ${
+                justAdded
                   ? "bg-[#16A34A] text-white"
                   : "bg-black text-white active:scale-[0.99]"
               }`}
             >
-              {!canOrder
-                ? "Добавить в корзину"
-                : justAdded
-                ? "Добавлено"
-                : "Добавить в корзину"}
+              <span>
+                {justAdded ? "Добавлено" : "Добавить в корзину"}
+              </span>
+
+              {cartProductCount > 0 && (
+                <span className="absolute right-4 top-1/2 flex h-6 min-w-6 -translate-y-1/2 items-center justify-center rounded-full bg-white px-2 text-[12px] font-semibold text-black">
+                  {cartProductCount}
+                </span>
+              )}
             </button>
+
+            <div className="mt-3 flex items-center justify-center gap-3 text-[11px] text-gray-400">
+              <span className="inline-flex items-center gap-1">
+                <ShieldIcon />
+                Ваши данные защищены
+              </span>
+
+              <span className="inline-flex items-center gap-1">
+                <LockIcon />
+                Безопасная оплата
+              </span>
+            </div>
           </div>
         </div>
       </div>
+
+      {showSizeTable && (
+        <div className="fixed inset-0 z-[120] flex items-end bg-black/35 px-3 pb-3">
+          <div className="w-full rounded-[24px] bg-white p-5 shadow-[0_18px_60px_rgba(0,0,0,0.18)]">
+            <div className="mb-4 flex items-center justify-between">
+              <p className="text-[16px] font-medium text-black">Таблица размеров</p>
+              <button
+                type="button"
+                onClick={() => setShowSizeTable(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-[#F5F5F5] text-[18px] text-black"
+                aria-label="Закрыть"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="overflow-hidden rounded-2xl border border-gray-100">
+              <div className="grid grid-cols-3 bg-[#F7F7F7] px-3 py-2 text-[12px] text-gray-400">
+                <span>Размер</span>
+                <span>RU</span>
+                <span>Тип</span>
+              </div>
+
+              {sizes.map((s) => (
+                <div
+                  key={`table-${s.label}`}
+                  className="grid grid-cols-3 border-t border-gray-100 px-3 py-2 text-[13px] text-gray-700"
+                >
+                  <span>{s.label}</span>
+                  <span>{s.sub}</span>
+                  <span>{product.type === "bottom" ? "Низ" : "Верх"}</span>
+                </div>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowSizeTable(false)}
+              className="mt-4 w-full rounded-2xl bg-black py-3 text-sm font-medium text-white"
+            >
+              Понятно
+            </button>
+          </div>
+        </div>
+      )}
 
       <BottomNav />
     </main>
