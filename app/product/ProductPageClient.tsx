@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import BottomNav from "../components/BottomNav";
 
 export type Product = {
@@ -42,6 +43,21 @@ function formatPrice(value: number | null | undefined) {
   return value.toLocaleString("ru-RU");
 }
 
+function getDefaultSize(product: Product | null) {
+  if (!product) return "S";
+
+  if (product.sizes?.includes("S")) return "S";
+  if (product.sizes?.length) return product.sizes[0];
+
+  return product.type === "bottom" ? "30" : "S";
+}
+
+function getProductionCountry(product: Product) {
+  return product.badge?.trim().toLowerCase() === "из-за рубежа"
+    ? "Импорт"
+    : "Россия";
+}
+
 function getCartProductCount(productId: string) {
   try {
     const cart = JSON.parse(localStorage.getItem("cart") || "[]") as CartItem[];
@@ -55,115 +71,73 @@ function getCartProductCount(productId: string) {
   }
 }
 
-function ShieldIcon() {
+function IconBack() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M15 18 9 12l6-6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function IconHeart({ active }: { active: boolean }) {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill={active ? "currentColor" : "none"}
+      stroke="currentColor"
+      strokeWidth="1.7"
+    >
+      <path
+        d="M20.8 4.6c-1.8-1.8-4.7-1.8-6.5 0L12 6.9 9.7 4.6c-1.8-1.8-4.7-1.8-6.5 0s-1.8 4.7 0 6.5L12 21l8.8-9.9c1.8-1.8 1.8-4.7 0-6.5Z"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function IconCopy({ copied }: { copied: boolean }) {
   return (
     <svg
       width="13"
       height="13"
       viewBox="0 0 24 24"
       fill="none"
-      stroke="currentColor"
+      stroke={copied ? "#16A34A" : "currentColor"}
       strokeWidth="1.8"
       strokeLinecap="round"
       strokeLinejoin="round"
-      aria-hidden="true"
     >
+      {copied ? (
+        <path d="m5 12 4 4L19 6" />
+      ) : (
+        <>
+          <rect x="8" y="8" width="12" height="12" rx="2" />
+          <path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" />
+        </>
+      )}
+    </svg>
+  );
+}
+
+function IconShield() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 3 19 6v5c0 4.6-2.9 8.4-7 10-4.1-1.6-7-5.4-7-10V6l7-3Z" />
       <path d="m9 12 2 2 4-4" />
     </svg>
   );
 }
 
-function LockIcon() {
+function IconLock() {
   return (
-    <svg
-      width="13"
-      height="13"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <rect x="5" y="10" width="14" height="10" rx="2" />
       <path d="M8 10V7a4 4 0 0 1 8 0v3" />
     </svg>
   );
-}
-
-function CopyIcon() {
-  return (
-    <svg
-      width="13"
-      height="13"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.75"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <rect x="9" y="9" width="10" height="10" rx="2" />
-      <path d="M5 15H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1" />
-    </svg>
-  );
-}
-
-type SizeTableRow = {
-  size: string;
-  ru: string;
-  width: string;
-  length: string;
-};
-
-function getSizeTableRows(product: Product | null): SizeTableRow[] {
-  const category = product?.category?.toLowerCase() || "";
-  const isBottom = product?.type === "bottom" || category.includes("джинс") || category.includes("брюк") || category.includes("юбк");
-
-  if (isBottom) {
-    return [
-      { size: "30", ru: "46", width: "76 см", length: "81 см" },
-      { size: "31", ru: "46–48", width: "79 см", length: "81 см" },
-      { size: "32", ru: "48", width: "81 см", length: "81 см" },
-      { size: "33", ru: "48–50", width: "84 см", length: "81 см" },
-      { size: "34", ru: "50", width: "86 см", length: "86 см" },
-      { size: "36", ru: "52", width: "91 см", length: "86 см" },
-      { size: "38", ru: "54", width: "97 см", length: "86 см" },
-    ];
-  }
-
-  const isWomen = category.includes("плать") || category.includes("юбк") || category.includes("жен");
-
-  if (isWomen) {
-    return [
-      { size: "S", ru: "42–44", width: "37 см", length: "57 см" },
-      { size: "M", ru: "46–48", width: "39 см", length: "58 см" },
-      { size: "L", ru: "48–50", width: "42 см", length: "60 см" },
-      { size: "XL", ru: "50–52", width: "44 см", length: "61 см" },
-      { size: "XXL", ru: "52–54", width: "46 см", length: "62 см" },
-    ];
-  }
-
-  if (category.includes("поло")) {
-    return [
-      { size: "S", ru: "44–46", width: "50 см", length: "70 см" },
-      { size: "M", ru: "46–48", width: "52 см", length: "72 см" },
-      { size: "L", ru: "48–50", width: "54 см", length: "74 см" },
-      { size: "XL", ru: "50–52", width: "56 см", length: "76 см" },
-      { size: "XXL", ru: "52–54", width: "58 см", length: "78 см" },
-    ];
-  }
-
-  return [
-    { size: "S", ru: "44–46", width: "49 см", length: "70 см" },
-    { size: "M", ru: "46–48", width: "52 см", length: "72 см" },
-    { size: "L", ru: "48–50", width: "55 см", length: "74 см" },
-    { size: "XL", ru: "50–52", width: "58 см", length: "76 см" },
-    { size: "XXL", ru: "52–54", width: "61 см", length: "78 см" },
-  ];
 }
 
 export default function ProductPageClient({
@@ -173,15 +147,10 @@ export default function ProductPageClient({
   initialProduct: Product | null;
   initialError: string;
 }) {
+  const router = useRouter();
+
   const [product] = useState<Product | null>(initialProduct);
-
-  const getInitialSize = () => {
-    if (!initialProduct) return "S";
-    if (initialProduct.sizes?.includes("S")) return "S";
-    return initialProduct.sizes?.[0] || "S";
-  };
-
-  const [selectedSize, setSelectedSize] = useState<string>(getInitialSize);
+  const [selectedSize, setSelectedSize] = useState(getDefaultSize(initialProduct));
   const [selectedColor, setSelectedColor] = useState(
     initialProduct?.defaultColor || initialProduct?.colors?.[0] || ""
   );
@@ -190,11 +159,11 @@ export default function ProductPageClient({
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [justAdded, setJustAdded] = useState(false);
   const [cartProductCount, setCartProductCount] = useState(0);
-  const [showSizeTable, setShowSizeTable] = useState(false);
   const [articleCopied, setArticleCopied] = useState(false);
 
   const touchStartXRef = useRef<number | null>(null);
   const addedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const data = JSON.parse(localStorage.getItem("favorites") || "[]");
@@ -204,42 +173,39 @@ export default function ProductPageClient({
   useEffect(() => {
     if (!product) return;
 
-    const syncCount = () => {
+    setSelectedSize(getDefaultSize(product));
+    setSelectedColor(product.defaultColor || product.colors?.[0] || "");
+    setCartProductCount(getCartProductCount(product.id));
+  }, [product]);
+
+  useEffect(() => {
+    const syncCartCount = () => {
+      if (!product) return;
       setCartProductCount(getCartProductCount(product.id));
     };
 
-    syncCount();
-
-    window.addEventListener("cart-updated", syncCount);
-    window.addEventListener("storage", syncCount);
-    window.addEventListener("focus", syncCount);
+    window.addEventListener("cart-updated", syncCartCount);
+    window.addEventListener("storage", syncCartCount);
 
     return () => {
-      window.removeEventListener("cart-updated", syncCount);
-      window.removeEventListener("storage", syncCount);
-      window.removeEventListener("focus", syncCount);
+      window.removeEventListener("cart-updated", syncCartCount);
+      window.removeEventListener("storage", syncCartCount);
     };
   }, [product]);
 
   useEffect(() => {
     return () => {
-      if (addedTimerRef.current) {
-        clearTimeout(addedTimerRef.current);
-      }
+      if (addedTimerRef.current) clearTimeout(addedTimerRef.current);
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
     };
   }, []);
 
   const galleryImages = useMemo(() => {
     if (!product) return [];
-
     const colorGallery = product.galleryByColor?.[selectedColor] || [];
-
     if (colorGallery.length > 0) return colorGallery;
-
     const colorImage = selectedColor ? product.colorImages?.[selectedColor] : "";
-
     if (colorImage) return [colorImage];
-
     return product.images?.length ? product.images : [product.image];
   }, [product, selectedColor]);
 
@@ -276,10 +242,9 @@ export default function ProductPageClient({
   ];
 
   const sizes = product?.type === "bottom" ? bottomSizes : topSizes;
+
   const article = product ? `ART-${product.id}` : "";
-  const sizeTableRows = getSizeTableRows(product);
   const description = product?.description || "";
-  const canOrder = !!selectedSize && !!selectedColor;
   const discountPercent = product
     ? getDiscountPercent(product.oldPrice, product.price)
     : 0;
@@ -315,9 +280,14 @@ export default function ProductPageClient({
 
     const diff = touchStartXRef.current - endX;
 
-    if (Math.abs(diff) > 40) {
-      if (diff > 0) nextImage();
-      else prevImage();
+    if (Math.abs(diff) > 55) {
+      if (diff > 0) {
+        nextImage();
+      } else if (activeImageIndex === 0) {
+        router.back();
+      } else {
+        prevImage();
+      }
     }
 
     touchStartXRef.current = null;
@@ -330,35 +300,32 @@ export default function ProductPageClient({
     const clickX = e.clientX - rect.left;
     const half = rect.width / 2;
 
-    if (clickX >= half) {
-      nextImage();
-    } else {
-      prevImage();
-    }
+    if (clickX >= half) nextImage();
+    else prevImage();
   };
 
   const copyArticle = async () => {
     if (!article) return;
 
     try {
-      await navigator.clipboard.writeText(article);
+      await navigator.clipboard?.writeText(article);
       setArticleCopied(true);
-      window.setTimeout(() => setArticleCopied(false), 1400);
+
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = setTimeout(() => setArticleCopied(false), 1300);
     } catch {
       setArticleCopied(false);
     }
   };
 
   const addToCart = () => {
-    if (!product || !canOrder) return;
+    if (!product || !selectedSize || !selectedColor) return;
 
     const existingCart: CartItem[] = JSON.parse(
       localStorage.getItem("cart") || "[]"
     );
 
-    const updatedCart = [...existingCart];
-
-    const existingIndex = updatedCart.findIndex(
+    const existingIndex = existingCart.findIndex(
       (item) =>
         item.id === product.id &&
         item.size === selectedSize &&
@@ -366,9 +333,9 @@ export default function ProductPageClient({
     );
 
     if (existingIndex >= 0) {
-      updatedCart[existingIndex].quantity += 1;
+      existingCart[existingIndex].quantity += 1;
     } else {
-      updatedCart.push({
+      existingCart.push({
         id: product.id,
         name: product.name,
         price: product.price,
@@ -378,19 +345,18 @@ export default function ProductPageClient({
       });
     }
 
-    localStorage.setItem("cart", JSON.stringify(updatedCart));
+    localStorage.setItem("cart", JSON.stringify(existingCart));
     window.dispatchEvent(new Event("cart-updated"));
 
     setCartProductCount(getCartProductCount(product.id));
     setJustAdded(true);
+    setSelectedSize(getDefaultSize(product));
 
-    if (addedTimerRef.current) {
-      clearTimeout(addedTimerRef.current);
-    }
+    if (addedTimerRef.current) clearTimeout(addedTimerRef.current);
 
     addedTimerRef.current = setTimeout(() => {
       setJustAdded(false);
-    }, 1500);
+    }, 1400);
   };
 
   if (!product) {
@@ -436,25 +402,28 @@ export default function ProductPageClient({
             type="button"
             onClick={(e) => {
               e.stopPropagation();
+              router.back();
+            }}
+            aria-label="Назад"
+            className="absolute left-3 top-3 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-black shadow-[0_4px_16px_rgba(0,0,0,0.06)] backdrop-blur-md"
+          >
+            <IconBack />
+          </button>
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
               toggleFavorite();
             }}
             aria-label="В избранное"
-            className={`absolute right-3 top-3 z-20 flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-full transition-all duration-200 active:scale-[0.98] ${
+            className={`absolute right-3 top-3 z-20 flex h-10 w-10 items-center justify-center rounded-full shadow-[0_4px_16px_rgba(0,0,0,0.06)] backdrop-blur-md ${
               favorites.includes(product.id)
                 ? "bg-black text-white"
-                : "bg-white/90 text-black shadow-[0_4px_16px_rgba(0,0,0,0.08)] backdrop-blur"
+                : "bg-white/90 text-black"
             }`}
           >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill={favorites.includes(product.id) ? "currentColor" : "none"}
-              stroke="currentColor"
-              strokeWidth="1.8"
-            >
-              <path d="M20.8 4.6c-1.8-1.8-4.7-1.8-6.5 0L12 6.9l-2.3-2.3c-1.8-1.8-4.7-1.8-6.5 0s-1.8 4.7 0 6.5L12 21l8.8-9.9c1.8-1.8 1.8-4.7 0-6.5z" />
-            </svg>
+            <IconHeart active={favorites.includes(product.id)} />
           </button>
 
           <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-1.5">
@@ -478,64 +447,62 @@ export default function ProductPageClient({
         </div>
 
         <div className="p-5">
-          <div className="mb-2">
-            <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0 text-[11px] uppercase tracking-[0.16em] text-gray-400">
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="truncate text-[10px] font-normal uppercase tracking-[0.18em] text-[#A8A8A8]">
                 {product.brand}
               </div>
 
+              <h1 className="mt-1.5 text-[18px] font-normal leading-[1.18] tracking-[-0.02em] text-black">
+                {product.name}
+              </h1>
+            </div>
+
+            <div className="flex shrink-0 items-center gap-1 rounded-full bg-[#F6F6F6] px-2.5 py-1 text-[9px] font-normal uppercase tracking-[0.08em] text-[#A8A8A8]">
+              <span>{article}</span>
               <button
                 type="button"
                 onClick={copyArticle}
-                className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#F5F5F5] px-2.5 py-1 text-[10px] uppercase tracking-[0.08em] text-gray-400 active:scale-[0.98]"
+                className="flex h-4 w-4 items-center justify-center text-[#A8A8A8]"
                 aria-label="Скопировать артикул"
               >
-                <span>{articleCopied ? "Скопировано" : article}</span>
-                <CopyIcon />
+                <IconCopy copied={articleCopied} />
               </button>
             </div>
-
-            <h1 className="mt-2 text-[24px] font-medium leading-tight text-black">
-              {product.name}
-            </h1>
           </div>
 
-          <div className="mb-3 mt-4 flex items-start justify-between gap-3">
+          <div className="mb-3 flex items-start justify-between gap-3">
             <div className="flex items-center gap-2">
               {product.oldPrice && (
-                <span className="text-[14px] font-normal leading-none text-gray-400 line-through">
+                <span className="text-[13px] font-normal leading-none text-gray-400 line-through">
                   {formatPrice(product.oldPrice)} ₽
                 </span>
               )}
 
-              <span className="text-[22px] font-semibold leading-none tracking-[-0.02em] text-[#2B2824]">
-                {formatPrice(product.price)} ₽
-              </span>
-
               {discountPercent > 0 && (
-                <span className="rounded-full bg-[#F5F5F5] px-1.5 py-0.5 text-[10px] font-medium text-[#D92D20]">
+                <span className="text-[12px] font-medium leading-none text-[#FF2F7D]">
                   -{discountPercent}%
                 </span>
               )}
+
+              <span className="text-[20px] font-normal leading-none tracking-[-0.02em] text-[#16A34A]">
+                {formatPrice(product.price)} ₽
+              </span>
             </div>
 
             {product.badge ? (
-              <div className="shrink-0 rounded-full bg-[#F2F2F2] px-3 py-1 text-[10px] font-medium text-[#666]">
+              <div className="shrink-0 rounded-full bg-[#F3F3F3] px-3 py-1 text-[10px] font-normal text-[#777]">
                 {product.badge}
               </div>
             ) : null}
           </div>
 
           <div className="mt-5">
-            <div className="mb-2 flex items-end justify-between gap-3">
-              <p className="text-sm text-gray-500">Размер</p>
-            </div>
-
+            <p className="mb-2 text-sm font-normal text-gray-500">Размер</p>
             <div className="grid grid-cols-5 gap-1.5">
               {sizes.map((s) => (
                 <button
                   key={s.label}
-                  type="button"
                   onClick={() => setSelectedSize(s.label)}
                   className={`rounded-xl border px-1.5 py-2 text-center transition-all duration-200 active:scale-95 ${
                     selectedSize === s.label
@@ -543,10 +510,12 @@ export default function ProductPageClient({
                       : "border-gray-200 bg-white text-black"
                   }`}
                 >
-                  <div className="text-[11px] font-medium">{s.label}</div>
+                  <div className="text-[11px] font-normal">{s.label}</div>
                   <div
                     className={`mt-0.5 text-[9px] ${
-                      selectedSize === s.label ? "text-white/70" : "text-gray-400"
+                      selectedSize === s.label
+                        ? "text-white/70"
+                        : "text-gray-400"
                     }`}
                   >
                     {s.sub}
@@ -555,22 +524,17 @@ export default function ProductPageClient({
               ))}
             </div>
 
-            <div className="mt-2 flex items-center justify-between gap-3 text-[12px]">
-              <span className="text-gray-400">Выбран размер: {selectedSize}</span>
-
-              <button
-                type="button"
-                onClick={() => setShowSizeTable(true)}
-                className="text-[11px] text-gray-400 underline underline-offset-2"
-              >
-                таблица размеров
-              </button>
-            </div>
+            <button
+              type="button"
+              className="mt-2 text-[12px] font-normal text-gray-400 underline underline-offset-2"
+            >
+              таблица размеров
+            </button>
           </div>
 
           <div className="mt-5">
-            <p className="mb-2 text-sm text-gray-500">Цвет</p>
-            <div className="flex gap-2 overflow-x-auto pb-1">
+            <p className="mb-2 text-sm font-normal text-gray-500">Цвет</p>
+            <div className="grid grid-cols-5 gap-2">
               {product.colors.map((c) => {
                 const preview =
                   product.galleryByColor?.[c]?.[0] ||
@@ -583,22 +547,24 @@ export default function ProductPageClient({
                 return (
                   <button
                     key={c}
-                    type="button"
                     onClick={() => selectColor(c)}
-                    className={`h-[58px] w-[46px] shrink-0 overflow-hidden rounded-xl border bg-white transition-all duration-200 active:scale-95 ${
+                    className={`overflow-hidden rounded-xl border bg-white transition-all duration-200 active:scale-95 ${
                       isSelected
-                        ? "border-[#2B2824] ring-1 ring-black/10"
+                        ? "border-black ring-1 ring-black/10"
                         : "border-gray-200"
                     }`}
+                    aria-label={`Цвет ${c}`}
                   >
-                    <img
-                      src={preview}
-                      alt={c}
-                      className="h-full w-full object-cover"
-                      onError={(e) => {
-                        e.currentTarget.src = "/products/product-1.jpg";
-                      }}
-                    />
+                    <div className="aspect-[3/4] w-full overflow-hidden bg-[#ECECEC]">
+                      <img
+                        src={preview}
+                        alt={c}
+                        className="h-full w-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = "/products/product-1.jpg";
+                        }}
+                      />
+                    </div>
                   </button>
                 );
               })}
@@ -609,152 +575,98 @@ export default function ProductPageClient({
             </div>
           </div>
 
-          {product.composition.length > 0 && (
-            <div className="mt-6">
-              <div className="mb-3 flex items-center justify-between">
-                <p className="text-sm font-medium text-black">Состав и уход</p>
-                <span className="text-[11px] text-gray-400">детали изделия</span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div className="rounded-[18px] bg-[#F7F7F7] p-3">
-                  <div className="text-[11px] text-gray-400">Основной состав</div>
-                  <div className="mt-2 text-[15px] font-medium text-[#2B2824]">
-                    {product.composition.join(", ")}
-                  </div>
-                  <div className="mt-2 text-[11px] leading-4 text-gray-400">
-                    Материал приятный к телу и подходит для ежедневной носки.
-                  </div>
-                </div>
-
-                <div className="rounded-[18px] bg-[#F7F7F7] p-3">
-                  <div className="text-[11px] text-gray-400">Уход</div>
-                  <div className="mt-2 text-[13px] leading-5 text-[#2B2824]">
-                    Деликатная стирка до 30°C
-                  </div>
-                  <div className="mt-1 text-[13px] leading-5 text-[#2B2824]">
-                    Не отбеливать
-                  </div>
-                  <div className="mt-1 text-[13px] leading-5 text-[#2B2824]">
-                    Сушить естественно
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-2 rounded-[18px] bg-[#F7F7F7] px-3 py-3">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-[12px] text-gray-400">Категория</span>
-                  <span className="text-[13px] text-[#2B2824]">{product.category}</span>
-                </div>
-              </div>
+          <div className="mt-5 rounded-2xl bg-[#F7F7F7] p-4">
+            <div className="mb-3 text-[13px] font-normal text-[#777]">
+              Информация о товаре
             </div>
-          )}
 
-          <div className="mt-5">
-            <p className="text-[14px] leading-6 text-gray-600">
-              {description.length > 110 && !showFullDescription
-                ? `${description.slice(0, 110)}...`
-                : description}
-            </p>
+            <div className="divide-y divide-black/5">
+              <div className="flex items-center justify-between gap-4 py-2">
+                <span className="text-[12px] text-[#999]">Артикул</span>
+                <button
+                  type="button"
+                  onClick={copyArticle}
+                  className="flex items-center gap-1 text-right text-[12px] text-[#555]"
+                >
+                  {article}
+                  <IconCopy copied={articleCopied} />
+                </button>
+              </div>
 
-            {description.length > 110 && (
-              <button
-                type="button"
-                onClick={() => setShowFullDescription((prev) => !prev)}
-                className="mt-2 text-[13px] text-black underline underline-offset-2"
-              >
-                {showFullDescription ? "Свернуть" : "Читать полностью"}
-              </button>
-            )}
+              <div className="flex items-center justify-between gap-4 py-2">
+                <span className="text-[12px] text-[#999]">Страна производства</span>
+                <span className="text-right text-[12px] text-[#555]">
+                  {getProductionCountry(product)}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between gap-4 py-2">
+                <span className="text-[12px] text-[#999]">Состав</span>
+                <span className="text-right text-[12px] text-[#555]">
+                  {product.composition.length > 0
+                    ? product.composition.join(", ")
+                    : "Не указан"}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between gap-4 py-2">
+                <span className="text-[12px] text-[#999]">Категория</span>
+                <span className="text-right text-[12px] text-[#555]">
+                  {product.category}
+                </span>
+              </div>
+
+              {description && (
+                <div className="py-2">
+                  <div className="mb-1 text-[12px] text-[#999]">Описание</div>
+                  <p className="text-[12px] leading-5 text-[#555]">
+                    {description.length > 120 && !showFullDescription
+                      ? `${description.slice(0, 120)}...`
+                      : description}
+                  </p>
+
+                  {description.length > 120 && (
+                    <button
+                      onClick={() => setShowFullDescription((prev) => !prev)}
+                      className="mt-1 text-[12px] text-black underline underline-offset-2"
+                    >
+                      {showFullDescription ? "Свернуть" : "Читать полностью"}
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="mt-5">
             <button
-              type="button"
               onClick={addToCart}
-              disabled={!canOrder}
-              className={`relative w-full rounded-2xl py-3.5 text-sm font-medium transition-all duration-200 ${
+              className={`w-full rounded-2xl py-3.5 text-sm font-normal transition-all duration-200 ${
                 justAdded
                   ? "bg-[#16A34A] text-white"
                   : "bg-black text-white active:scale-[0.99]"
               }`}
             >
-              <span>
-                {justAdded ? "Добавлено" : "Добавить в корзину"}
-              </span>
-
-              {cartProductCount > 0 && (
-                <span className="absolute right-4 top-1/2 flex h-6 min-w-6 -translate-y-1/2 items-center justify-center rounded-full bg-white px-2 text-[12px] font-semibold text-black">
-                  {cartProductCount}
-                </span>
-              )}
+              {justAdded
+                ? "Добавлено"
+                : cartProductCount > 0
+                ? `Добавить в корзину · ${cartProductCount}`
+                : "Добавить в корзину"}
             </button>
 
-            <div className="mt-3 flex items-center justify-center gap-3 text-[11px] text-gray-400">
+            <div className="mt-2 flex items-center justify-center gap-3 text-[11px] text-gray-400">
               <span className="inline-flex items-center gap-1">
-                <ShieldIcon />
+                <IconShield />
                 Ваши данные защищены
               </span>
-
               <span className="inline-flex items-center gap-1">
-                <LockIcon />
+                <IconLock />
                 Безопасная оплата
               </span>
             </div>
           </div>
         </div>
       </div>
-
-      {showSizeTable && (
-        <div className="fixed inset-0 z-[120] flex items-end bg-black/35 px-3 pb-3">
-          <div className="w-full rounded-[24px] bg-white p-5 shadow-[0_18px_60px_rgba(0,0,0,0.18)]">
-            <div className="mb-4 flex items-center justify-between">
-              <p className="text-[16px] font-medium text-black">Таблица размеров</p>
-              <button
-                type="button"
-                onClick={() => setShowSizeTable(false)}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-[#F5F5F5] text-[18px] text-black"
-                aria-label="Закрыть"
-              >
-                ×
-              </button>
-            </div>
-
-            <div className="overflow-hidden rounded-2xl border border-gray-100">
-              <div className="grid grid-cols-4 bg-[#F7F7F7] px-3 py-2 text-[11px] text-gray-400">
-                <span>Размер</span>
-                <span>RU</span>
-                <span>Ширина</span>
-                <span>Длина</span>
-              </div>
-
-              {sizeTableRows.map((row) => (
-                <div
-                  key={`table-${row.size}`}
-                  className="grid grid-cols-4 border-t border-gray-100 px-3 py-2 text-[12px] text-gray-700"
-                >
-                  <span>{row.size}</span>
-                  <span>{row.ru}</span>
-                  <span>{row.width}</span>
-                  <span>{row.length}</span>
-                </div>
-              ))}
-            </div>
-
-            <p className="mt-3 text-[11px] leading-4 text-gray-400">
-              Замеры ориентировочные: ширина — по груди/талии, длина — по спинке или внутреннему шву.
-            </p>
-
-            <button
-              type="button"
-              onClick={() => setShowSizeTable(false)}
-              className="mt-4 w-full rounded-2xl bg-black py-3 text-sm font-medium text-white"
-            >
-              Понятно
-            </button>
-          </div>
-        </div>
-      )}
 
       <BottomNav />
     </main>
