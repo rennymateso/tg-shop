@@ -38,80 +38,6 @@ function getDiscountPercent(oldPrice: number | null, price: number) {
   return Math.round(((oldPrice - price) / oldPrice) * 100);
 }
 
-function formatPrice(value: number | null | undefined) {
-  if (!value) return "";
-  return value.toLocaleString("ru-RU");
-}
-
-function readCart(): CartItem[] {
-  try {
-    const parsed = JSON.parse(localStorage.getItem("cart") || "[]") as CartItem[];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-function writeCart(cart: CartItem[]) {
-  localStorage.setItem("cart", JSON.stringify(cart));
-  window.dispatchEvent(new Event("cart-updated"));
-}
-
-function getProductCount(cart: CartItem[], productId: string) {
-  return cart
-    .filter((item) => item.id === productId)
-    .reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
-}
-
-function getDefaultSize(product: Product | null) {
-  if (!product) return "S";
-  return product.type === "bottom" ? "30" : "S";
-}
-
-function IconBack() {
-  return (
-    <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.85" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M15 18 9 12l6-6" />
-    </svg>
-  );
-}
-
-function IconHeart({ active }: { active: boolean }) {
-  return (
-    <svg width="21" height="21" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M20.8 4.6c-1.8-1.8-4.7-1.8-6.5 0L12 6.9 9.7 4.6c-1.8-1.8-4.7-1.8-6.5 0s-1.8 4.7 0 6.5L12 21l8.8-9.9c1.8-1.8 1.8-4.7 0-6.5Z" />
-    </svg>
-  );
-}
-
-function IconShare() {
-  return (
-    <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 16V4" />
-      <path d="m7 9 5-5 5 5" />
-      <path d="M20 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-4" />
-    </svg>
-  );
-}
-
-function IconLock() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="5" y="10" width="14" height="10" rx="2" />
-      <path d="M8 10V7a4 4 0 0 1 8 0v3" />
-    </svg>
-  );
-}
-
-function IconShield() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 3 19 6v5c0 4.6-2.9 8.4-7 10-4.1-1.6-7-5.4-7-10V6l7-3Z" />
-      <path d="m9 12 2 2 4-4" />
-    </svg>
-  );
-}
-
 export default function ProductPageClient({
   initialProduct,
   initialError,
@@ -122,14 +48,51 @@ export default function ProductPageClient({
   const router = useRouter();
 
   const [product] = useState<Product | null>(initialProduct);
-  const [selectedSize, setSelectedSize] = useState(getDefaultSize(initialProduct));
-  const [selectedColor, setSelectedColor] = useState(initialProduct?.defaultColor || initialProduct?.colors?.[0] || "");
+  const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
+  const [selectedColor, setSelectedColor] = useState(
+    initialProduct?.defaultColor || ""
+  );
   const [favorites, setFavorites] = useState<string[]>([]);
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const [cartProductCount, setCartProductCount] = useState(0);
+  const [justAdded, setJustAdded] = useState(false);
 
   const touchStartXRef = useRef<number | null>(null);
+  const addedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const data = JSON.parse(localStorage.getItem("favorites") || "[]");
+    setFavorites(Array.isArray(data) ? data : []);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (addedTimerRef.current) {
+        clearTimeout(addedTimerRef.current);
+      }
+    };
+  }, []);
+
+  const galleryImages = useMemo(() => {
+    if (!product) return [];
+    const colorGallery = product.galleryByColor?.[selectedColor] || [];
+    if (colorGallery.length > 0) return colorGallery;
+    return product.images?.length ? product.images : [product.image];
+  }, [product, selectedColor]);
+
+  const activeImage = galleryImages[activeImageIndex] || product?.image || "";
+
+  const toggleFavorite = () => {
+    if (!product) return;
+
+    const updated = favorites.includes(product.id)
+      ? favorites.filter((i) => i !== product.id)
+      : [...favorites, product.id];
+
+    setFavorites(updated);
+    localStorage.setItem("favorites", JSON.stringify(updated));
+    window.dispatchEvent(new Event("favorites-updated"));
+  };
 
   const topSizes = [
     { label: "S", sub: "46" },
@@ -150,78 +113,41 @@ export default function ProductPageClient({
   ];
 
   const sizes = product?.type === "bottom" ? bottomSizes : topSizes;
+
   const article = product ? `ART-${product.id}` : "";
   const description = product?.description || "";
-  const discountPercent = product ? getDiscountPercent(product.oldPrice, product.price) : 0;
-  const defaultSize = getDefaultSize(product);
+  const canOrder = selectedSizes.length > 0 && !!selectedColor;
+  const discountPercent = product
+    ? getDiscountPercent(product.oldPrice, product.price)
+    : 0;
 
-  const galleryImages = useMemo(() => {
-    if (!product) return [];
-    const colorGallery = product.galleryByColor?.[selectedColor] || [];
-    if (colorGallery.length > 0) return colorGallery;
-    const colorImage = product.colorImages?.[selectedColor];
-    if (colorImage) return [colorImage];
-    return product.images?.length ? product.images : [product.image];
-  }, [product, selectedColor]);
-
-  const activeImage = galleryImages[activeImageIndex] || product?.image || "";
-
-  useEffect(() => {
-    const data = JSON.parse(localStorage.getItem("favorites") || "[]");
-    setFavorites(Array.isArray(data) ? data : []);
-  }, []);
-
-  useEffect(() => {
-    const syncCartCount = () => {
-      if (!product) return;
-      setCartProductCount(getProductCount(readCart(), product.id));
-    };
-
-    syncCartCount();
-    window.addEventListener("cart-updated", syncCartCount);
-    window.addEventListener("storage", syncCartCount);
-
-    return () => {
-      window.removeEventListener("cart-updated", syncCartCount);
-      window.removeEventListener("storage", syncCartCount);
-    };
-  }, [product]);
-
-  const toggleFavorite = () => {
-    if (!product) return;
-
-    const updated = favorites.includes(product.id)
-      ? favorites.filter((i) => i !== product.id)
-      : [...favorites, product.id];
-
-    setFavorites(updated);
-    localStorage.setItem("favorites", JSON.stringify(updated));
-    window.dispatchEvent(new Event("favorites-updated"));
+  const toggleSize = (value: string) => {
+    setSelectedSizes((prev) =>
+      prev.includes(value)
+        ? prev.filter((item) => item !== value)
+        : [...prev, value]
+    );
   };
 
   const selectColor = (value: string) => {
     setSelectedColor(value);
+    setSelectedSizes([]);
     setActiveImageIndex(0);
-  };
-
-  const getColorPreview = (color: string) => {
-    if (!product) return "/products/product-1.jpg";
-    return (
-      product.galleryByColor?.[color]?.[0] ||
-      product.colorImages?.[color] ||
-      product.image ||
-      "/products/product-1.jpg"
-    );
+    setJustAdded(false);
   };
 
   const nextImage = () => {
     if (galleryImages.length <= 1) return;
-    setActiveImageIndex((prev) => (prev >= galleryImages.length - 1 ? 0 : prev + 1));
+    setActiveImageIndex((prev) =>
+      prev >= galleryImages.length - 1 ? 0 : prev + 1
+    );
   };
 
   const prevImage = () => {
     if (galleryImages.length <= 1) return;
-    setActiveImageIndex((prev) => (prev <= 0 ? galleryImages.length - 1 : prev - 1));
+    setActiveImageIndex((prev) =>
+      prev <= 0 ? galleryImages.length - 1 : prev - 1
+    );
   };
 
   const onTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
@@ -248,834 +174,332 @@ export default function ProductPageClient({
 
     const rect = e.currentTarget.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
+    const half = rect.width / 2;
 
-    if (clickX >= rect.width / 2) nextImage();
-    else prevImage();
-  };
-
-  const handleShare = async () => {
-    if (!product) return;
-
-    const url = typeof window !== "undefined" ? window.location.href : "";
-    const title = product.name;
-
-    try {
-      if (navigator.share) {
-        await navigator.share({ title, text: title, url });
-      } else if (navigator.clipboard && url) {
-        await navigator.clipboard.writeText(url);
-      }
-    } catch {
-      // пользователь мог закрыть шаринг
+    if (clickX >= half) {
+      nextImage();
+    } else {
+      prevImage();
     }
   };
 
-  const addCurrentSelectionToCart = () => {
-    if (!product || !selectedSize || !selectedColor) return 0;
+  const addToCart = () => {
+    if (!product || !canOrder) return;
 
-    const cart = readCart();
-    const existingIndex = cart.findIndex(
-      (item) =>
-        item.id === product.id &&
-        item.size === selectedSize &&
-        item.color === selectedColor
+    const existingCart: CartItem[] = JSON.parse(
+      localStorage.getItem("cart") || "[]"
     );
 
-    if (existingIndex >= 0) {
-      cart[existingIndex].quantity += 1;
-    } else {
-      cart.push({
-        id: product.id,
-        name: product.name,
-        price: product.price,
-        size: selectedSize,
-        color: selectedColor,
-        quantity: 1,
-      });
+    const newItems: CartItem[] = selectedSizes.map((size) => ({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      size,
+      color: selectedColor,
+      quantity: 1,
+    }));
+
+    const updatedCart = [...existingCart];
+
+    newItems.forEach((newItem) => {
+      const existingIndex = updatedCart.findIndex(
+        (item) =>
+          item.id === newItem.id &&
+          item.size === newItem.size &&
+          item.color === newItem.color
+      );
+
+      if (existingIndex >= 0) {
+        updatedCart[existingIndex].quantity += newItem.quantity;
+      } else {
+        updatedCart.push(newItem);
+      }
+    });
+
+    localStorage.setItem("cart", JSON.stringify(updatedCart));
+    window.dispatchEvent(new Event("cart-updated"));
+
+    setJustAdded(true);
+
+    if (addedTimerRef.current) {
+      clearTimeout(addedTimerRef.current);
     }
 
-    writeCart(cart);
-    const newCount = getProductCount(cart, product.id);
-    setCartProductCount(newCount);
-    setSelectedSize(defaultSize);
-
-    return newCount;
-  };
-
-  const decreaseProductCount = () => {
-    if (!product) return;
-
-    const cart = readCart();
-    const index = cart.findIndex((item) => item.id === product.id);
-
-    if (index < 0) return;
-
-    cart[index].quantity -= 1;
-
-    if (cart[index].quantity <= 0) {
-      cart.splice(index, 1);
-    }
-
-    writeCart(cart);
-    setCartProductCount(getProductCount(cart, product.id));
-  };
-
-  const buyNow = () => {
-    addCurrentSelectionToCart();
-    router.push("/cart");
+    addedTimerRef.current = setTimeout(() => {
+      setJustAdded(false);
+    }, 1800);
   };
 
   if (!product) {
     return (
-      <>
-        <style>{`
-          .pd-page {
-            min-height: 844px;
-            background: #f5f5f5;
-            padding: 124px 16px 120px;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-          }
-          .pd-empty {
-            border-radius: 22px;
-            background: #fff;
-            padding: 22px;
-            color: #111;
-          }
-        `}</style>
-
-        <main className="pd-page">
-          <div className="pd-empty">
-            <p style={{ fontSize: 16, fontWeight: 500 }}>Товар не найден</p>
-            {initialError && (
-              <p style={{ marginTop: 8, fontSize: 12, color: "#999", wordBreak: "break-word" }}>
-                {initialError}
-              </p>
-            )}
-          </div>
-          <BottomNav />
-        </main>
-      </>
-    );
-  }
-
-  return (
-    <>
-      <style>{`
-        *, *::before, *::after {
-          box-sizing: border-box;
-          -webkit-tap-highlight-color: transparent;
-        }
-
-        body {
-          overflow-x: hidden;
-          background: #f5f5f5;
-        }
-
-        button {
-          font: inherit;
-        }
-
-        .pd-page {
-          width: 100%;
-          min-height: 844px;
-          overflow-x: hidden;
-          background: #f5f5f5;
-          color: #111;
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", sans-serif;
-          padding-bottom: 204px;
-        }
-
-        .pd-shell {
-          width: min(100%, 390px);
-          margin: 0 auto;
-        }
-
-        .pd-topbar {
-          position: fixed;
-          left: 50%;
-          top: 12px;
-          z-index: 70;
-          width: min(358px, calc(100vw - 32px));
-          transform: translateX(-50%);
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          pointer-events: none;
-        }
-
-        .pd-actions {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          pointer-events: auto;
-        }
-
-        .pd-icon-btn {
-          width: 38px;
-          height: 38px;
-          border: 0;
-          border-radius: 999px;
-          background: rgba(255,255,255,.92);
-          color: #111;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          box-shadow: 0 8px 20px rgba(0,0,0,.08);
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
-          cursor: pointer;
-        }
-
-        .pd-icon-btn.active {
-          background: #111;
-          color: #fff;
-        }
-
-        .pd-hero {
-          position: relative;
-          margin-top: 0;
-          height: 610px;
-          overflow: hidden;
-          background: #ececec;
-          border-radius: 0;
-        }
-
-        .pd-hero::after {
-          content: "";
-          position: absolute;
-          inset: 0;
-          pointer-events: none;
-          background: linear-gradient(180deg, rgba(0,0,0,.18) 0%, rgba(0,0,0,0) 18%, rgba(0,0,0,0) 78%, rgba(0,0,0,.08) 100%);
-        }
-
-        .pd-hero-img {
-          width: 100%;
-          height: 100%;
-          object-fit: contain;
-          display: block;
-          user-select: none;
-        }
-
-        .pd-dots {
-          position: absolute;
-          left: 50%;
-          bottom: 12px;
-          z-index: 12;
-          transform: translateX(-50%);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 5px;
-          padding: 4px 6px;
-          border-radius: 999px;
-          background: rgba(0,0,0,.07);
-        }
-
-        .pd-dot {
-          width: 4px;
-          height: 4px;
-          border: 0;
-          padding: 0;
-          border-radius: 999px;
-          background: rgba(255,255,255,.38);
-          cursor: pointer;
-        }
-
-        .pd-dot.active {
-          width: 12px;
-          background: rgba(255,255,255,.65);
-        }
-
-        .pd-card {
-          margin-top: 0;
-          border-radius: 0;
-          background: #fff;
-          padding: 19px 16px 24px;
-          box-shadow: 0 -8px 24px rgba(0,0,0,.05);
-        }
-
-        .pd-brand-row {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 12px;
-        }
-
-        .pd-brand {
-          min-width: 0;
-          color: #8f8f8f;
-          font-size: 11px;
-          line-height: 1;
-          font-weight: 400;
-          letter-spacing: .14em;
-          text-transform: uppercase;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-
-        .pd-article {
-          flex: 0 0 auto;
-          color: #aaa;
-          font-size: 10.2px;
-          line-height: 1;
-          font-weight: 400;
-          letter-spacing: .06em;
-          white-space: nowrap;
-        }
-
-        .pd-title-row {
-          margin-top: 10px;
-          display: grid;
-          grid-template-columns: minmax(0, 1fr) auto;
-          gap: 10px;
-          align-items: start;
-        }
-
-        .pd-title {
-          margin: 0;
-          color: #111;
-          font-size: 24px;
-          line-height: 1.08;
-          font-weight: 500;
-          letter-spacing: -0.05em;
-        }
-
-        .pd-foreign {
-          margin-top: 2px;
-          padding: 7px 10px;
-          border-radius: 999px;
-          background: #f2f2f2;
-          color: #666;
-          font-size: 11px;
-          line-height: 1;
-          font-weight: 400;
-          white-space: nowrap;
-        }
-
-        .pd-price-row {
-          margin-top: 13px;
-          display: flex;
-          align-items: baseline;
-          gap: 8px;
-          white-space: nowrap;
-        }
-
-        .pd-old-price {
-          color: #9b9b9b;
-          font-size: 14px;
-          line-height: 1;
-          font-weight: 400;
-          text-decoration: line-through;
-        }
-
-        .pd-discount {
-          color: #e13a3a;
-          font-size: 14px;
-          line-height: 1;
-          font-weight: 500;
-        }
-
-        .pd-price {
-          color: #12B76A;
-          font-size: 27px;
-          line-height: 1;
-          font-weight: 600;
-          letter-spacing: -0.052em;
-        }
-
-        .pd-section {
-          margin-top: 17px;
-          padding-top: 15px;
-          border-top: 1px solid rgba(0,0,0,.075);
-        }
-
-        .pd-section-title {
-          color: #111;
-          font-size: 14px;
-          line-height: 1;
-          font-weight: 500;
-        }
-
-        .pd-muted {
-          color: #999;
-          font-weight: 400;
-        }
-
-        .pd-sizes {
-          margin-top: 12px;
-          display: grid;
-          grid-template-columns: repeat(5, minmax(0,1fr));
-          gap: 7px;
-        }
-
-        .pd-size {
-          min-height: 46px;
-          border: 1px solid rgba(0,0,0,.1);
-          border-radius: 12px;
-          background: #fff;
-          color: #111;
-          cursor: pointer;
-        }
-
-        .pd-size.active {
-          background: #111;
-          border-color: #111;
-          color: #fff;
-        }
-
-        .pd-size-label {
-          font-size: 14px;
-          line-height: 1;
-          font-weight: 500;
-        }
-
-        .pd-size-sub {
-          margin-top: 3px;
-          color: currentColor;
-          opacity: .5;
-          font-size: 9.5px;
-          line-height: 1;
-          font-weight: 400;
-        }
-
-        .pd-colors {
-          margin-top: 12px;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          overflow-x: auto;
-          padding-bottom: 2px;
-          scrollbar-width: none;
-        }
-
-        .pd-colors::-webkit-scrollbar {
-          display: none;
-        }
-
-        .pd-color {
-          flex: 0 0 auto;
-          width: 52px;
-          height: 65px;
-          border: 1px solid rgba(0,0,0,.10);
-          border-radius: 13px;
-          background: #f2f2f2;
-          padding: 0;
-          overflow: hidden;
-          cursor: pointer;
-        }
-
-        .pd-color.active {
-          border: 2px solid #111;
-        }
-
-        .pd-color img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          display: block;
-        }
-
-        .pd-composition-card {
-          margin-top: 12px;
-          border-radius: 16px;
-          background: #f7f7f7;
-          overflow: hidden;
-        }
-
-        .pd-composition-row {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 12px;
-          padding: 12px 13px;
-          border-bottom: 1px solid rgba(0,0,0,.055);
-        }
-
-        .pd-composition-row:last-child {
-          border-bottom: 0;
-        }
-
-        .pd-composition-label {
-          color: #777;
-          font-size: 12px;
-          line-height: 1;
-          font-weight: 400;
-        }
-
-        .pd-composition-value {
-          color: #111;
-          font-size: 12.5px;
-          line-height: 1;
-          font-weight: 400;
-          text-align: right;
-        }
-
-        .pd-description {
-          margin: 0;
-          color: #555;
-          font-size: 14px;
-          line-height: 1.55;
-          font-weight: 400;
-        }
-
-        .pd-more {
-          margin-top: 9px;
-          border: 0;
-          background: transparent;
-          color: #111;
-          padding: 0;
-          font-size: 13px;
-          line-height: 1;
-          font-weight: 500;
-          cursor: pointer;
-        }
-
-        .pd-buybar {
-          position: fixed;
-          left: 50%;
-          bottom: 86px;
-          z-index: 80;
-          width: min(362px, calc(100vw - 28px));
-          transform: translateX(-50%);
-          padding-top: 8px;
-          background: linear-gradient(180deg, rgba(245,245,245,0), rgba(245,245,245,.94) 34%, rgba(245,245,245,.94));
-        }
-
-        .pd-buyrow {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 8px;
-        }
-
-        .pd-action {
-          height: 46px;
-          border: 0;
-          border-radius: 15px;
-          color: #fff;
-          font-size: 13px;
-          line-height: 1;
-          font-weight: 500;
-          cursor: pointer;
-          box-shadow: 0 10px 24px rgba(0,0,0,.10);
-        }
-
-        .pd-buy {
-          background: #12B76A;
-        }
-
-        .pd-cart {
-          background: #111;
-        }
-
-        .pd-counter {
-          height: 46px;
-          border-radius: 15px;
-          background: #111;
-          color: #fff;
-          display: grid;
-          grid-template-columns: 38px 1fr 38px;
-          align-items: center;
-          overflow: hidden;
-          box-shadow: 0 10px 24px rgba(0,0,0,.10);
-        }
-
-        .pd-counter button {
-          height: 100%;
-          border: 0;
-          background: transparent;
-          color: #fff;
-          font-size: 20px;
-          line-height: 1;
-          cursor: pointer;
-        }
-
-        .pd-counter span {
-          text-align: center;
-          font-size: 12px;
-          line-height: 1;
-          font-weight: 500;
-          white-space: nowrap;
-        }
-
-        .pd-security {
-          margin-top: 6px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 10px;
-          color: #8b8b8b;
-          font-size: 10.2px;
-          line-height: 1;
-          font-weight: 400;
-          white-space: nowrap;
-        }
-
-        .pd-security span {
-          display: inline-flex;
-          align-items: center;
-          gap: 4px;
-        }
-
-        @media (max-width: 370px) {
-          .pd-shell {
-            width: min(100%, 370px);
-          }
-
-          .pd-topbar {
-            top: 12px;
-            width: min(342px, calc(100vw - 28px));
-          }
-
-          .pd-hero {
-            height: 570px;
-          }
-
-          .pd-title {
-            font-size: 22px;
-          }
-
-          .pd-price {
-            font-size: 25px;
-          }
-
-          .pd-sizes {
-            gap: 6px;
-          }
-
-          .pd-color {
-            width: 50px;
-            height: 64px;
-          }
-
-          .pd-buybar {
-            width: min(348px, calc(100vw - 22px));
-          }
-
-          .pd-security {
-            gap: 7px;
-            font-size: 9.8px;
-          }
-        }
-      `}</style>
-
-      <main className="pd-page">
-        <div className="pd-shell">
-                    <section
-            className="pd-hero"
-            onTouchStart={onTouchStart}
-            onTouchEnd={onTouchEnd}
-            onClick={handleImageTap}
-            aria-label="Галерея товара"
-          >
-            <img
-              src={activeImage || product.image || "/products/product-1.jpg"}
-              alt={product.name}
-              className="pd-hero-img"
-              onError={(e) => {
-                e.currentTarget.src = "/products/product-1.jpg";
-              }}
-            />
-
-            {galleryImages.length > 1 && (
-              <div className="pd-dots" aria-hidden="true">
-                {galleryImages.map((_, index) => (
-                  <button
-                    key={`${product.id}-dot-${index}`}
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setActiveImageIndex(index);
-                    }}
-                    className={`pd-dot${index === activeImageIndex ? " active" : ""}`}
-                    aria-label={`Фото ${index + 1}`}
-                  />
-                ))}
-              </div>
-            )}
-          </section>
-
-          <div className="pd-topbar">
-            <button
-              type="button"
-              className="pd-icon-btn"
-              onClick={() => router.back()}
-              aria-label="Назад"
-            >
-              <IconBack />
-            </button>
-
-            <div className="pd-actions">
-              <button
-                type="button"
-                onClick={toggleFavorite}
-                aria-label="В избранное"
-                className={`pd-icon-btn${favorites.includes(product.id) ? " active" : ""}`}
-              >
-                <IconHeart active={favorites.includes(product.id)} />
-              </button>
-
-              <button
-                type="button"
-                onClick={handleShare}
-                className="pd-icon-btn"
-                aria-label="Поделиться"
-              >
-                <IconShare />
-              </button>
-            </div>
-          </div>
-
-          <section className="pd-card">
-            <div className="pd-brand-row">
-              <div className="pd-brand">{product.brand}</div>
-              <div className="pd-article">{article}</div>
-            </div>
-
-            <div className="pd-title-row">
-              <h1 className="pd-title">{product.name}</h1>
-              <div className="pd-foreign">из-за рубежа</div>
-            </div>
-
-            <div className="pd-price-row">
-              {product.oldPrice ? (
-                <span className="pd-old-price">{formatPrice(product.oldPrice)} ₽</span>
-              ) : null}
-              {discountPercent > 0 ? (
-                <span className="pd-discount">−{discountPercent}%</span>
-              ) : null}
-              <span className="pd-price">{formatPrice(product.price)} ₽</span>
-            </div>
-
-            <div className="pd-section">
-              <div className="pd-section-title">
-                Размер: <span className="pd-muted">{selectedSize}</span>
-              </div>
-
-              <div className="pd-sizes">
-                {sizes.map((s) => (
-                  <button
-                    type="button"
-                    key={s.label}
-                    onClick={() => setSelectedSize(s.label)}
-                    className={`pd-size${selectedSize === s.label ? " active" : ""}`}
-                  >
-                    <div className="pd-size-label">{s.label}</div>
-                    <div className="pd-size-sub">{s.sub}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="pd-section">
-              <div className="pd-section-title">
-                Цвет: <span className="pd-muted">{selectedColor || "Выберите"}</span>
-              </div>
-
-              <div className="pd-colors">
-                {product.colors.map((color) => {
-                  const preview = getColorPreview(color);
-
-                  return (
-                    <button
-                      type="button"
-                      key={color}
-                      className={`pd-color${selectedColor === color ? " active" : ""}`}
-                      onClick={() => selectColor(color)}
-                      aria-label={`Цвет ${color}`}
-                      title={color}
-                    >
-                      <img
-                        src={preview}
-                        alt={color}
-                        onError={(e) => {
-                          e.currentTarget.src = "/products/product-1.jpg";
-                        }}
-                      />
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {product.composition.length > 0 && (
-              <div className="pd-section">
-                <div className="pd-section-title">Состав и характеристики</div>
-                <div className="pd-composition-card">
-                  {product.composition.map((item, index) => (
-                    <div key={`${item}-${index}`} className="pd-composition-row">
-                      <span className="pd-composition-label">Материал {index + 1}</span>
-                      <span className="pd-composition-value">{item}</span>
-                    </div>
-                  ))}
-                  <div className="pd-composition-row">
-                    <span className="pd-composition-label">Категория</span>
-                    <span className="pd-composition-value">{product.category}</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {description ? (
-              <div className="pd-section">
-                <div className="pd-section-title" style={{ marginBottom: 10 }}>Описание</div>
-                <p className="pd-description">
-                  {description.length > 130 && !showFullDescription
-                    ? `${description.slice(0, 130)}...`
-                    : description}
-                </p>
-
-                {description.length > 130 && (
-                  <button
-                    type="button"
-                    onClick={() => setShowFullDescription((prev) => !prev)}
-                    className="pd-more"
-                  >
-                    {showFullDescription ? "Свернуть" : "Читать полностью"}
-                  </button>
-                )}
-              </div>
-            ) : null}
-          </section>
+      <main className="min-h-screen bg-[#F5F5F5] px-4 pt-[76px] pb-32">
+        <div className="mb-5 flex items-center justify-center">
+          <h1 className="text-[20px] font-medium">Товар</h1>
         </div>
 
-        <div className="pd-buybar">
-          <div className="pd-buyrow">
-            <button type="button" onClick={buyNow} className="pd-action pd-buy">
-              Купить сейчас
-            </button>
-
-            {cartProductCount > 0 ? (
-              <div className="pd-counter" aria-label="Количество в корзине">
-                <button type="button" onClick={decreaseProductCount} aria-label="Уменьшить количество">
-                  −
-                </button>
-                <span>{cartProductCount} в корзине</span>
-                <button type="button" onClick={addCurrentSelectionToCart} aria-label="Увеличить количество">
-                  +
-                </button>
-              </div>
-            ) : (
-              <button type="button" onClick={addCurrentSelectionToCart} className="pd-action pd-cart">
-                Добавить
-              </button>
-            )}
-          </div>
-
-          <div className="pd-security" aria-label="Информация о безопасности">
-            <span>
-              <IconShield />
-              Ваши данные защищены
-            </span>
-            <span>
-              <IconLock />
-              Безопасная оплата
-            </span>
-          </div>
+        <div className="rounded-[24px] bg-white p-5 shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
+          <p className="text-sm text-gray-500">Товар не найден</p>
+          {initialError && (
+            <p className="mt-2 break-words text-xs text-gray-400">
+              {initialError}
+            </p>
+          )}
         </div>
 
         <BottomNav />
       </main>
-    </>
+    );
+  }
+
+  return (
+    <main className="min-h-screen bg-[#F5F5F5] px-4 pt-[76px] pb-32">
+      <div className="mb-4 flex items-center justify-end">
+        <button
+          onClick={toggleFavorite}
+          aria-label="В избранное"
+          className={`flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-2xl transition-all duration-200 active:scale-[0.99] ${
+            favorites.includes(product.id)
+              ? "bg-black text-white"
+              : "bg-white text-black shadow-[0_4px_16px_rgba(0,0,0,0.04)]"
+          }`}
+        >
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill={favorites.includes(product.id) ? "currentColor" : "none"}
+            stroke="currentColor"
+            strokeWidth="1.8"
+          >
+            <path d="M20.8 4.6c-1.8-1.8-4.7-1.8-6.5 0L12 6.9l-2.3-2.3c-1.8-1.8-4.7-1.8-6.5 0s-1.8 4.7 0 6.5L12 21l8.8-9.9c1.8-1.8 1.8-4.7 0-6.5z" />
+          </svg>
+        </button>
+      </div>
+
+      <div className="overflow-hidden rounded-[24px] bg-white shadow-[0_10px_30px_rgba(0,0,0,0.05)]">
+        <div
+          className="relative aspect-[3/4] overflow-hidden bg-[#ECECEC]"
+          onTouchStart={onTouchStart}
+          onTouchEnd={onTouchEnd}
+          onClick={handleImageTap}
+        >
+          <img
+            src={activeImage || product.image || "/products/product-1.jpg"}
+            alt={product.name}
+            className="h-full w-full object-cover"
+            onError={(e) => {
+              e.currentTarget.src = "/products/product-1.jpg";
+            }}
+          />
+
+          <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-1.5">
+            {galleryImages.map((_, index) => (
+              <button
+                key={`${product.id}-dot-${index}`}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActiveImageIndex(index);
+                }}
+                className={`block rounded-full ${
+                  index === activeImageIndex
+                    ? "h-1.5 w-4 bg-white"
+                    : "h-1.5 w-1.5 bg-white/45"
+                }`}
+                aria-label={`Фото ${index + 1}`}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="p-5">
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <div className="text-[11px] uppercase tracking-[0.16em] text-gray-400">
+              {product.brand}
+            </div>
+
+            <div className="text-[11px] uppercase tracking-[0.16em] text-gray-400">
+              {article}
+            </div>
+          </div>
+
+          <div className="mb-3 flex items-start justify-between gap-3">
+            <div className="flex items-center gap-2">
+              {product.oldPrice && (
+                <span className="text-[14px] font-normal leading-none text-gray-400 line-through">
+                  {product.oldPrice} ₽
+                </span>
+              )}
+
+              <span className="text-[21px] font-semibold leading-none tracking-[-0.02em] text-[#16A34A]">
+                {product.price} ₽
+              </span>
+
+              {discountPercent > 0 && (
+                <span className="rounded-full bg-[#E8F7EE] px-1.5 py-0.5 text-[10px] font-medium text-[#16A34A]">
+                  -{discountPercent}%
+                </span>
+              )}
+            </div>
+
+            {product.badge ? (
+              <div
+                className={`shrink-0 rounded-full px-3 py-1 text-[10px] font-medium ${
+                  product.badge === "Из-за рубежа"
+                    ? "bg-black text-white"
+                    : "bg-[#F5F5F5] text-black"
+                }`}
+              >
+                {product.badge}
+              </div>
+            ) : null}
+          </div>
+
+          <div className="mt-5">
+            <p className="mb-2 text-sm text-gray-500">Размер</p>
+            <div className="grid grid-cols-5 gap-1.5">
+              {sizes.map((s) => (
+                <button
+                  key={s.label}
+                  onClick={() => toggleSize(s.label)}
+                  className={`rounded-xl border px-1.5 py-2 text-center transition-all duration-200 active:scale-95 ${
+                    selectedSizes.includes(s.label)
+                      ? "border-black bg-black text-white"
+                      : "border-gray-200 bg-white text-black"
+                  }`}
+                >
+                  <div className="text-[11px] font-medium">{s.label}</div>
+                  <div
+                    className={`mt-0.5 text-[9px] ${
+                      selectedSizes.includes(s.label)
+                        ? "text-white/70"
+                        : "text-gray-400"
+                    }`}
+                  >
+                    {s.sub}
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            <div className="mt-2 text-[12px] text-gray-400">
+              {selectedSizes.length > 0
+                ? `Выбрано размеров: ${selectedSizes.join(", ")}`
+                : "Можно выбрать несколько размеров"}
+            </div>
+          </div>
+
+          <div className="mt-5">
+            <p className="mb-2 text-sm text-gray-500">Цвет</p>
+            <div className="grid grid-cols-4 gap-2">
+              {product.colors.map((c) => {
+                const preview =
+                  product.galleryByColor?.[c]?.[0] ||
+                  product.colorImages?.[c] ||
+                  product.image ||
+                  "/products/product-1.jpg";
+
+                const isSelected = selectedColor === c;
+
+                return (
+                  <button
+                    key={c}
+                    onClick={() => selectColor(c)}
+                    className={`overflow-hidden rounded-2xl border bg-white transition-all duration-200 active:scale-95 ${
+                      isSelected
+                        ? "border-black ring-2 ring-black/10"
+                        : "border-gray-200"
+                    }`}
+                  >
+                    <div className="aspect-[3/4] w-full overflow-hidden bg-[#ECECEC]">
+                      <img
+                        src={preview}
+                        alt={c}
+                        className="h-full w-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = "/products/product-1.jpg";
+                        }}
+                      />
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="mt-2 text-[12px] text-gray-400">
+              {selectedColor ? `Выбран цвет: ${selectedColor}` : "Выберите цвет"}
+            </div>
+          </div>
+
+          {product.composition.length > 0 && (
+            <div className="mt-5">
+              <p className="mb-2 text-sm text-gray-500">Состав</p>
+              <div className="flex flex-wrap gap-2">
+                {product.composition.map((item) => (
+                  <span
+                    key={item}
+                    className="rounded-full bg-[#F5F5F5] px-3 py-1.5 text-[12px] text-gray-700"
+                  >
+                    {item}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="mt-5">
+            <h1 className="text-[24px] font-medium leading-tight text-black">
+              {product.name}
+            </h1>
+          </div>
+
+          <div className="mt-5">
+            <p className="text-[14px] leading-6 text-gray-600">
+              {description.length > 110 && !showFullDescription
+                ? `${description.slice(0, 110)}...`
+                : description}
+            </p>
+
+            {description.length > 110 && (
+              <button
+                onClick={() => setShowFullDescription((prev) => !prev)}
+                className="mt-2 text-[13px] text-black underline underline-offset-2"
+              >
+                {showFullDescription ? "Свернуть" : "Читать полностью"}
+              </button>
+            )}
+          </div>
+
+          <div className="mt-6 flex items-center justify-between rounded-2xl bg-[#F7F7F7] px-4 py-3">
+            <span className="text-sm text-gray-500">Товаров к добавлению</span>
+            <span className="text-[18px] font-semibold tracking-[-0.02em] text-black">
+              {selectedSizes.length * (selectedColor ? 1 : 0)}
+            </span>
+          </div>
+
+          <div className="mt-5">
+            <button
+              onClick={addToCart}
+              disabled={!canOrder}
+              className={`w-full rounded-2xl py-3.5 text-sm font-medium transition-all duration-200 ${
+                !canOrder
+                  ? "bg-gray-200 text-gray-500"
+                  : justAdded
+                  ? "bg-[#16A34A] text-white"
+                  : "bg-black text-white active:scale-[0.99]"
+              }`}
+            >
+              {!canOrder
+                ? "Добавить в корзину"
+                : justAdded
+                ? "Добавлено"
+                : "Добавить в корзину"}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <BottomNav />
+    </main>
   );
 }
