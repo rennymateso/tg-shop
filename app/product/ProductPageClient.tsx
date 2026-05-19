@@ -140,6 +140,24 @@ function IconLock() {
   );
 }
 
+function IconChevron({ open }: { open: boolean }) {
+  return (
+    <svg
+      width="17"
+      height="17"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.18s ease" }}
+    >
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  );
+}
+
 export default function ProductPageClient({
   initialProduct,
   initialError,
@@ -160,6 +178,7 @@ export default function ProductPageClient({
   const [justAdded, setJustAdded] = useState(false);
   const [cartProductCount, setCartProductCount] = useState(0);
   const [articleCopied, setArticleCopied] = useState(false);
+  const [openInfoSection, setOpenInfoSection] = useState<"description" | "characteristics" | null>(null);
 
   const touchStartXRef = useRef<number | null>(null);
   const addedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -563,67 +582,105 @@ export default function ProductPageClient({
             </div>
           </div>
 
-          <div className="mt-5 rounded-2xl bg-[#F7F7F7] p-4">
-            <div className="mb-3 text-[13px] font-normal text-[#777]">
-              Информация о товаре
-            </div>
+          <div className="mt-5 overflow-hidden rounded-2xl border border-black/5 bg-white">
+            <button
+              type="button"
+              onClick={() =>
+                setOpenInfoSection((prev) =>
+                  prev === "description" ? null : "description"
+                )
+              }
+              className="flex w-full items-center justify-between px-4 py-4 text-left"
+            >
+              <span className="text-[14px] font-normal text-black">Описание</span>
+              <span className="text-gray-400">
+                <IconChevron open={openInfoSection === "description"} />
+              </span>
+            </button>
 
-            <div className="divide-y divide-black/5">
-              <div className="flex items-center justify-between gap-4 py-2">
-                <span className="text-[12px] text-[#999]">Артикул</span>
-                <button
-                  type="button"
-                  onClick={copyArticle}
-                  className="flex items-center gap-1 text-right text-[12px] text-[#555]"
-                >
-                  {article}
-                  <IconCopy copied={articleCopied} />
-                </button>
+            {openInfoSection === "description" && (
+              <div className="border-t border-black/5 px-4 pb-4 pt-3">
+                <p className="text-[13px] leading-6 text-[#555]">
+                  {description || "Описание товара скоро появится."}
+                </p>
               </div>
+            )}
 
-              <div className="flex items-center justify-between gap-4 py-2">
-                <span className="text-[12px] text-[#999]">Страна производства</span>
-                <span className="text-right text-[12px] text-[#555]">
-                  {getProductionCountry(product)}
-                </span>
-              </div>
+            <button
+              type="button"
+              onClick={() =>
+                setOpenInfoSection((prev) =>
+                  prev === "characteristics" ? null : "characteristics"
+                )
+              }
+              className="flex w-full items-center justify-between border-t border-black/5 px-4 py-4 text-left"
+            >
+              <span className="text-[14px] font-normal text-black">
+                Характеристики
+              </span>
+              <span className="text-gray-400">
+                <IconChevron open={openInfoSection === "characteristics"} />
+              </span>
+            </button>
 
-              <div className="flex items-center justify-between gap-4 py-2">
-                <span className="text-[12px] text-[#999]">Состав</span>
-                <span className="text-right text-[12px] text-[#555]">
-                  {product.composition.length > 0
-                    ? product.composition.join(", ")
-                    : "Не указан"}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between gap-4 py-2">
-                <span className="text-[12px] text-[#999]">Категория</span>
-                <span className="text-right text-[12px] text-[#555]">
-                  {product.category}
-                </span>
-              </div>
-
-              {description && (
-                <div className="py-2">
-                  <div className="mb-1 text-[12px] text-[#999]">Описание</div>
-                  <p className="text-[12px] leading-5 text-[#555]">
-                    {description.length > 120 && !showFullDescription
-                      ? `${description.slice(0, 120)}...`
-                      : description}
-                  </p>
-
-                  {description.length > 120 && (
+            {openInfoSection === "characteristics" && (
+              <div className="border-t border-black/5 px-4 pb-4 pt-2">
+                <div className="divide-y divide-black/5">
+                  <div className="flex items-center justify-between gap-4 py-2.5">
+                    <span className="text-[12px] text-[#999]">Артикул</span>
                     <button
-                      onClick={() => setShowFullDescription((prev) => !prev)}
-                      className="mt-1 text-[12px] text-black underline underline-offset-2"
+                      type="button"
+                      onClick={copyArticle}
+                      className="flex items-center gap-1 text-right text-[12px] text-[#555]"
                     >
-                      {showFullDescription ? "Свернуть" : "Читать полностью"}
+                      {article}
+                      <IconCopy copied={articleCopied} />
                     </button>
-                  )}
+                  </div>
+
+                  <div className="flex items-center justify-between gap-4 py-2.5">
+                    <span className="text-[12px] text-[#999]">
+                      Страна-изготовитель
+                    </span>
+                    <span className="text-right text-[12px] text-[#555]">
+                      {getProductionCountry(product)}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-4 py-2.5">
+                    <span className="text-[12px] text-[#999]">Материал</span>
+                    <span className="text-right text-[12px] text-[#555]">
+                      {product.composition?.[0] || "Не указан"}
+                    </span>
+                  </div>
+
+                  <div className="flex items-start justify-between gap-4 py-2.5">
+                    <span className="text-[12px] text-[#999]">
+                      Состав материала
+                    </span>
+                    <span className="max-w-[190px] text-right text-[12px] leading-5 text-[#555]">
+                      {product.composition.length > 0
+                        ? product.composition.join(", ")
+                        : "Не указан"}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-4 py-2.5">
+                    <span className="text-[12px] text-[#999]">Тип</span>
+                    <span className="text-right text-[12px] text-[#555]">
+                      {product.category}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-4 py-2.5">
+                    <span className="text-[12px] text-[#999]">Пол</span>
+                    <span className="text-right text-[12px] text-[#555]">
+                      Мужской
+                    </span>
+                  </div>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
 
           <div className="mt-5">
