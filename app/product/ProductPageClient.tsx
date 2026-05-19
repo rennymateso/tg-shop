@@ -466,37 +466,41 @@ export default function ProductPageClient({
         </div>
 
         <div className="p-5">
-          <div className="mb-2">
-            <div className="truncate text-[10px] font-normal uppercase tracking-[0.14em] text-gray-400">
-              {product.brand}
-            </div>
-
-            <h1 className="mt-1 text-[24px] font-medium leading-tight text-black">
-              {product.name}
-            </h1>
-          </div>
-
-          <div className="mb-3 flex items-start justify-between gap-3">
+          <div className="mb-4">
             <div className="flex items-end gap-2">
               {product.oldPrice && (
-                <span className="text-[12px] font-medium leading-none text-[#A0A7B5] line-through decoration-[1px]">
+                <span className="pb-[2px] text-[15px] font-normal leading-none text-[#A0A7B5] line-through decoration-[1px]">
                   {formatPrice(product.oldPrice)} ₽
                 </span>
               )}
 
-              <span className="text-[17px] font-bold leading-none tracking-[-0.035em] text-[#16A34A]">
+              <span className="text-[25px] font-semibold leading-none tracking-[-0.04em] text-[#16A34A]">
                 {formatPrice(product.price)} ₽
               </span>
 
               {discountPercent > 0 && (
-                <span className="pb-[1px] text-[12px] font-semibold leading-none text-[#FF2F7D]">
+                <span className="pb-[3px] text-[14px] font-semibold leading-none text-[#FF2F7D]">
                   -{discountPercent}%
                 </span>
               )}
             </div>
 
+            <div className="mt-4 h-px w-full bg-[#ECECEC]" />
+          </div>
+
+          <div className="mb-2 flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="truncate text-[10px] font-normal uppercase tracking-[0.14em] text-gray-400">
+                {product.brand}
+              </div>
+
+              <h1 className="mt-1 text-[24px] font-medium leading-tight text-black">
+                {product.name}
+              </h1>
+            </div>
+
             {product.badge ? (
-              <div className="shrink-0 rounded-full bg-[#F3F3F3] px-3 py-1 text-[10px] font-normal text-[#777]">
+              <div className="mt-[1px] shrink-0 rounded-full bg-[#F3F3F3] px-3 py-1 text-[10px] font-normal text-[#777]">
                 {product.badge}
               </div>
             ) : null}
