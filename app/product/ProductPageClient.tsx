@@ -447,47 +447,33 @@ export default function ProductPageClient({
         </div>
 
         <div className="p-5">
-          <div className="mb-2 flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <div className="truncate text-[10px] font-normal uppercase tracking-[0.18em] text-[#A8A8A8]">
-                {product.brand}
-              </div>
-
-              <h1 className="mt-1.5 text-[18px] font-normal leading-[1.18] tracking-[-0.02em] text-black">
-                {product.name}
-              </h1>
+          <div className="mb-2">
+            <div className="truncate text-[10px] font-normal uppercase tracking-[0.14em] text-gray-400">
+              {product.brand}
             </div>
 
-            <div className="flex shrink-0 items-center gap-1 rounded-full bg-[#F6F6F6] px-2.5 py-1 text-[9px] font-normal uppercase tracking-[0.08em] text-[#A8A8A8]">
-              <span>{article}</span>
-              <button
-                type="button"
-                onClick={copyArticle}
-                className="flex h-4 w-4 items-center justify-center text-[#A8A8A8]"
-                aria-label="Скопировать артикул"
-              >
-                <IconCopy copied={articleCopied} />
-              </button>
-            </div>
+            <h1 className="mt-1 text-[24px] font-medium leading-tight text-black">
+              {product.name}
+            </h1>
           </div>
 
           <div className="mb-3 flex items-start justify-between gap-3">
-            <div className="flex items-center gap-2">
+            <div className="flex items-end gap-2">
               {product.oldPrice && (
-                <span className="text-[13px] font-normal leading-none text-gray-400 line-through">
+                <span className="text-[12px] font-medium leading-none text-[#A0A7B5] line-through decoration-[1px]">
                   {formatPrice(product.oldPrice)} ₽
                 </span>
               )}
 
+              <span className="text-[17px] font-bold leading-none tracking-[-0.035em] text-[#16A34A]">
+                {formatPrice(product.price)} ₽
+              </span>
+
               {discountPercent > 0 && (
-                <span className="text-[12px] font-medium leading-none text-[#FF2F7D]">
+                <span className="pb-[1px] text-[12px] font-semibold leading-none text-[#FF2F7D]">
                   -{discountPercent}%
                 </span>
               )}
-
-              <span className="text-[20px] font-normal leading-none tracking-[-0.02em] text-[#16A34A]">
-                {formatPrice(product.price)} ₽
-              </span>
             </div>
 
             {product.badge ? (
@@ -498,7 +484,15 @@ export default function ProductPageClient({
           </div>
 
           <div className="mt-5">
-            <p className="mb-2 text-sm font-normal text-gray-500">Размер</p>
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-sm font-normal text-gray-500">Размер</p>
+              <button
+                type="button"
+                className="text-[12px] font-normal text-gray-400 underline underline-offset-2"
+              >
+                таблица размеров
+              </button>
+            </div>
             <div className="grid grid-cols-5 gap-1.5">
               {sizes.map((s) => (
                 <button
@@ -524,12 +518,6 @@ export default function ProductPageClient({
               ))}
             </div>
 
-            <button
-              type="button"
-              className="mt-2 text-[12px] font-normal text-gray-400 underline underline-offset-2"
-            >
-              таблица размеров
-            </button>
           </div>
 
           <div className="mt-5">
