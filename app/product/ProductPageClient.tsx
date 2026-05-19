@@ -93,6 +93,79 @@ function LockIcon() {
   );
 }
 
+function CopyIcon() {
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <rect x="9" y="9" width="10" height="10" rx="2" />
+      <path d="M5 15H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1" />
+    </svg>
+  );
+}
+
+type SizeTableRow = {
+  size: string;
+  ru: string;
+  width: string;
+  length: string;
+};
+
+function getSizeTableRows(product: Product | null): SizeTableRow[] {
+  const category = product?.category?.toLowerCase() || "";
+  const isBottom = product?.type === "bottom" || category.includes("джинс") || category.includes("брюк") || category.includes("юбк");
+
+  if (isBottom) {
+    return [
+      { size: "30", ru: "46", width: "76 см", length: "81 см" },
+      { size: "31", ru: "46–48", width: "79 см", length: "81 см" },
+      { size: "32", ru: "48", width: "81 см", length: "81 см" },
+      { size: "33", ru: "48–50", width: "84 см", length: "81 см" },
+      { size: "34", ru: "50", width: "86 см", length: "86 см" },
+      { size: "36", ru: "52", width: "91 см", length: "86 см" },
+      { size: "38", ru: "54", width: "97 см", length: "86 см" },
+    ];
+  }
+
+  const isWomen = category.includes("плать") || category.includes("юбк") || category.includes("жен");
+
+  if (isWomen) {
+    return [
+      { size: "S", ru: "42–44", width: "37 см", length: "57 см" },
+      { size: "M", ru: "46–48", width: "39 см", length: "58 см" },
+      { size: "L", ru: "48–50", width: "42 см", length: "60 см" },
+      { size: "XL", ru: "50–52", width: "44 см", length: "61 см" },
+      { size: "XXL", ru: "52–54", width: "46 см", length: "62 см" },
+    ];
+  }
+
+  if (category.includes("поло")) {
+    return [
+      { size: "S", ru: "44–46", width: "50 см", length: "70 см" },
+      { size: "M", ru: "46–48", width: "52 см", length: "72 см" },
+      { size: "L", ru: "48–50", width: "54 см", length: "74 см" },
+      { size: "XL", ru: "50–52", width: "56 см", length: "76 см" },
+      { size: "XXL", ru: "52–54", width: "58 см", length: "78 см" },
+    ];
+  }
+
+  return [
+    { size: "S", ru: "44–46", width: "49 см", length: "70 см" },
+    { size: "M", ru: "46–48", width: "52 см", length: "72 см" },
+    { size: "L", ru: "48–50", width: "55 см", length: "74 см" },
+    { size: "XL", ru: "50–52", width: "58 см", length: "76 см" },
+    { size: "XXL", ru: "52–54", width: "61 см", length: "78 см" },
+  ];
+}
+
 export default function ProductPageClient({
   initialProduct,
   initialError,
@@ -118,6 +191,7 @@ export default function ProductPageClient({
   const [justAdded, setJustAdded] = useState(false);
   const [cartProductCount, setCartProductCount] = useState(0);
   const [showSizeTable, setShowSizeTable] = useState(false);
+  const [articleCopied, setArticleCopied] = useState(false);
 
   const touchStartXRef = useRef<number | null>(null);
   const addedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -203,6 +277,7 @@ export default function ProductPageClient({
 
   const sizes = product?.type === "bottom" ? bottomSizes : topSizes;
   const article = product ? `ART-${product.id}` : "";
+  const sizeTableRows = getSizeTableRows(product);
   const description = product?.description || "";
   const canOrder = !!selectedSize && !!selectedColor;
   const discountPercent = product
@@ -259,6 +334,18 @@ export default function ProductPageClient({
       nextImage();
     } else {
       prevImage();
+    }
+  };
+
+  const copyArticle = async () => {
+    if (!article) return;
+
+    try {
+      await navigator.clipboard.writeText(article);
+      setArticleCopied(true);
+      window.setTimeout(() => setArticleCopied(false), 1400);
+    } catch {
+      setArticleCopied(false);
     }
   };
 
@@ -391,20 +478,26 @@ export default function ProductPageClient({
         </div>
 
         <div className="p-5">
-          <div className="mb-2 flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <div className="text-[11px] uppercase tracking-[0.16em] text-gray-400">
+          <div className="mb-2">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0 text-[11px] uppercase tracking-[0.16em] text-gray-400">
                 {product.brand}
               </div>
 
-              <h1 className="mt-2 text-[24px] font-medium leading-tight text-black">
-                {product.name}
-              </h1>
+              <button
+                type="button"
+                onClick={copyArticle}
+                className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#F5F5F5] px-2.5 py-1 text-[10px] uppercase tracking-[0.08em] text-gray-400 active:scale-[0.98]"
+                aria-label="Скопировать артикул"
+              >
+                <span>{articleCopied ? "Скопировано" : article}</span>
+                <CopyIcon />
+              </button>
             </div>
 
-            <div className="shrink-0 text-[10px] uppercase tracking-[0.12em] text-gray-400">
-              {article}
-            </div>
+            <h1 className="mt-2 text-[24px] font-medium leading-tight text-black">
+              {product.name}
+            </h1>
           </div>
 
           <div className="mb-3 mt-4 flex items-start justify-between gap-3">
@@ -415,7 +508,7 @@ export default function ProductPageClient({
                 </span>
               )}
 
-              <span className="text-[22px] font-semibold leading-none tracking-[-0.02em] text-black">
+              <span className="text-[22px] font-semibold leading-none tracking-[-0.02em] text-[#2B2824]">
                 {formatPrice(product.price)} ₽
               </span>
 
@@ -436,14 +529,6 @@ export default function ProductPageClient({
           <div className="mt-5">
             <div className="mb-2 flex items-end justify-between gap-3">
               <p className="text-sm text-gray-500">Размер</p>
-
-              <button
-                type="button"
-                onClick={() => setShowSizeTable(true)}
-                className="text-[11px] text-gray-400 underline underline-offset-2"
-              >
-                таблица размеров
-              </button>
             </div>
 
             <div className="grid grid-cols-5 gap-1.5">
@@ -470,14 +555,22 @@ export default function ProductPageClient({
               ))}
             </div>
 
-            <div className="mt-2 text-[12px] text-gray-400">
-              Выбран размер: {selectedSize}
+            <div className="mt-2 flex items-center justify-between gap-3 text-[12px]">
+              <span className="text-gray-400">Выбран размер: {selectedSize}</span>
+
+              <button
+                type="button"
+                onClick={() => setShowSizeTable(true)}
+                className="text-[11px] text-gray-400 underline underline-offset-2"
+              >
+                таблица размеров
+              </button>
             </div>
           </div>
 
           <div className="mt-5">
             <p className="mb-2 text-sm text-gray-500">Цвет</p>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="flex gap-2 overflow-x-auto pb-1">
               {product.colors.map((c) => {
                 const preview =
                   product.galleryByColor?.[c]?.[0] ||
@@ -492,22 +585,20 @@ export default function ProductPageClient({
                     key={c}
                     type="button"
                     onClick={() => selectColor(c)}
-                    className={`overflow-hidden rounded-2xl border bg-white transition-all duration-200 active:scale-95 ${
+                    className={`h-[58px] w-[46px] shrink-0 overflow-hidden rounded-xl border bg-white transition-all duration-200 active:scale-95 ${
                       isSelected
-                        ? "border-black ring-2 ring-black/10"
+                        ? "border-[#2B2824] ring-1 ring-black/10"
                         : "border-gray-200"
                     }`}
                   >
-                    <div className="aspect-[3/4] w-full overflow-hidden bg-[#ECECEC]">
-                      <img
-                        src={preview}
-                        alt={c}
-                        className="h-full w-full object-cover"
-                        onError={(e) => {
-                          e.currentTarget.src = "/products/product-1.jpg";
-                        }}
-                      />
-                    </div>
+                    <img
+                      src={preview}
+                      alt={c}
+                      className="h-full w-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.src = "/products/product-1.jpg";
+                      }}
+                    />
                   </button>
                 );
               })}
@@ -519,33 +610,41 @@ export default function ProductPageClient({
           </div>
 
           {product.composition.length > 0 && (
-            <div className="mt-6 rounded-[22px] bg-[#F7F7F7] p-4">
+            <div className="mt-6">
               <div className="mb-3 flex items-center justify-between">
                 <p className="text-sm font-medium text-black">Состав и уход</p>
-                <span className="text-[11px] text-gray-400">информация о товаре</span>
+                <span className="text-[11px] text-gray-400">детали изделия</span>
               </div>
 
-              <div className="space-y-2">
-                {product.composition.map((item, index) => (
-                  <div
-                    key={`${item}-${index}`}
-                    className="flex items-center justify-between rounded-2xl bg-white px-3 py-2.5"
-                  >
-                    <span className="text-[12px] text-gray-400">
-                      Материал {index + 1}
-                    </span>
-                    <span className="text-[13px] text-gray-700">{item}</span>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="rounded-[18px] bg-[#F7F7F7] p-3">
+                  <div className="text-[11px] text-gray-400">Основной состав</div>
+                  <div className="mt-2 text-[15px] font-medium text-[#2B2824]">
+                    {product.composition.join(", ")}
                   </div>
-                ))}
-
-                <div className="flex items-center justify-between rounded-2xl bg-white px-3 py-2.5">
-                  <span className="text-[12px] text-gray-400">Категория</span>
-                  <span className="text-[13px] text-gray-700">{product.category}</span>
+                  <div className="mt-2 text-[11px] leading-4 text-gray-400">
+                    Материал приятный к телу и подходит для ежедневной носки.
+                  </div>
                 </div>
 
-                <div className="flex items-center justify-between rounded-2xl bg-white px-3 py-2.5">
-                  <span className="text-[12px] text-gray-400">Доставка</span>
-                  <span className="text-[13px] text-gray-700">7–14 дней</span>
+                <div className="rounded-[18px] bg-[#F7F7F7] p-3">
+                  <div className="text-[11px] text-gray-400">Уход</div>
+                  <div className="mt-2 text-[13px] leading-5 text-[#2B2824]">
+                    Деликатная стирка до 30°C
+                  </div>
+                  <div className="mt-1 text-[13px] leading-5 text-[#2B2824]">
+                    Не отбеливать
+                  </div>
+                  <div className="mt-1 text-[13px] leading-5 text-[#2B2824]">
+                    Сушить естественно
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-2 rounded-[18px] bg-[#F7F7F7] px-3 py-3">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-[12px] text-gray-400">Категория</span>
+                  <span className="text-[13px] text-[#2B2824]">{product.category}</span>
                 </div>
               </div>
             </div>
@@ -622,23 +721,29 @@ export default function ProductPageClient({
             </div>
 
             <div className="overflow-hidden rounded-2xl border border-gray-100">
-              <div className="grid grid-cols-3 bg-[#F7F7F7] px-3 py-2 text-[12px] text-gray-400">
+              <div className="grid grid-cols-4 bg-[#F7F7F7] px-3 py-2 text-[11px] text-gray-400">
                 <span>Размер</span>
                 <span>RU</span>
-                <span>Тип</span>
+                <span>Ширина</span>
+                <span>Длина</span>
               </div>
 
-              {sizes.map((s) => (
+              {sizeTableRows.map((row) => (
                 <div
-                  key={`table-${s.label}`}
-                  className="grid grid-cols-3 border-t border-gray-100 px-3 py-2 text-[13px] text-gray-700"
+                  key={`table-${row.size}`}
+                  className="grid grid-cols-4 border-t border-gray-100 px-3 py-2 text-[12px] text-gray-700"
                 >
-                  <span>{s.label}</span>
-                  <span>{s.sub}</span>
-                  <span>{product.type === "bottom" ? "Низ" : "Верх"}</span>
+                  <span>{row.size}</span>
+                  <span>{row.ru}</span>
+                  <span>{row.width}</span>
+                  <span>{row.length}</span>
                 </div>
               ))}
             </div>
+
+            <p className="mt-3 text-[11px] leading-4 text-gray-400">
+              Замеры ориентировочные: ширина — по груди/талии, длина — по спинке или внутреннему шву.
+            </p>
 
             <button
               type="button"
