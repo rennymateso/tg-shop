@@ -550,7 +550,7 @@ export default function CartPageClient() {
                 key={item.id}
                 type="button"
                 onClick={() => router.push(`/product?id=${item.id}`)}
-                className="w-[142px] shrink-0 text-left"
+                className="flex h-[292px] w-[142px] shrink-0 flex-col text-left"
               >
                 <div className="overflow-hidden rounded-[18px] bg-[#EFEFEF]">
                   <div className="aspect-[3/4]">
@@ -570,11 +570,11 @@ export default function CartPageClient() {
                     {item.brand}
                   </div>
 
-                  <div className="mt-1 line-clamp-2 text-[14px] font-medium leading-[1.2] tracking-[-0.02em] text-black">
+                  <div className="mt-1 line-clamp-2 min-h-[34px] text-[14px] font-medium leading-[1.2] tracking-[-0.02em] text-black">
                     {item.name}
                   </div>
 
-                  <div className="mt-2 flex items-baseline gap-[5px] whitespace-nowrap">
+                  <div className="mt-auto flex items-baseline gap-[5px] whitespace-nowrap">
                     {item.oldPrice ? (
                       <span className="text-[11px] font-normal leading-none text-[#999] line-through">
                         {formatPrice(item.oldPrice)} ₽
