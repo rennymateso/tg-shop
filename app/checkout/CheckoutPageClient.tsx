@@ -869,7 +869,7 @@ export default function CheckoutPageClient() {
 
               <button
                 onClick={() => router.push("/")}
-                className="mt-5 rounded-2xl bg-black px-5 py-3 text-sm font-medium text-white"
+                className="mt-5 rounded-2xl bg-[#F0F0F0] px-5 py-3 text-sm font-medium text-black"
               >
                 Перейти в каталог
               </button>
@@ -1017,8 +1017,8 @@ export default function CheckoutPageClient() {
                     onClick={() => setDeliveryMethod("delivery")}
                     className={`rounded-2xl py-3 text-sm ${
                       deliveryMethod === "delivery"
-                        ? "bg-black text-white"
-                        : "bg-gray-100 text-black"
+                        ? "bg-[#F0F0F0] text-black ring-1 ring-black/10"
+                        : "bg-gray-100 text-gray-500"
                     }`}
                   >
                     Доставка
@@ -1028,8 +1028,8 @@ export default function CheckoutPageClient() {
                     onClick={() => setDeliveryMethod("pickup")}
                     className={`rounded-2xl py-3 text-sm ${
                       deliveryMethod === "pickup"
-                        ? "bg-black text-white"
-                        : "bg-gray-100 text-black"
+                        ? "bg-[#F0F0F0] text-black ring-1 ring-black/10"
+                        : "bg-gray-100 text-gray-500"
                     }`}
                   >
                     Самовывоз
@@ -1062,7 +1062,7 @@ export default function CheckoutPageClient() {
                               onClick={() => handleSelectSavedAddress(address)}
                               className={`w-full rounded-2xl border p-3 text-left ${
                                 selectedAddressId === address.id
-                                  ? "border-black bg-black text-white"
+                                  ? "border-black/10 bg-[#F0F0F0] text-black"
                                   : "border-gray-200 bg-[#F5F5F5] text-black"
                               }`}
                             >
@@ -1073,7 +1073,7 @@ export default function CheckoutPageClient() {
                                     className={`rounded-full px-2 py-0.5 text-[10px] ${
                                       selectedAddressId === address.id
                                         ? "bg-white text-black"
-                                        : "bg-black text-white"
+                                        : "bg-[#E8E8E8] text-black"
                                     }`}
                                   >
                                     Основной
@@ -1084,7 +1084,7 @@ export default function CheckoutPageClient() {
                               <p
                                 className={`mt-1 text-sm ${
                                   selectedAddressId === address.id
-                                    ? "text-white/80"
+                                    ? "text-gray-500"
                                     : "text-gray-500"
                                 }`}
                               >
@@ -1173,8 +1173,8 @@ export default function CheckoutPageClient() {
                     onClick={() => setPaymentMethod("card")}
                     className={`rounded-2xl py-3 text-sm ${
                       paymentMethod === "card"
-                        ? "bg-black text-white"
-                        : "bg-gray-100 text-black"
+                        ? "bg-[#F0F0F0] text-black ring-1 ring-black/10"
+                        : "bg-gray-100 text-gray-500"
                     }`}
                   >
                     Картой
@@ -1188,8 +1188,8 @@ export default function CheckoutPageClient() {
                     disabled={deliveryMethod !== "pickup"}
                     className={`rounded-2xl py-3 text-sm ${
                       paymentMethod === "cash"
-                        ? "bg-black text-white"
-                        : "bg-gray-100 text-black"
+                        ? "bg-[#F0F0F0] text-black ring-1 ring-black/10"
+                        : "bg-gray-100 text-gray-500"
                     } disabled:cursor-not-allowed disabled:opacity-50`}
                   >
                     Наличными
@@ -1236,7 +1236,7 @@ export default function CheckoutPageClient() {
 
                   <div className="flex items-end justify-between border-t border-[#E7E7E7] pt-3">
                     <span className="text-[15px] font-medium text-black">Итого</span>
-                    <span className="text-[22px] font-semibold leading-none tracking-[-0.04em] text-[#16A34A]">
+                    <span className="text-[22px] font-semibold leading-none tracking-[-0.04em] text-[#2B2824]">
                       {formatPrice(finalNewTotal)} ₽
                     </span>
                   </div>
@@ -1250,7 +1250,7 @@ export default function CheckoutPageClient() {
                   <button
                     onClick={handleCardPayment}
                     disabled={!isFormValid || isPaying}
-                    className="w-full rounded-2xl bg-black py-3.5 text-sm font-medium text-white disabled:opacity-60"
+                    className="w-full rounded-2xl bg-[#16A34A] py-3.5 text-sm font-medium text-white disabled:opacity-60"
                   >
                     {isPaying ? "Переход..." : "Перейти к оплате"}
                   </button>
@@ -1258,7 +1258,7 @@ export default function CheckoutPageClient() {
                   <button
                     onClick={handleCashOrder}
                     disabled={!isFormValid || deliveryMethod !== "pickup" || isPaying}
-                    className="w-full rounded-2xl bg-black py-3.5 text-sm font-medium text-white disabled:opacity-60"
+                    className="w-full rounded-2xl bg-[#16A34A] py-3.5 text-sm font-medium text-white disabled:opacity-60"
                   >
                     {isPaying ? "Сохраняем..." : "Оформить заказ"}
                   </button>
