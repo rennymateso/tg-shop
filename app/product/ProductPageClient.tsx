@@ -389,12 +389,12 @@ export default function ProductPageClient({
         }
 
         .mn-product-price {
-          color: #128243;
+          color: #16A34A;
           font-family: 'Onest', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-          font-size: 16px;
+          font-size: 22px;
           line-height: 1;
           font-weight: 700;
-          letter-spacing: -0.035em;
+          letter-spacing: -0.045em;
         }
       `}</style>
 
@@ -406,12 +406,12 @@ export default function ProductPageClient({
         }
 
         .mn-product-price {
-          color: #128243;
+          color: #16A34A;
           font-family: 'Onest', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-          font-size: 16px;
+          font-size: 22px;
           line-height: 1;
           font-weight: 700;
-          letter-spacing: -0.035em;
+          letter-spacing: -0.045em;
         }
       `}</style>
 
@@ -503,13 +503,13 @@ export default function ProductPageClient({
           <div className="mb-4">
             <div className="flex items-baseline gap-[5px] whitespace-nowrap">
               {product.oldPrice ? (
-                <span className="text-[11px] font-normal leading-none text-[#999] line-through">
+                <span className="text-[13px] font-medium leading-none text-[#999] line-through">
                   {formatPrice(product.oldPrice)} ₽
                 </span>
               ) : null}
 
               {discountPercent > 0 ? (
-                <span className="text-[11px] font-semibold leading-none text-[#e13a3a]">
+                <span className="text-[13px] font-bold leading-none text-[#e13a3a]">
                   −{discountPercent}%
                 </span>
               ) : null}
