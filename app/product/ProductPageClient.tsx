@@ -773,14 +773,6 @@ export default function ProductPageClient({
               <h3 className="text-[16px] font-medium text-black">
                 Таблица размеров
               </h3>
-
-              <button
-                type="button"
-                onClick={() => setShowSizeTable(false)}
-                className="rounded-full bg-black px-4 py-2 text-[13px] font-normal text-white"
-              >
-                Понятно
-              </button>
             </div>
 
             <div className="overflow-hidden rounded-2xl border border-black/5">
@@ -816,6 +808,14 @@ export default function ProductPageClient({
                 </div>
               ))}
             </div>
+
+            <button
+              type="button"
+              onClick={() => setShowSizeTable(false)}
+              className="mt-4 h-12 w-full rounded-2xl bg-black text-[14px] font-normal text-white"
+            >
+              Понятно
+            </button>
           </div>
         </div>
       )}
