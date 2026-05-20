@@ -382,7 +382,7 @@ export default function CartPageClient() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <div className="mb-1 truncate text-[10px] font-normal uppercase tracking-[0.16em] text-[#8B8B8B]">
+                        <div className="mb-1 truncate text-[9px] font-normal uppercase tracking-[0.18em] text-[#aaa]">
                           {product?.brand || "MONTREAUX"}
                         </div>
 
@@ -465,23 +465,26 @@ export default function CartPageClient() {
           })}
 
           <div className="rounded-[24px] border border-white bg-white p-4 shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
-            <div className="mb-4 flex items-center justify-between">
-              <span className="text-sm text-gray-500">Итого</span>
+            <div className="mb-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[13px] font-normal text-gray-500">Товары</span>
+                <span className="text-[14px] font-medium text-black">
+                  {formatPrice(totalOld)} ₽
+                </span>
+              </div>
 
-              <div className="flex items-center gap-[6px]">
-                {totalOld > total && (
-                  <span className="text-[12px] font-normal leading-none text-[#999] line-through">
-                    {formatPrice(totalOld)} ₽
+              {totalOld > total && (
+                <div className="flex items-center justify-between">
+                  <span className="text-[13px] font-normal text-gray-500">Скидка</span>
+                  <span className="text-[14px] font-medium text-[#e13a3a]">
+                    −{formatPrice(totalOld - total)} ₽
                   </span>
-                )}
+                </div>
+              )}
 
-                {totalOld > total && (
-                  <span className="text-[12px] font-semibold leading-none text-[#e13a3a]">
-                    −{getDiscountPercent(totalOld, total)}%
-                  </span>
-                )}
-
-                <span className="text-[20px] font-extrabold leading-none tracking-[-0.04em] text-[#128243]">
+              <div className="flex items-end justify-between border-t border-[#EFEFEF] pt-3">
+                <span className="text-[15px] font-medium text-black">Итого</span>
+                <span className="text-[22px] font-extrabold leading-none tracking-[-0.04em] text-[#128243]">
                   {formatPrice(total)} ₽
                 </span>
               </div>
