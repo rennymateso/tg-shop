@@ -104,6 +104,55 @@ type PaymentAttemptStatus = {
   updated_at: string;
 };
 
+const citySuggestions = [
+  "Казань",
+  "Краснодар",
+  "Калининград",
+  "Калуга",
+  "Кемерово",
+  "Киров",
+  "Кострома",
+  "Курск",
+  "Москва",
+  "Санкт-Петербург",
+  "Набережные Челны",
+  "Нижний Новгород",
+  "Екатеринбург",
+  "Самара",
+  "Уфа",
+];
+
+const kazanStreetSuggestions = [
+  "Академика Глушко",
+  "Баумана",
+  "Пушкина",
+  "Петербургская",
+  "Чистопольская",
+  "Сибгата Хакима",
+  "Ямашева",
+  "Декабристов",
+  "Вишневского",
+  "Островского",
+  "Габдуллы Тукая",
+  "Мусина",
+  "Павлюхина",
+  "Ершова",
+];
+
+function getFilteredSuggestions(list: string[], query: string) {
+  const normalized = query.trim().toLowerCase();
+
+  if (!normalized) return list.slice(0, 6);
+
+  return list
+    .filter((item) => item.toLowerCase().startsWith(normalized))
+    .slice(0, 6);
+}
+
+function isKazanCity(value: string) {
+  return value.trim().toLowerCase() === "казань";
+}
+
 function mapRowToProduct(row: ProductRow): Product {
   const normalizedColorImages: Record<string, string> = {};
 
@@ -350,6 +399,8 @@ export default function CheckoutPageClient() {
   const [house, setHouse] = useState("");
   const [apartment, setApartment] = useState("");
   const [deliveryComment, setDeliveryComment] = useState("");
+  const [showCitySuggestions, setShowCitySuggestions] = useState(false);
+  const [showStreetSuggestions, setShowStreetSuggestions] = useState(false);
 
   const [promoCode, setPromoCode] = useState("");
   const [isPaying, setIsPaying] = useState(false);
@@ -604,7 +655,8 @@ export default function CheckoutPageClient() {
   }, [items, productsMap]);
 
   const itemsCount = items.reduce((sum, item) => sum + item.quantity, 0);
-  const deliveryPrice = deliveryMethod === "delivery" ? 500 : 0;
+  const deliveryPrice =
+    deliveryMethod === "delivery" && !isKazanCity(city) ? 500 : 0;
   const finalOldTotal = totals.oldItemsTotal + deliveryPrice;
   const finalNewTotal = totals.newItemsTotal + deliveryPrice;
   const discountAmount = Math.max(0, totals.oldItemsTotal - totals.newItemsTotal);
@@ -632,6 +684,19 @@ export default function CheckoutPageClient() {
     street,
     house,
   });
+
+  const filteredCitySuggestions = useMemo(
+    () => getFilteredSuggestions(citySuggestions, city),
+    [city]
+  );
+
+  const filteredStreetSuggestions = useMemo(
+    () =>
+      isKazanCity(city)
+        ? getFilteredSuggestions(kazanStreetSuggestions, street)
+        : [],
+    [city, street]
+  );
 
   const getProductById = (id: string) => productsMap[id];
 
@@ -1017,8 +1082,8 @@ export default function CheckoutPageClient() {
                     onClick={() => setDeliveryMethod("delivery")}
                     className={`rounded-2xl py-3 text-sm ${
                       deliveryMethod === "delivery"
-                        ? "bg-[#F0F0F0] text-black ring-1 ring-black/10"
-                        : "bg-gray-100 text-gray-500"
+                        ? "bg-[#EAF8F0] text-[#128243] ring-1 ring-[#16A34A]/35"
+                        : "bg-[#F5F5F5] text-gray-500"
                     }`}
                   >
                     Доставка
@@ -1028,8 +1093,8 @@ export default function CheckoutPageClient() {
                     onClick={() => setDeliveryMethod("pickup")}
                     className={`rounded-2xl py-3 text-sm ${
                       deliveryMethod === "pickup"
-                        ? "bg-[#F0F0F0] text-black ring-1 ring-black/10"
-                        : "bg-gray-100 text-gray-500"
+                        ? "bg-[#EAF8F0] text-[#128243] ring-1 ring-[#16A34A]/35"
+                        : "bg-[#F5F5F5] text-gray-500"
                     }`}
                   >
                     Самовывоз
@@ -1062,7 +1127,7 @@ export default function CheckoutPageClient() {
                               onClick={() => handleSelectSavedAddress(address)}
                               className={`w-full rounded-2xl border p-3 text-left ${
                                 selectedAddressId === address.id
-                                  ? "border-black/10 bg-[#F0F0F0] text-black"
+                                  ? "border-[#16A34A]/35 bg-[#EAF8F0] text-black"
                                   : "border-gray-200 bg-[#F5F5F5] text-black"
                               }`}
                             >
@@ -1106,49 +1171,95 @@ export default function CheckoutPageClient() {
 
                     {showNewAddressForm && (
                       <div className="mt-3">
-                                            <input
-                                              placeholder="Город *"
-                                              value={city}
-                                              onChange={(e) => {
-                                                setSelectedAddressId("");
-                                                setCity(e.target.value);
-                                              }}
-                                              className="mb-3 w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-                                            />
+                        <div className="relative mb-3">
+                          <input
+                            placeholder="Город *"
+                            value={city}
+                            onFocus={() => setShowCitySuggestions(true)}
+                            onChange={(e) => {
+                              setSelectedAddressId("");
+                              setCity(e.target.value);
+                              setShowCitySuggestions(true);
+                            }}
+                            className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
+                          />
 
-                                            <div className="grid grid-cols-[1fr_88px_110px] gap-2">
-                                              <input
-                                                placeholder="Улица *"
-                                                value={street}
-                                                onChange={(e) => {
-                                                  setSelectedAddressId("");
-                                                  setStreet(e.target.value);
-                                                }}
-                                                className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-                                              />
+                          {showCitySuggestions && filteredCitySuggestions.length > 0 && (
+                            <div className="absolute left-0 right-0 top-[52px] z-40 overflow-hidden rounded-2xl bg-white shadow-[0_12px_30px_rgba(0,0,0,0.10)]">
+                              {filteredCitySuggestions.map((suggestion) => (
+                                <button
+                                  key={suggestion}
+                                  type="button"
+                                  onMouseDown={(e) => e.preventDefault()}
+                                  onClick={() => {
+                                    setCity(suggestion);
+                                    setShowCitySuggestions(false);
+                                  }}
+                                  className="block w-full px-4 py-3 text-left text-sm text-black active:bg-[#F5F5F5]"
+                                >
+                                  {suggestion}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
 
-                                              <input
-                                                placeholder="Дом *"
-                                                value={house}
-                                                onChange={(e) => {
-                                                  setSelectedAddressId("");
-                                                  setHouse(e.target.value);
-                                                }}
-                                                className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-                                              />
+                        <div className="grid grid-cols-[1fr_88px_110px] gap-2">
+                          <div className="relative">
+                            <input
+                              placeholder="Улица *"
+                              value={street}
+                              onFocus={() => setShowStreetSuggestions(true)}
+                              onChange={(e) => {
+                                setSelectedAddressId("");
+                                setStreet(e.target.value);
+                                setShowStreetSuggestions(true);
+                              }}
+                              className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
+                            />
 
-                                              <input
-                                                placeholder="Кв."
-                                                value={apartment}
-                                                onChange={(e) => {
-                                                  setSelectedAddressId("");
-                                                  setApartment(e.target.value);
-                                                }}
-                                                className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-                                              />
-                                            </div>
+                            {showStreetSuggestions && filteredStreetSuggestions.length > 0 && (
+                              <div className="absolute left-0 right-0 top-[52px] z-40 overflow-hidden rounded-2xl bg-white shadow-[0_12px_30px_rgba(0,0,0,0.10)]">
+                                {filteredStreetSuggestions.map((suggestion) => (
+                                  <button
+                                    key={suggestion}
+                                    type="button"
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    onClick={() => {
+                                      setStreet(suggestion);
+                                      setShowStreetSuggestions(false);
+                                    }}
+                                    className="block w-full px-4 py-3 text-left text-sm text-black active:bg-[#F5F5F5]"
+                                  >
+                                    {suggestion}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
 
-                                            <textarea
+                          <input
+                            placeholder="Дом *"
+                            value={house}
+                            onChange={(e) => {
+                              setSelectedAddressId("");
+                              setHouse(e.target.value);
+                            }}
+                            className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
+                          />
+
+                          <input
+                            placeholder="Кв."
+                            value={apartment}
+                            onChange={(e) => {
+                              setSelectedAddressId("");
+                              setApartment(e.target.value);
+                            }}
+                            className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
+                          />
+                        </div>
+
+                                                                    <textarea
                                               placeholder="Комментарий (подъезд, этаж, код домофона и другое)"
                                               value={deliveryComment}
                                               onChange={(e) => {
@@ -1173,8 +1284,8 @@ export default function CheckoutPageClient() {
                     onClick={() => setPaymentMethod("card")}
                     className={`rounded-2xl py-3 text-sm ${
                       paymentMethod === "card"
-                        ? "bg-[#F0F0F0] text-black ring-1 ring-black/10"
-                        : "bg-gray-100 text-gray-500"
+                        ? "bg-[#EAF8F0] text-[#128243] ring-1 ring-[#16A34A]/35"
+                        : "bg-[#F5F5F5] text-gray-500"
                     }`}
                   >
                     Картой
@@ -1188,8 +1299,8 @@ export default function CheckoutPageClient() {
                     disabled={deliveryMethod !== "pickup"}
                     className={`rounded-2xl py-3 text-sm ${
                       paymentMethod === "cash"
-                        ? "bg-[#F0F0F0] text-black ring-1 ring-black/10"
-                        : "bg-gray-100 text-gray-500"
+                        ? "bg-[#EAF8F0] text-[#128243] ring-1 ring-[#16A34A]/35"
+                        : "bg-[#F5F5F5] text-gray-500"
                     } disabled:cursor-not-allowed disabled:opacity-50`}
                   >
                     Наличными
@@ -1229,8 +1340,12 @@ export default function CheckoutPageClient() {
 
                   <div className="mb-3 flex items-center justify-between">
                     <span className="text-gray-500">Доставка</span>
-                    <span className="text-black">
-                      {deliveryPrice > 0 ? `${formatPrice(deliveryPrice)} ₽` : "Бесплатно"}
+                    <span className={deliveryPrice > 0 ? "text-black" : "text-[#16A34A]"}>
+                      {deliveryMethod === "delivery" && isKazanCity(city)
+                        ? "Без доплат"
+                        : deliveryPrice > 0
+                        ? `${formatPrice(deliveryPrice)} ₽`
+                        : "Бесплатно"}
                     </span>
                   </div>
 
