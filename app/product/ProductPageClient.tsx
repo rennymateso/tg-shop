@@ -179,6 +179,7 @@ export default function ProductPageClient({
   const [cartProductCount, setCartProductCount] = useState(0);
   const [articleCopied, setArticleCopied] = useState(false);
   const [openInfoSection, setOpenInfoSection] = useState<"description" | "characteristics" | null>(null);
+  const [showSizeTable, setShowSizeTable] = useState(false);
 
   const touchStartXRef = useRef<number | null>(null);
   const addedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -398,7 +399,6 @@ export default function ProductPageClient({
       </main>
     );
   }
-
   return (
     <>
       <style>{`
@@ -546,6 +546,7 @@ export default function ProductPageClient({
               <p className="text-sm font-normal text-gray-500">Размер</p>
               <button
                 type="button"
+                onClick={() => setShowSizeTable(true)}
                 className="text-[12px] font-normal text-gray-400 underline underline-offset-2"
               >
                 таблица размеров
@@ -764,6 +765,60 @@ export default function ProductPageClient({
           </div>
         </div>
       </div>
+
+      {showSizeTable && (
+        <div className="fixed inset-0 z-[120] flex items-end justify-center bg-black/40 px-4">
+          <div className="w-full max-w-[420px] rounded-t-[28px] bg-white p-5">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-[16px] font-medium text-black">
+                Таблица размеров
+              </h3>
+
+              <button
+                type="button"
+                onClick={() => setShowSizeTable(false)}
+                className="rounded-full bg-black px-4 py-2 text-[13px] font-normal text-white"
+              >
+                Понятно
+              </button>
+            </div>
+
+            <div className="overflow-hidden rounded-2xl border border-black/5">
+              <div className="grid grid-cols-4 bg-[#F7F7F7] px-3 py-3 text-[11px] font-medium text-[#666]">
+                <span>Размер</span>
+                <span>RU</span>
+                <span>Ширина</span>
+                <span>Длина</span>
+              </div>
+
+              {(product.type === "bottom"
+                ? [
+                    ["30", "46", "40 см", "101 см"],
+                    ["32", "48", "42 см", "103 см"],
+                    ["34", "50", "44 см", "105 см"],
+                    ["36", "52", "46 см", "107 см"],
+                  ]
+                : [
+                    ["S", "46", "52 см", "69 см"],
+                    ["M", "48", "54 см", "71 см"],
+                    ["L", "50", "56 см", "73 см"],
+                    ["XL", "52", "58 см", "75 см"],
+                  ]
+              ).map((row, index) => (
+                <div
+                  key={index}
+                  className="grid grid-cols-4 border-t border-black/5 px-3 py-3 text-[12px] text-[#444]"
+                >
+                  <span>{row[0]}</span>
+                  <span>{row[1]}</span>
+                  <span>{row[2]}</span>
+                  <span>{row[3]}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       <BottomNav />
       </main>
