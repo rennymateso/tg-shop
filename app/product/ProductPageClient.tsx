@@ -173,6 +173,7 @@ export default function ProductPageClient({
     initialProduct?.defaultColor || initialProduct?.colors?.[0] || ""
   );
   const [favorites, setFavorites] = useState<string[]>([]);
+  const [viewedProducts, setViewedProducts] = useState<Product[]>([]);
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [justAdded, setJustAdded] = useState(false);
@@ -211,6 +212,27 @@ export default function ProductPageClient({
       window.removeEventListener("cart-updated", syncCartCount);
       window.removeEventListener("storage", syncCartCount);
     };
+  }, [product]);
+
+
+  useEffect(() => {
+    if (!product) return;
+
+    try {
+      const existing = JSON.parse(localStorage.getItem("viewed-products") || "[]");
+
+      const normalized = Array.isArray(existing) ? existing : [];
+
+      const filtered = normalized.filter((item: Product) => item.id !== product.id);
+
+      const next = [product, ...filtered].slice(0, 10);
+
+      localStorage.setItem("viewed-products", JSON.stringify(next));
+
+      setViewedProducts(filtered.slice(0, 8));
+    } catch {
+      setViewedProducts([]);
+    }
   }, [product]);
 
   useEffect(() => {
@@ -395,7 +417,67 @@ export default function ProductPageClient({
           )}
         </div>
 
-        <BottomNav />
+  
+      {viewedProducts.length > 0 && (
+        <section className="mt-8">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-[18px] font-medium text-black">
+              Вы смотрели
+            </h2>
+          </div>
+
+          <div className="flex gap-3 overflow-x-auto pb-1">
+            {viewedProducts.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => router.push(`/product?id=${item.id}`)}
+                className="w-[148px] shrink-0 text-left"
+              >
+                <div className="overflow-hidden rounded-[18px] bg-[#EFEFEF]">
+                  <div className="aspect-[3/4]">
+                    <img
+                      src={item.image}
+                      alt={item.name}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-2">
+                  <div className="truncate text-[9px] font-normal uppercase tracking-[0.18em] text-[#aaa]">
+                    {item.brand}
+                  </div>
+
+                  <div className="mt-1 line-clamp-2 text-[14px] font-medium leading-[1.2] tracking-[-0.02em] text-black">
+                    {item.name}
+                  </div>
+
+                  <div className="mt-2 flex items-baseline gap-[5px] whitespace-nowrap">
+                    {item.oldPrice ? (
+                      <span className="text-[11px] font-normal leading-none text-[#999] line-through">
+                        {formatPrice(item.oldPrice)} ₽
+                      </span>
+                    ) : null}
+
+                    {getDiscountPercent(item.oldPrice, item.price) > 0 ? (
+                      <span className="text-[11px] font-semibold leading-none text-[#e13a3a]">
+                        −{getDiscountPercent(item.oldPrice, item.price)}%
+                      </span>
+                    ) : null}
+
+                    <span className="text-[16px] font-bold leading-none tracking-[-0.035em] text-[#128243]">
+                      {formatPrice(item.price)} ₽
+                    </span>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <BottomNav />
       </main>
     );
   }
