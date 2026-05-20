@@ -146,6 +146,44 @@ function TrashIcon() {
   );
 }
 
+function ShieldIcon() {
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M12 3 19 6v5c0 4.6-2.9 8.4-7 10-4.1-1.6-7-5.4-7-10V6l7-3Z" />
+      <path d="m9 12 2 2 4-4" />
+    </svg>
+  );
+}
+
+function LockIcon() {
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <rect x="5" y="10" width="14" height="10" rx="2" />
+      <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+    </svg>
+  );
+}
+
 function CartSkeleton() {
   return (
     <div className="space-y-3">
@@ -321,9 +359,24 @@ export default function CartPageClient() {
         .cart-onest {
           font-family: 'Onest', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
         }
+        html,
+        body {
+          overscroll-behavior: none;
+          -webkit-text-size-adjust: 100%;
+          touch-action: pan-y;
+        }
+
+        .cart-fixed-page {
+          height: 100vh;
+          height: 100dvh;
+          overflow-y: auto;
+          overflow-x: hidden;
+          overscroll-behavior: contain;
+          -webkit-overflow-scrolling: touch;
+        }
       `}</style>
 
-      <main className="cart-onest min-h-screen bg-[#F5F5F5] px-4 pt-[76px] pb-36">
+      <main className="cart-onest cart-fixed-page bg-[#F5F5F5] px-4 pt-[76px] pb-36">
       <div className="mb-5 flex items-center justify-center">
         <h1 className="text-[20px] font-medium text-black">Корзина</h1>
       </div>
@@ -530,9 +583,14 @@ export default function CartPageClient() {
             </button>
 
             <div className="mt-3 flex items-center justify-center gap-3 text-[11px] font-normal text-gray-400">
-              <span>Ваши данные защищены</span>
-              <span className="h-1 w-1 rounded-full bg-gray-300" />
-              <span>Безопасная оплата</span>
+              <span className="inline-flex items-center gap-1">
+                <ShieldIcon />
+                Ваши данные защищены
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <LockIcon />
+                Безопасная оплата
+              </span>
             </div>
           </div>
         </div>
