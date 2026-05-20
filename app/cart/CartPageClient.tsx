@@ -1,213 +1,496 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
-import {
-  syncTelegramCustomer,
-  type CustomerProfile,
-} from "../lib/customer-profile";
-import { getTelegramWebApp } from "../lib/telegram-mini-app";
+import { useRouter } from "next/navigation";
+import BottomNav from "../components/BottomNav";
+import { supabase } from "../lib/supabase";
 
 type CartItem = {
   id: string;
   name: string;
   price: number;
-  size: string;
-  color: string;
-  quantity: number;
+  size?: string;
+  color?: string;
+  quantity?: number;
 };
 
-function getCartCount() {
-  try {
-    const raw = localStorage.getItem("cart") || "[]";
-    const cart = JSON.parse(raw) as CartItem[];
-    if (!Array.isArray(cart)) return 0;
-    return cart.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
-  } catch {
-    return 0;
+type ProductBadge = "Новинка" | "Скидка" | "В наличии" | "Из-за рубежа";
+type ProductCategory = "Футболки" | "Поло" | "Джинсы" | "Брюки" | "Костюмы";
+type ProductBrand =
+  | "Lacoste"
+  | "Polo Ralph Lauren"
+  | "Tommy Hilfiger"
+  | "Calvin Klein"
+  | "GANT"
+  | "BOSS"
+  | "Emporio Armani"
+  | "Armani Exchange"
+  | "Beymen Club"
+  | "Loro Piana"
+  | "Brunello Cucinelli"
+  | "BORZ"
+  | "Massimo Carino"
+  | "Другие бренды";
+
+type Product = {
+  id: string;
+  name: string;
+  brand: ProductBrand;
+  price: number;
+  oldPrice: number | null;
+  badge: ProductBadge;
+  image: string;
+  images: string[];
+  colorImages?: Record<string, string>;
+  type: "top" | "bottom";
+  category: ProductCategory;
+  colors: string[];
+  sizes: string[];
+  description: string;
+};
+
+type ProductRow = {
+  id: string;
+  name: string;
+  brand: ProductBrand;
+  category: ProductCategory;
+  price: number;
+  old_price: number | null;
+  badge: ProductBadge;
+  status: "Активен" | "Скрыт";
+  description: string;
+  article: string;
+  sizes: string[] | null;
+  colors: string[] | null;
+  image: string;
+  color_images: Record<string, string[]> | null;
+  created_at: string;
+  updated_at: string;
+};
+
+function formatPrice(value: number | null | undefined) {
+  if (!value) return "";
+  return value.toLocaleString("ru-RU");
+}
+
+function getDiscountPercent(oldPrice: number | null, price: number) {
+  if (!oldPrice || oldPrice <= price) return 0;
+  return Math.round(((oldPrice - price) / oldPrice) * 100);
+}
+
+function mapRowToProduct(row: ProductRow): Product {
+  const normalizedColorImages: Record<string, string> = {};
+
+  if (row.color_images && typeof row.color_images === "object") {
+    Object.entries(row.color_images).forEach(([color, images]) => {
+      if (Array.isArray(images) && images.length > 0) {
+        normalizedColorImages[color] = images[0];
+      }
+    });
   }
+
+  const galleryFromDb =
+    row.color_images && typeof row.color_images === "object"
+      ? Object.values(row.color_images)
+          .filter((value) => Array.isArray(value))
+          .flat()
+      : [];
+
+  const uniqueImages = Array.from(
+    new Set([row.image, ...galleryFromDb].filter(Boolean))
+  );
+
+  return {
+    id: row.id,
+    name: row.name,
+    brand: row.brand,
+    price: row.price,
+    oldPrice: row.old_price || null,
+    badge: row.badge,
+    image: row.image || uniqueImages[0] || "/products/product-1.jpg",
+    images:
+      uniqueImages.length > 0
+        ? uniqueImages
+        : [row.image || "/products/product-1.jpg"],
+    colorImages: normalizedColorImages,
+    type:
+      row.category === "Джинсы" || row.category === "Брюки"
+        ? "bottom"
+        : "top",
+    category: row.category,
+    colors: Array.isArray(row.colors) ? row.colors : [],
+    sizes: Array.isArray(row.sizes) ? row.sizes : [],
+    description: row.description || "",
+  };
 }
 
-function getFavoritesCount() {
-  try {
-    const raw = localStorage.getItem("favorites") || "[]";
-    const favorites = JSON.parse(raw) as string[];
-    if (!Array.isArray(favorites)) return 0;
-    return favorites.length;
-  } catch {
-    return 0;
-  }
+function TrashIcon() {
+  return (
+    <svg
+      width="17"
+      height="17"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M4 7h16" />
+      <path d="M10 11v6" />
+      <path d="M14 11v6" />
+      <path d="M6 7l1 14h10l1-14" />
+      <path d="M9 7V4h6v3" />
+    </svg>
+  );
 }
 
-function getCachedCustomer() {
-  try {
-    const raw = localStorage.getItem("customer_profile_cache") || "null";
-    const parsed = JSON.parse(raw) as CustomerProfile | null;
-    return parsed;
-  } catch {
-    return null;
-  }
+function CartSkeleton() {
+  return (
+    <div className="space-y-3">
+      {[1, 2].map((item) => (
+        <div
+          key={item}
+          className="animate-pulse rounded-[22px] bg-white p-3 shadow-[0_8px_24px_rgba(0,0,0,0.04)]"
+        >
+          <div className="flex gap-3">
+            <div className="aspect-[3/4] w-[82px] shrink-0 rounded-[16px] bg-[#ECECEC]" />
+            <div className="min-w-0 flex-1">
+              <div className="mb-2 h-3 w-24 rounded-full bg-[#ECECEC]" />
+              <div className="h-5 w-40 rounded-full bg-[#ECECEC]" />
+              <div className="mt-3 h-7 w-36 rounded-full bg-[#F3F3F3]" />
+              <div className="mt-4 flex items-center justify-between">
+                <div className="h-6 w-24 rounded-full bg-[#ECECEC]" />
+                <div className="h-8 w-24 rounded-full bg-[#F5F5F5]" />
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
-function setCachedCustomer(customer: CustomerProfile | null) {
-  if (!customer) return;
-  localStorage.setItem("customer_profile_cache", JSON.stringify(customer));
-  window.dispatchEvent(new Event("customer-profile-updated"));
-}
-
-export default function BottomNav() {
+export default function CartPageClient() {
   const router = useRouter();
-  const pathname = usePathname();
 
-  const [cartCount, setCartCount] = useState(0);
-  const [favoritesCount, setFavoritesCount] = useState(0);
-  const [customer, setCustomer] = useState<CustomerProfile | null>(null);
-
-  useEffect(() => {
-    const syncCounts = () => {
-      setCartCount(getCartCount());
-      setFavoritesCount(getFavoritesCount());
-    };
-
-    syncCounts();
-
-    const handleStorage = () => syncCounts();
-    const handleFocus = () => syncCounts();
-    const handleCartUpdated = () => syncCounts();
-    const handleFavoritesUpdated = () => syncCounts();
-    const handleVisibility = () => {
-      if (!document.hidden) syncCounts();
-    };
-
-    window.addEventListener("storage", handleStorage);
-    window.addEventListener("focus", handleFocus);
-    window.addEventListener("cart-updated", handleCartUpdated);
-    window.addEventListener("favorites-updated", handleFavoritesUpdated);
-    document.addEventListener("visibilitychange", handleVisibility);
-
-    return () => {
-      window.removeEventListener("storage", handleStorage);
-      window.removeEventListener("focus", handleFocus);
-      window.removeEventListener("cart-updated", handleCartUpdated);
-      window.removeEventListener("favorites-updated", handleFavoritesUpdated);
-      document.removeEventListener("visibilitychange", handleVisibility);
-    };
-  }, [pathname]);
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [cartReady, setCartReady] = useState(false);
+  const [productsMap, setProductsMap] = useState<Record<string, Product>>({});
+  const [loadingProducts, setLoadingProducts] = useState(true);
 
   useEffect(() => {
-    const loadCustomer = async () => {
-      const cached = getCachedCustomer();
-      if (cached) {
-        setCustomer(cached);
-      }
-
-      const webApp = getTelegramWebApp();
-      if (!webApp?.initData) return;
-
-      const profile = await syncTelegramCustomer();
-      if (profile) {
-        setCustomer(profile);
-        setCachedCustomer(profile);
+    const readCart = () => {
+      try {
+        const data = JSON.parse(localStorage.getItem("cart") || "[]");
+        setCart(Array.isArray(data) ? data : []);
+      } catch {
+        setCart([]);
+      } finally {
+        setCartReady(true);
       }
     };
 
-    loadCustomer();
+    readCart();
 
-    const handleProfileUpdated = () => {
-      const cached = getCachedCustomer();
-      setCustomer(cached);
-    };
-
-    window.addEventListener("customer-profile-updated", handleProfileUpdated);
-    window.addEventListener("focus", handleProfileUpdated);
+    window.addEventListener("focus", readCart);
+    window.addEventListener("storage", readCart);
+    window.addEventListener("cart-updated", readCart);
 
     return () => {
-      window.removeEventListener("customer-profile-updated", handleProfileUpdated);
-      window.removeEventListener("focus", handleProfileUpdated);
+      window.removeEventListener("focus", readCart);
+      window.removeEventListener("storage", readCart);
+      window.removeEventListener("cart-updated", readCart);
     };
   }, []);
 
-  const cartBadge = useMemo(() => {
-    if (cartCount <= 0) return "";
-    if (cartCount > 99) return "99+";
-    return String(cartCount);
-  }, [cartCount]);
+  useEffect(() => {
+    const loadProducts = async () => {
+      setLoadingProducts(true);
+      setProductsMap({});
 
-  const favoritesBadge = useMemo(() => {
-    if (favoritesCount <= 0) return "";
-    if (favoritesCount > 99) return "99+";
-    return String(favoritesCount);
-  }, [favoritesCount]);
+      const { data, error } = await supabase.from("products").select("*");
 
-  const activeClass = (path: string) =>
-    pathname === path ? "text-blue-500" : "text-gray-400";
+      if (error) {
+        console.error("Ошибка загрузки товаров для корзины:", error.message);
+        setProductsMap({});
+        setLoadingProducts(false);
+        return;
+      }
 
-  const profileInitial =
-    customer?.first_name?.trim()?.charAt(0)?.toUpperCase() || "P";
+      const mapped = ((data || []) as ProductRow[]).map(mapRowToProduct);
+      const nextMap: Record<string, Product> = {};
+
+      mapped.forEach((product) => {
+        nextMap[product.id] = product;
+      });
+
+      setProductsMap(nextMap);
+      setLoadingProducts(false);
+    };
+
+    loadProducts();
+  }, []);
+
+  const syncCart = (nextCart: CartItem[]) => {
+    setCart(nextCart);
+    localStorage.setItem("cart", JSON.stringify(nextCart));
+    window.dispatchEvent(new Event("cart-updated"));
+  };
+
+  const updateQuantity = (index: number, nextQuantity: number) => {
+    const safeQuantity = Math.max(1, nextQuantity);
+    const nextCart = [...cart];
+
+    nextCart[index] = {
+      ...nextCart[index],
+      quantity: safeQuantity,
+    };
+
+    syncCart(nextCart);
+  };
+
+  const removeItem = (index: number) => {
+    const nextCart = [...cart];
+    nextCart.splice(index, 1);
+    syncCart(nextCart);
+  };
+
+  const clearCart = () => {
+    setCart([]);
+    localStorage.removeItem("cart");
+    window.dispatchEvent(new Event("cart-updated"));
+  };
+
+  const total = useMemo(
+    () =>
+      cart.reduce(
+        (sum, item) => sum + item.price * (item.quantity ? item.quantity : 1),
+        0
+      ),
+    [cart]
+  );
+
+  const totalOld = useMemo(
+    () =>
+      cart.reduce((sum, item) => {
+        const product = productsMap[item.id];
+        const quantity = item.quantity || 1;
+        const oldPrice = product?.oldPrice ?? item.price;
+        return sum + oldPrice * quantity;
+      }, 0),
+    [cart, productsMap]
+  );
+
+  const getProductById = (id: string) => productsMap[id];
+
+  const goToCheckout = () => {
+    router.push("/checkout");
+  };
+
+  const isPageLoading = !cartReady || loadingProducts;
 
   return (
-    <div className="fixed bottom-4 left-4 right-4 z-50 flex justify-between rounded-[34px] border border-gray-100 bg-white px-4 py-3 shadow-2xl">
-      <button
-        onClick={() => router.push("/")}
-        className={`flex flex-1 flex-col items-center gap-1 ${activeClass("/")}`}
-      >
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M3 10.5L12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" />
-        </svg>
-        <span className="text-[13px]">Главная</span>
-      </button>
+    <main className="min-h-screen bg-[#F5F5F5] px-4 pt-[76px] pb-36 font-[var(--font-geist-sans)]">
+      <div className="mb-5 flex items-center justify-center">
+        <h1 className="text-[20px] font-medium text-black">Корзина</h1>
+      </div>
 
-      <button
-        onClick={() => router.push("/favorites")}
-        className={`relative flex flex-1 flex-col items-center gap-1 ${activeClass("/favorites")}`}
-      >
-        {favoritesBadge && (
-          <span className="absolute right-[calc(50%-24px)] top-0 min-w-[18px] rounded-full bg-black px-1.5 py-[1px] text-center text-[10px] font-medium leading-[16px] text-white">
-            {favoritesBadge}
-          </span>
-        )}
+      {isPageLoading ? (
+        <CartSkeleton />
+      ) : cart.length === 0 ? (
+        <div className="rounded-[24px] bg-white p-7 text-center shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#F3F3F3]">
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="black"
+              strokeWidth="1.6"
+            >
+              <path d="M6 6h15l-1.5 9h-12z" />
+              <path d="M6 6L5 3H2" />
+              <circle cx="9" cy="20" r="1" />
+              <circle cx="18" cy="20" r="1" />
+            </svg>
+          </div>
 
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 21l-1.4-1.3C5.4 15 2 11.9 2 8.1 2 5 4.4 3 7.4 3c1.7 0 3.4.8 4.6 2.1C13.2 3.8 14.9 3 16.6 3 19.6 3 22 5 22 8.1c0 3.8-3.4 6.9-8.6 11.6z" />
-        </svg>
-        <span className="text-[13px]">Избранное</span>
-      </button>
+          <p className="mt-4 text-[16px] font-medium text-black">
+            Корзина пустая
+          </p>
 
-      <button
-        onClick={() => router.push("/cart")}
-        className={`relative flex flex-1 flex-col items-center gap-1 ${activeClass("/cart")}`}
-      >
-        {cartBadge && (
-          <span className="absolute right-[calc(50%-24px)] top-0 min-w-[18px] rounded-full bg-black px-1.5 py-[1px] text-center text-[10px] font-medium leading-[16px] text-white">
-            {cartBadge}
-          </span>
-        )}
+          <p className="mt-2 text-sm text-gray-400">
+            Добавьте товары из каталога
+          </p>
 
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M7 18c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm10 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM7.2 14h9.9c.8 0 1.5-.5 1.8-1.2L22 6H6.2L5.3 4H2v2h2l3.6 7.6-1.3 2.4c-.2.3-.3.7-.3 1 0 1.1.9 2 2 2H20v-2H8.4c-.1 0-.2-.1-.2-.2v-.1l1-1.7z" />
-        </svg>
-        <span className="text-[13px]">Корзина</span>
-      </button>
-
-      <button
-        onClick={() => router.push("/profile")}
-        className={`flex flex-1 flex-col items-center gap-1 ${activeClass("/profile")}`}
-      >
-        <div className="h-7 w-7 overflow-hidden rounded-full border border-current bg-[#F5F5F5]">
-          {customer?.photo_url ? (
-            <img
-              src={customer.photo_url}
-              alt="Профиль"
-              className="h-full w-full rounded-full object-cover"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center text-sm">
-              {profileInitial}
-            </div>
-          )}
+          <button
+            onClick={() => router.push("/")}
+            className="mt-5 rounded-2xl bg-black px-5 py-3 text-sm font-medium text-white transition-transform duration-200 active:scale-[0.99]"
+          >
+            Перейти в каталог
+          </button>
         </div>
-        <span className="text-[13px]">Профиль</span>
-      </button>
-    </div>
+      ) : (
+        <div className="space-y-3">
+          {cart.map((item, i) => {
+            const product = getProductById(item.id);
+            const quantity = item.quantity || 1;
+            const oldUnitPrice = product?.oldPrice ?? item.price;
+            const discountPercent = getDiscountPercent(
+              product?.oldPrice ?? null,
+              item.price
+            );
+
+            const itemImage =
+              (item.color ? product?.colorImages?.[item.color] : undefined) ||
+              product?.image ||
+              "/products/product-1.jpg";
+
+            return (
+              <div
+                key={`${item.id}-${item.size || ""}-${item.color || ""}-${i}`}
+                className="rounded-[22px] bg-white p-3 shadow-[0_8px_24px_rgba(0,0,0,0.04)]"
+              >
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => router.push(`/product?id=${item.id}`)}
+                    className="aspect-[3/4] w-[82px] shrink-0 overflow-hidden rounded-[16px] bg-[#ECECEC]"
+                    aria-label="Открыть товар"
+                  >
+                    <img
+                      src={itemImage}
+                      alt={item.name}
+                      className="h-full w-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.src = "/products/product-1.jpg";
+                      }}
+                    />
+                  </button>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="mb-1 truncate text-[10px] font-normal uppercase tracking-[0.14em] text-gray-400">
+                          {product?.brand || "MONTREAUX"}
+                        </div>
+
+                        <h2 className="line-clamp-2 text-[14px] font-medium leading-[1.25] text-black">
+                          {item.name}
+                        </h2>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => removeItem(i)}
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#F6F6F6] text-gray-400"
+                        aria-label="Удалить товар"
+                      >
+                        <TrashIcon />
+                      </button>
+                    </div>
+
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {item.size && (
+                        <span className="rounded-full bg-[#F3F3F3] px-2 py-1 text-[10px] text-gray-600">
+                          Размер: {item.size}
+                        </span>
+                      )}
+
+                      {item.color && (
+                        <span className="rounded-full bg-[#F3F3F3] px-2 py-1 text-[10px] text-gray-600">
+                          Цвет: {item.color}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="mt-3 flex items-center justify-between gap-2">
+                      <div className="flex min-w-0 flex-wrap items-baseline gap-[5px]">
+                        {oldUnitPrice > item.price && (
+                          <span className="text-[11px] font-normal leading-none text-[#999] line-through">
+                            {formatPrice(oldUnitPrice * quantity)} ₽
+                          </span>
+                        )}
+
+                        {discountPercent > 0 && (
+                          <span className="text-[11px] font-semibold leading-none text-[#e13a3a]">
+                            −{discountPercent}%
+                          </span>
+                        )}
+
+                        <span className="text-[16px] font-bold leading-none tracking-[-0.035em] text-[#16A34A]">
+                          {formatPrice(item.price * quantity)} ₽
+                        </span>
+                      </div>
+
+                      <div className="flex h-8 shrink-0 items-center rounded-full bg-[#F5F5F5] px-1">
+                        <button
+                          type="button"
+                          onClick={() => updateQuantity(i, quantity - 1)}
+                          className="flex h-7 w-7 items-center justify-center rounded-full text-[17px] leading-none text-black"
+                          aria-label="Уменьшить количество"
+                        >
+                          −
+                        </button>
+
+                        <span className="min-w-5 text-center text-[13px] font-medium text-black">
+                          {quantity}
+                        </span>
+
+                        <button
+                          type="button"
+                          onClick={() => updateQuantity(i, quantity + 1)}
+                          className="flex h-7 w-7 items-center justify-center rounded-full text-[17px] leading-none text-black"
+                          aria-label="Увеличить количество"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+
+          <div className="rounded-[24px] border border-white bg-white p-4 shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
+            <div className="mb-3 flex items-center justify-between">
+              <span className="text-sm text-gray-500">Итого</span>
+
+              <div className="flex items-center gap-2">
+                {totalOld > total && (
+                  <span className="text-[13px] text-gray-400 line-through">
+                    {formatPrice(totalOld)} ₽
+                  </span>
+                )}
+
+                <span className="text-[18px] font-bold tracking-[-0.035em] text-[#16A34A]">
+                  {formatPrice(total)} ₽
+                </span>
+              </div>
+            </div>
+
+            <button
+              onClick={goToCheckout}
+              className="w-full rounded-2xl bg-black py-3.5 text-sm font-medium text-white"
+            >
+              Оформить заказ
+            </button>
+
+            <button
+              type="button"
+              onClick={clearCart}
+              className="mt-3 w-full rounded-2xl bg-[#F3F3F3] py-3 text-sm font-normal text-gray-500"
+            >
+              Очистить корзину
+            </button>
+          </div>
+        </div>
+      )}
+
+      <BottomNav />
+    </main>
   );
 }
