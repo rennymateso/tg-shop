@@ -321,6 +321,19 @@ function normalizeAddressPart(value: string | null | undefined) {
   return (value || "").trim().toLowerCase();
 }
 
+function readLocalAddresses() {
+  try {
+    const data = JSON.parse(localStorage.getItem("customer_addresses_local") || "[]");
+    return Array.isArray(data) ? (data as CustomerAddress[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeLocalAddresses(addresses: CustomerAddress[]) {
+  localStorage.setItem("customer_addresses_local", JSON.stringify(addresses));
+}
+
 function getCheckoutItemImage(product: Product | undefined, color: string) {
   if (!product) return "/products/product-1.jpg";
 
@@ -431,9 +444,70 @@ export default function CheckoutPageClient() {
   const paymentStatus = searchParams.get("payment");
   const attemptId = searchParams.get("attemptId");
 
+  useEffect(() => {
+    const viewport = document.querySelector('meta[name="viewport"]');
+    const previousViewport = viewport?.getAttribute("content") || "";
+
+    viewport?.setAttribute(
+      "content",
+      "width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover"
+    );
+
+    const preventGesture = (event: Event) => {
+      event.preventDefault();
+    };
+
+    const preventMultiTouch = (event: TouchEvent) => {
+      if (event.touches.length > 1) event.preventDefault();
+    };
+
+    let lastTouchEnd = 0;
+
+    const preventDoubleTapZoom = (event: TouchEvent) => {
+      const now = Date.now();
+
+      if (now - lastTouchEnd <= 300) {
+        event.preventDefault();
+      }
+
+      lastTouchEnd = now;
+    };
+
+    document.addEventListener("gesturestart", preventGesture);
+    document.addEventListener("gesturechange", preventGesture);
+    document.addEventListener("gestureend", preventGesture);
+    document.addEventListener("touchmove", preventMultiTouch, { passive: false });
+    document.addEventListener("touchend", preventDoubleTapZoom, { passive: false });
+
+    return () => {
+      if (viewport) viewport.setAttribute("content", previousViewport);
+
+      document.removeEventListener("gesturestart", preventGesture);
+      document.removeEventListener("gesturechange", preventGesture);
+      document.removeEventListener("gestureend", preventGesture);
+      document.removeEventListener("touchmove", preventMultiTouch);
+      document.removeEventListener("touchend", preventDoubleTapZoom);
+    };
+  }, []);
+
   const loadAddresses = async () => {
     if (!initData) {
-      setSavedAddresses([]);
+      const localAddresses = readLocalAddresses();
+      setSavedAddresses(localAddresses);
+
+      const defaultAddress = localAddresses.find((item) => item.is_default) || localAddresses[0];
+
+      if (defaultAddress && !selectedAddressId) {
+        setSelectedAddressId(defaultAddress.id);
+        setCity(defaultAddress.city || "");
+        setStreet(defaultAddress.street || "");
+        setHouse(defaultAddress.house || "");
+        setApartment(defaultAddress.apartment || "");
+        setDeliveryComment(defaultAddress.comment || "");
+        setShowNewAddressForm(false);
+        setShowSavedAddressesModal(false);
+      }
+
       setLoadingAddresses(false);
       return;
     }
@@ -461,7 +535,8 @@ export default function CheckoutPageClient() {
     setShowSavedAddressesModal(false);
       }
     } else {
-      setSavedAddresses([]);
+      const localAddresses = readLocalAddresses();
+      setSavedAddresses(localAddresses);
     }
 
     setLoadingAddresses(false);
@@ -744,9 +819,30 @@ export default function CheckoutPageClient() {
     setShowAddressModal(true);
   };
 
-  const handleSaveAddressModal = () => {
+  const handleSaveAddressModal = async () => {
+    if (!city.trim() || !street.trim() || !house.trim()) return;
+
+    const newAddress: CustomerAddress = {
+      id: `local-${Date.now()}`,
+      label: savedAddresses.length === 0 ? "Основной адрес" : "Адрес доставки",
+      city: city.trim(),
+      street: street.trim(),
+      house: house.trim(),
+      apartment: apartment.trim() || null,
+      comment: deliveryComment.trim() || null,
+      is_default: savedAddresses.length === 0,
+    };
+
+    const nextAddresses = [newAddress, ...savedAddresses];
+    setSavedAddresses(nextAddresses);
+    writeLocalAddresses(nextAddresses);
+    setSelectedAddressId(newAddress.id);
+
     setShowAddressModal(false);
     setShowNewAddressForm(false);
+    setShowSavedAddressesModal(false);
+
+    await saveAddressIfNeeded();
   };
 
   const pickupAddress =
@@ -928,9 +1024,37 @@ export default function CheckoutPageClient() {
         .checkout-onest {
           font-family: 'Onest', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
         }
+        html,
+        body {
+          width: 100%;
+          height: 100%;
+          overflow: hidden;
+          overscroll-behavior: none;
+          -webkit-text-size-adjust: 100%;
+          touch-action: pan-y;
+        }
+
+        input,
+        textarea,
+        select {
+          font-size: 16px;
+        }
+
+        .checkout-fixed-page {
+          position: fixed;
+          inset: 0;
+          width: 100%;
+          height: 100vh;
+          height: 100dvh;
+          overflow-y: auto;
+          overflow-x: hidden;
+          overscroll-behavior: contain;
+          -webkit-overflow-scrolling: touch;
+          touch-action: pan-y;
+        }
       `}</style>
 
-      <main className="checkout-onest min-h-screen bg-[#F5F5F5] px-4 pt-[76px] pb-32">
+      <main className="checkout-onest checkout-fixed-page bg-[#F5F5F5] px-4 pt-[76px] pb-32">
       <div className="mb-5 flex items-center justify-center">
         <h1 className="text-[20px] font-medium">Оформление</h1>
       </div>
@@ -1107,7 +1231,7 @@ export default function CheckoutPageClient() {
                     onClick={() => setDeliveryMethod("delivery")}
                     className={`rounded-2xl py-3 text-sm ${
                       deliveryMethod === "delivery"
-                        ? "bg-[#EAF8F0] text-[#128243] ring-1 ring-[#16A34A]/35"
+                        ? "bg-white text-black ring-1 ring-black/20"
                         : "bg-[#F5F5F5] text-gray-500"
                     }`}
                   >
@@ -1118,7 +1242,7 @@ export default function CheckoutPageClient() {
                     onClick={() => setDeliveryMethod("pickup")}
                     className={`rounded-2xl py-3 text-sm ${
                       deliveryMethod === "pickup"
-                        ? "bg-[#EAF8F0] text-[#128243] ring-1 ring-[#16A34A]/35"
+                        ? "bg-white text-black ring-1 ring-black/20"
                         : "bg-[#F5F5F5] text-gray-500"
                     }`}
                   >
@@ -1208,7 +1332,7 @@ export default function CheckoutPageClient() {
                     onClick={() => setPaymentMethod("card")}
                     className={`rounded-2xl py-3 text-sm ${
                       paymentMethod === "card"
-                        ? "bg-[#EAF8F0] text-[#128243] ring-1 ring-[#16A34A]/35"
+                        ? "bg-white text-black ring-1 ring-black/20"
                         : "bg-[#F5F5F5] text-gray-500"
                     }`}
                   >
@@ -1223,7 +1347,7 @@ export default function CheckoutPageClient() {
                     disabled={deliveryMethod !== "pickup"}
                     className={`rounded-2xl py-3 text-sm ${
                       paymentMethod === "cash"
-                        ? "bg-[#EAF8F0] text-[#128243] ring-1 ring-[#16A34A]/35"
+                        ? "bg-white text-black ring-1 ring-black/20"
                         : "bg-[#F5F5F5] text-gray-500"
                     } disabled:cursor-not-allowed disabled:opacity-50`}
                   >
@@ -1309,8 +1433,14 @@ export default function CheckoutPageClient() {
       )}
 
       {showSavedAddressesModal && (
-        <div className="fixed inset-0 z-[120] flex items-end bg-black/40 px-4">
-          <div className="w-full rounded-t-[28px] bg-white p-5">
+        <div
+          className="fixed inset-0 z-[120] flex items-end bg-black/40 px-4"
+          onClick={() => setShowSavedAddressesModal(false)}
+        >
+          <div
+            className="w-full rounded-t-[28px] bg-white p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-[17px] font-medium text-black">Сохранённые адреса</h3>
               <button
@@ -1361,8 +1491,14 @@ export default function CheckoutPageClient() {
       )}
 
       {showAddressModal && (
-        <div className="fixed inset-0 z-[130] flex items-end bg-black/40 px-4">
-          <div className="w-full rounded-t-[28px] bg-white p-5">
+        <div
+          className="fixed inset-0 z-[130] flex items-end bg-black/40 px-4"
+          onClick={() => setShowAddressModal(false)}
+        >
+          <div
+            className="w-full rounded-t-[28px] bg-white p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h3 className="mb-4 text-[17px] font-medium text-black">
               Новый адрес
             </h3>
