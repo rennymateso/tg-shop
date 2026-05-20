@@ -409,6 +409,14 @@ export default function CartPageClient() {
         .cart-onest {
           font-family: 'Onest', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
         }
+        .no-scrollbar {
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        }
+
+        .no-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
         html,
         body {
           width: 100%;
@@ -634,7 +642,7 @@ export default function CartPageClient() {
 
               <div className="flex items-end justify-between border-t border-[#EFEFEF] pt-3">
                 <span className="text-[15px] font-medium text-black">Итого</span>
-                <span className="text-[22px] font-semibold leading-none tracking-[-0.04em] text-[#22C55E]">
+                <span className="text-[22px] font-semibold leading-none tracking-[-0.04em] text-[#16A34A]">
                   {formatPrice(total)} ₽
                 </span>
               </div>
@@ -667,7 +675,7 @@ export default function CartPageClient() {
             Вы смотрели
           </h2>
 
-          <div className="flex gap-3 overflow-x-auto pb-1">
+          <div className="no-scrollbar flex gap-3 overflow-x-auto pb-1">
             {viewedProducts.map((item) => (
               <button
                 key={item.id}
