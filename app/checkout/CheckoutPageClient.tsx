@@ -155,6 +155,33 @@ function getDiscountPercent(oldPrice: number, newPrice: number) {
   return Math.round(((oldPrice - newPrice) / oldPrice) * 100);
 }
 
+function formatPrice(value: number | null | undefined) {
+  if (!value) return "0";
+  return value.toLocaleString("ru-RU");
+}
+
+function TrashIcon() {
+  return (
+    <svg
+      width="17"
+      height="17"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M4 7h16" />
+      <path d="M10 11v6" />
+      <path d="M14 11v6" />
+      <path d="M6 7l1 14h10l1-14" />
+      <path d="M9 7V4h6v3" />
+    </svg>
+  );
+}
+
 function formatPhone(value: string) {
   const digits = value.replace(/\D/g, "").replace(/^7/, "").slice(0, 10);
 
@@ -311,6 +338,7 @@ export default function CheckoutPageClient() {
   const [savedAddresses, setSavedAddresses] = useState<CustomerAddress[]>([]);
   const [loadingAddresses, setLoadingAddresses] = useState(true);
   const [selectedAddressId, setSelectedAddressId] = useState("");
+  const [showNewAddressForm, setShowNewAddressForm] = useState(false);
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("+7");
@@ -357,6 +385,7 @@ export default function CheckoutPageClient() {
         setHouse(defaultAddress.house || "");
         setApartment(defaultAddress.apartment || "");
         setDeliveryComment(defaultAddress.comment || "");
+        setShowNewAddressForm(false);
       }
     } else {
       setSavedAddresses([]);
@@ -388,6 +417,10 @@ export default function CheckoutPageClient() {
         setDeliveryComment(savedDraft.deliveryComment || "");
         setPromoCode(savedDraft.promoCode || "");
         setSelectedAddressId(savedDraft.selectedAddressId || "");
+        setShowNewAddressForm(
+          !savedDraft.selectedAddressId &&
+            Boolean(savedDraft.city || savedDraft.street || savedDraft.house)
+        );
       }
     } catch {
       //
@@ -570,10 +603,11 @@ export default function CheckoutPageClient() {
     return { oldItemsTotal, newItemsTotal };
   }, [items, productsMap]);
 
+  const itemsCount = items.reduce((sum, item) => sum + item.quantity, 0);
   const deliveryPrice = deliveryMethod === "delivery" ? 500 : 0;
   const finalOldTotal = totals.oldItemsTotal + deliveryPrice;
   const finalNewTotal = totals.newItemsTotal + deliveryPrice;
-  const finalDiscountPercent = getDiscountPercent(finalOldTotal, finalNewTotal);
+  const discountAmount = Math.max(0, totals.oldItemsTotal - totals.newItemsTotal);
 
   const phoneDigitsCount = phone.replace(/\D/g, "").replace(/^7/, "").length;
   const isPhoneValid = phoneDigitsCount === 10;
@@ -612,6 +646,7 @@ export default function CheckoutPageClient() {
     setHouse(address.house || "");
     setApartment(address.apartment || "");
     setDeliveryComment(address.comment || "");
+    setShowNewAddressForm(false);
   };
 
   const handleNewAddress = () => {
@@ -621,6 +656,7 @@ export default function CheckoutPageClient() {
     setHouse("");
     setApartment("");
     setDeliveryComment("");
+    setShowNewAddressForm(true);
   };
 
   const pickupAddress =
@@ -795,7 +831,16 @@ export default function CheckoutPageClient() {
   const isPageLoading = loadingProducts;
 
   return (
-    <main className="min-h-screen bg-[#F5F5F5] px-4 pt-[76px] pb-32">
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&display=swap');
+
+        .checkout-onest {
+          font-family: 'Onest', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+        }
+      `}</style>
+
+      <main className="checkout-onest min-h-screen bg-[#F5F5F5] px-4 pt-[76px] pb-32">
       <div className="mb-5 flex items-center justify-center">
         <h1 className="text-[20px] font-medium">Оформление</h1>
       </div>
@@ -845,10 +890,15 @@ export default function CheckoutPageClient() {
                 return (
                   <div
                     key={`${item.id}-${item.size}-${item.color}-${i}`}
-                    className="rounded-[24px] bg-white p-4 shadow-[0_8px_28px_rgba(0,0,0,0.05)]"
+                    className="rounded-[22px] bg-white p-3 shadow-[0_8px_24px_rgba(0,0,0,0.04)]"
                   >
-                    <div className="flex gap-4">
-                      <div className="aspect-[3/4] w-[88px] shrink-0 overflow-hidden rounded-[18px] bg-[#ECECEC]">
+                    <div className="flex gap-3">
+                      <button
+                        type="button"
+                        onClick={() => router.push(`/product?id=${item.id}`)}
+                        className="aspect-[3/4] w-[82px] shrink-0 overflow-hidden rounded-[16px] bg-[#ECECEC]"
+                        aria-label="Открыть товар"
+                      >
                         <img
                           src={itemImage}
                           alt={item.name}
@@ -857,68 +907,78 @@ export default function CheckoutPageClient() {
                             e.currentTarget.src = "/products/product-1.jpg";
                           }}
                         />
-                      </div>
+                      </button>
 
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <div className="mb-1 text-[11px] uppercase tracking-[0.14em] text-gray-400">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <div className="mb-1 truncate text-[9px] font-normal uppercase tracking-[0.18em] text-[#aaa]">
                               {product?.brand || "MONTREAUX"}
                             </div>
 
-                            <h2 className="text-[15px] font-medium leading-[1.3] text-black">
+                            <h2 className="line-clamp-2 text-[15px] font-medium leading-[1.2] tracking-[-0.02em] text-black">
                               {item.name}
                             </h2>
                           </div>
 
                           <button
+                            type="button"
                             onClick={() => removeItem(i)}
-                            className="whitespace-nowrap text-xs text-gray-400"
+                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#F6F6F6] text-gray-400"
+                            aria-label="Удалить товар"
                           >
-                            удалить
+                            <TrashIcon />
                           </button>
                         </div>
 
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          <span className="rounded-full bg-[#F3F3F3] px-2.5 py-1 text-[11px] text-gray-600">
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          <span className="rounded-full bg-[#F3F3F3] px-2 py-1 text-[10px] text-gray-600">
                             Размер: {item.size}
                           </span>
 
-                          <span className="rounded-full bg-[#F3F3F3] px-2.5 py-1 text-[11px] text-gray-600">
+                          <span className="rounded-full bg-[#F3F3F3] px-2 py-1 text-[10px] text-gray-600">
                             Цвет: {item.color}
                           </span>
                         </div>
 
-                        <div className="mt-4 flex items-center justify-between gap-3">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-[13px] text-gray-400 line-through">
-                              {lineOldTotal} ₽
-                            </span>
+                        <div className="mt-3 flex items-center justify-between gap-2">
+                          <div className="flex min-w-0 flex-wrap items-baseline gap-[5px]">
+                            {lineOldTotal > lineNewTotal && (
+                              <span className="text-[11px] font-normal leading-none text-[#999] line-through">
+                                {formatPrice(lineOldTotal)} ₽
+                              </span>
+                            )}
 
-                            <span className="text-[16px] font-semibold tracking-[-0.02em] text-[#16A34A]">
-                              {lineNewTotal} ₽
-                            </span>
+                            {lineDiscountPercent > 0 && (
+                              <span className="text-[11px] font-semibold leading-none text-[#e13a3a]">
+                                −{lineDiscountPercent}%
+                              </span>
+                            )}
 
-                            <span className="rounded-full bg-[#E8F7EE] px-1.5 py-0.5 text-[10px] font-medium text-[#16A34A]">
-                              -{lineDiscountPercent}%
+                            <span className="text-[16px] font-bold leading-none tracking-[-0.035em] text-[#16A34A]">
+                              {formatPrice(lineNewTotal)} ₽
                             </span>
                           </div>
 
-                          <div className="flex items-center gap-2">
+                          <div className="flex h-8 shrink-0 items-center rounded-full bg-[#F5F5F5] px-1">
                             <button
+                              type="button"
                               onClick={() => updateQuantity(i, item.quantity - 1)}
-                              className="flex h-9 w-9 items-center justify-center rounded-full bg-[#F5F5F5] text-lg text-black"
+                              className="flex h-7 w-7 items-center justify-center rounded-full text-[17px] leading-none text-black"
+                              aria-label="Уменьшить количество"
                             >
                               −
                             </button>
 
-                            <span className="w-6 text-center text-[15px] font-medium text-black">
+                            <span className="min-w-5 text-center text-[13px] font-medium text-black">
                               {item.quantity}
                             </span>
 
                             <button
+                              type="button"
                               onClick={() => updateQuantity(i, item.quantity + 1)}
-                              className="flex h-9 w-9 items-center justify-center rounded-full bg-[#F5F5F5] text-lg text-black"
+                              className="flex h-7 w-7 items-center justify-center rounded-full text-[17px] leading-none text-black"
+                              aria-label="Увеличить количество"
                             >
                               +
                             </button>
@@ -931,23 +991,25 @@ export default function CheckoutPageClient() {
               })}
 
               <div className="rounded-[24px] bg-white p-4 shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
-                <h2 className="mb-4 text-[18px] font-medium text-black">
-                  Данные клиента
+                <h2 className="mb-3 text-[18px] font-medium text-black">
+                  Получатель
                 </h2>
 
-                <input
-                  placeholder="Ваше имя *"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="mb-3 w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-                />
+                <div className="mb-4 grid gap-2">
+                  <input
+                    placeholder="Имя *"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full rounded-2xl bg-[#F5F5F5] px-3.5 py-3 text-sm outline-none"
+                  />
 
-                <input
-                  placeholder="+7 (___) ___-__-__ *"
-                  value={phone}
-                  onChange={(e) => handlePhoneChange(e.target.value)}
-                  className="mb-4 w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-                />
+                  <input
+                    placeholder="+7 (___) ___-__-__ *"
+                    value={phone}
+                    onChange={(e) => handlePhoneChange(e.target.value)}
+                    className="w-full rounded-2xl bg-[#F5F5F5] px-3.5 py-3 text-sm outline-none"
+                  />
+                </div>
 
                 <p className="mb-2 text-sm text-gray-500">Получение</p>
                 <div className="mb-4 grid grid-cols-2 gap-2">
@@ -984,9 +1046,13 @@ export default function CheckoutPageClient() {
                           Загружаем адреса...
                         </div>
                       ) : savedAddresses.length === 0 ? (
-                        <div className="rounded-2xl bg-[#F5F5F5] p-3 text-sm text-gray-500">
-                          Сохранённых адресов пока нет
-                        </div>
+                        <button
+                          type="button"
+                          onClick={handleNewAddress}
+                          className="w-full rounded-2xl border border-dashed border-gray-300 bg-white p-3 text-sm text-black"
+                        >
+                          + Ввести новый адрес
+                        </button>
                       ) : (
                         <div className="space-y-2">
                           {savedAddresses.map((address) => (
@@ -1032,64 +1098,68 @@ export default function CheckoutPageClient() {
                             onClick={handleNewAddress}
                             className="w-full rounded-2xl border border-dashed border-gray-300 bg-white p-3 text-sm text-black"
                           >
-                            Ввести новый адрес
+                            + Ввести новый адрес
                           </button>
                         </div>
                       )}
                     </div>
 
-                    <input
-                      placeholder="Город *"
-                      value={city}
-                      onChange={(e) => {
-                        setSelectedAddressId("");
-                        setCity(e.target.value);
-                      }}
-                      className="mb-3 w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-                    />
+                    {showNewAddressForm && (
+                      <div className="mt-3">
+                                            <input
+                                              placeholder="Город *"
+                                              value={city}
+                                              onChange={(e) => {
+                                                setSelectedAddressId("");
+                                                setCity(e.target.value);
+                                              }}
+                                              className="mb-3 w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
+                                            />
 
-                    <div className="grid grid-cols-[1fr_88px_110px] gap-2">
-                      <input
-                        placeholder="Улица *"
-                        value={street}
-                        onChange={(e) => {
-                          setSelectedAddressId("");
-                          setStreet(e.target.value);
-                        }}
-                        className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-                      />
+                                            <div className="grid grid-cols-[1fr_88px_110px] gap-2">
+                                              <input
+                                                placeholder="Улица *"
+                                                value={street}
+                                                onChange={(e) => {
+                                                  setSelectedAddressId("");
+                                                  setStreet(e.target.value);
+                                                }}
+                                                className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
+                                              />
 
-                      <input
-                        placeholder="Дом *"
-                        value={house}
-                        onChange={(e) => {
-                          setSelectedAddressId("");
-                          setHouse(e.target.value);
-                        }}
-                        className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-                      />
+                                              <input
+                                                placeholder="Дом *"
+                                                value={house}
+                                                onChange={(e) => {
+                                                  setSelectedAddressId("");
+                                                  setHouse(e.target.value);
+                                                }}
+                                                className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
+                                              />
 
-                      <input
-                        placeholder="Кв."
-                        value={apartment}
-                        onChange={(e) => {
-                          setSelectedAddressId("");
-                          setApartment(e.target.value);
-                        }}
-                        className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-                      />
-                    </div>
+                                              <input
+                                                placeholder="Кв."
+                                                value={apartment}
+                                                onChange={(e) => {
+                                                  setSelectedAddressId("");
+                                                  setApartment(e.target.value);
+                                                }}
+                                                className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
+                                              />
+                                            </div>
 
-                    <textarea
-                      placeholder="Комментарий (подъезд, этаж, код домофона и другое)"
-                      value={deliveryComment}
-                      onChange={(e) => {
-                        setSelectedAddressId("");
-                        setDeliveryComment(e.target.value);
-                      }}
-                      rows={3}
-                      className="mt-3 w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-                    />
+                                            <textarea
+                                              placeholder="Комментарий (подъезд, этаж, код домофона и другое)"
+                                              value={deliveryComment}
+                                              onChange={(e) => {
+                                                setSelectedAddressId("");
+                                                setDeliveryComment(e.target.value);
+                                              }}
+                                              rows={3}
+                                              className="mt-3 w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
+                                            />
+                      </div>
+                    )}
                   </>
                 ) : (
                   <div className="mb-4 rounded-2xl bg-[#F5F5F5] p-3.5 text-sm leading-6 text-gray-600">
@@ -1139,27 +1209,36 @@ export default function CheckoutPageClient() {
                   className="mb-4 w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
                 />
 
-                <div className="mb-4 rounded-2xl bg-[#F7F7F7] px-4 py-3 text-sm">
-                  <div className="mb-2 flex items-center justify-between">
-                    <span className="text-gray-500">До скидки</span>
-                    <span className="text-gray-400 line-through">
-                      {finalOldTotal} ₽
+                <div className="mb-4 rounded-2xl bg-[#F7F7F7] px-4 py-4 text-sm">
+                  <div className="mb-3 flex items-center justify-between">
+                    <span className="text-[15px] font-medium text-black">Ваш заказ</span>
+                    <span className="text-[13px] text-gray-500">
+                      {itemsCount} шт.
                     </span>
                   </div>
 
                   <div className="mb-2 flex items-center justify-between">
-                    <span className="text-gray-500">После скидки</span>
-                    <span className="text-[#16A34A]">{finalNewTotal} ₽</span>
+                    <span className="text-gray-500">Товары ({itemsCount} шт.)</span>
+                    <span className="text-black">{formatPrice(totals.oldItemsTotal)} ₽</span>
                   </div>
 
                   <div className="mb-2 flex items-center justify-between">
                     <span className="text-gray-500">Скидка</span>
-                    <span className="text-[#16A34A]">-{finalDiscountPercent}%</span>
+                    <span className="text-[#e13a3a]">−{formatPrice(discountAmount)} ₽</span>
                   </div>
 
-                  <div className="flex items-center justify-between">
+                  <div className="mb-3 flex items-center justify-between">
                     <span className="text-gray-500">Доставка</span>
-                    <span className="text-black">{deliveryPrice} ₽</span>
+                    <span className="text-black">
+                      {deliveryPrice > 0 ? `${formatPrice(deliveryPrice)} ₽` : "Бесплатно"}
+                    </span>
+                  </div>
+
+                  <div className="flex items-end justify-between border-t border-[#E7E7E7] pt-3">
+                    <span className="text-[15px] font-medium text-black">Итого</span>
+                    <span className="text-[22px] font-semibold leading-none tracking-[-0.04em] text-[#16A34A]">
+                      {formatPrice(finalNewTotal)} ₽
+                    </span>
                   </div>
                 </div>
 
@@ -1191,6 +1270,7 @@ export default function CheckoutPageClient() {
       )}
 
       <BottomNav />
-    </main>
+      </main>
+    </>
   );
 }
