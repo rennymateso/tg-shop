@@ -380,7 +380,41 @@ export default function ProductPageClient({
 
   if (!product) {
     return (
-      <main className="min-h-screen bg-[#F5F5F5] px-4 pt-[76px] pb-32">
+      <main className="mn-product-page min-h-screen bg-[#F5F5F5] px-4 pt-[76px] pb-32">
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&display=swap');
+
+        .mn-product-page {
+          font-family: 'Onest', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        .mn-product-price {
+          color: #128243;
+          font-family: 'Onest', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+          font-size: 16px;
+          line-height: 1;
+          font-weight: 700;
+          letter-spacing: -0.035em;
+        }
+      `}</style>
+
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&display=swap');
+
+        .mn-product-page {
+          font-family: 'Onest', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        .mn-product-price {
+          color: #128243;
+          font-family: 'Onest', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+          font-size: 16px;
+          line-height: 1;
+          font-weight: 700;
+          letter-spacing: -0.035em;
+        }
+      `}</style>
+
         <div className="mb-5 flex items-center justify-center">
           <h1 className="text-[20px] font-medium">Товар</h1>
         </div>
@@ -400,7 +434,7 @@ export default function ProductPageClient({
   }
 
   return (
-    <main className="min-h-screen bg-[#F5F5F5] px-4 pt-[76px] pb-32">
+    <main className="mn-product-page min-h-screen bg-[#F5F5F5] px-4 pt-[76px] pb-32">
       <div className="overflow-hidden rounded-[24px] bg-white shadow-[0_10px_30px_rgba(0,0,0,0.05)]">
         <div
           className="relative aspect-[3/4] overflow-hidden bg-[#ECECEC]"
@@ -480,7 +514,7 @@ export default function ProductPageClient({
                 </span>
               ) : null}
 
-              <span className="text-[16px] font-bold leading-none tracking-[-0.035em] text-[#16A34A]">
+              <span className="mn-product-price">
                 {formatPrice(product.price)} ₽
               </span>
             </div>
