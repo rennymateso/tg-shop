@@ -485,7 +485,7 @@ export default function CartPageClient() {
             <button
               type="button"
               onClick={clearCart}
-              className="rounded-full bg-white px-3 py-2 text-[12px] font-normal text-gray-400 shadow-[0_6px_18px_rgba(0,0,0,0.04)]"
+              className="px-1 py-1 text-[12px] font-normal text-gray-400"
             >
               Очистить корзину
             </button>
@@ -634,7 +634,7 @@ export default function CartPageClient() {
 
               <div className="flex items-end justify-between border-t border-[#EFEFEF] pt-3">
                 <span className="text-[15px] font-medium text-black">Итого</span>
-                <span className="text-[22px] font-extrabold leading-none tracking-[-0.04em] text-[#16A34A]">
+                <span className="text-[22px] font-semibold leading-none tracking-[-0.04em] text-[#22C55E]">
                   {formatPrice(total)} ₽
                 </span>
               </div>
