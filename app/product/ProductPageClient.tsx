@@ -729,6 +729,12 @@ export default function ProductPageClient({
             )}
           </div>
 
+          {product.badge?.trim().toLowerCase() === "из-за рубежа" && (
+            <div className="mt-3 rounded-2xl bg-[#F7F7F7] px-4 py-3 text-[12px] leading-5 text-[#777]">
+              Товар из-за рубежа. Срок доставки 7–14 дней.
+            </div>
+          )}
+
           <div className="mt-5">
             <button
               onClick={addToCart}
