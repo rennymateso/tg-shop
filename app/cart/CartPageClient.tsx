@@ -220,6 +220,56 @@ export default function CartPageClient() {
   const [viewedProducts, setViewedProducts] = useState<Product[]>([]);
 
   useEffect(() => {
+    const viewport = document.querySelector('meta[name="viewport"]');
+    const previousViewport = viewport?.getAttribute("content") || "";
+
+    viewport?.setAttribute(
+      "content",
+      "width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover"
+    );
+
+    const preventGesture = (event: Event) => {
+      event.preventDefault();
+    };
+
+    const preventMultiTouch = (event: TouchEvent) => {
+      if (event.touches.length > 1) {
+        event.preventDefault();
+      }
+    };
+
+    let lastTouchEnd = 0;
+
+    const preventDoubleTapZoom = (event: TouchEvent) => {
+      const now = Date.now();
+
+      if (now - lastTouchEnd <= 300) {
+        event.preventDefault();
+      }
+
+      lastTouchEnd = now;
+    };
+
+    document.addEventListener("gesturestart", preventGesture);
+    document.addEventListener("gesturechange", preventGesture);
+    document.addEventListener("gestureend", preventGesture);
+    document.addEventListener("touchmove", preventMultiTouch, { passive: false });
+    document.addEventListener("touchend", preventDoubleTapZoom, { passive: false });
+
+    return () => {
+      if (viewport) {
+        viewport.setAttribute("content", previousViewport);
+      }
+
+      document.removeEventListener("gesturestart", preventGesture);
+      document.removeEventListener("gesturechange", preventGesture);
+      document.removeEventListener("gestureend", preventGesture);
+      document.removeEventListener("touchmove", preventMultiTouch);
+      document.removeEventListener("touchend", preventDoubleTapZoom);
+    };
+  }, []);
+
+  useEffect(() => {
     const readCart = () => {
       try {
         const data = JSON.parse(localStorage.getItem("cart") || "[]");
@@ -361,18 +411,31 @@ export default function CartPageClient() {
         }
         html,
         body {
+          width: 100%;
+          height: 100%;
+          overflow: hidden;
           overscroll-behavior: none;
           -webkit-text-size-adjust: 100%;
           touch-action: pan-y;
         }
 
+        input,
+        textarea,
+        select {
+          font-size: 16px;
+        }
+
         .cart-fixed-page {
+          position: fixed;
+          inset: 0;
+          width: 100%;
           height: 100vh;
           height: 100dvh;
           overflow-y: auto;
           overflow-x: hidden;
           overscroll-behavior: contain;
           -webkit-overflow-scrolling: touch;
+          touch-action: pan-y;
         }
       `}</style>
 
@@ -418,6 +481,16 @@ export default function CartPageClient() {
         </div>
       ) : (
         <div className="space-y-3">
+          <div className="flex items-center justify-end">
+            <button
+              type="button"
+              onClick={clearCart}
+              className="rounded-full bg-white px-3 py-2 text-[12px] font-normal text-gray-400 shadow-[0_6px_18px_rgba(0,0,0,0.04)]"
+            >
+              Очистить корзину
+            </button>
+          </div>
+
           {cart.map((item, i) => {
             const product = getProductById(item.id);
             const quantity = item.quantity || 1;
@@ -572,14 +645,6 @@ export default function CartPageClient() {
               className="w-full rounded-2xl bg-black py-3.5 text-sm font-medium text-white"
             >
               Оформить заказ
-            </button>
-
-            <button
-              type="button"
-              onClick={clearCart}
-              className="mt-3 w-full rounded-2xl bg-[#F3F3F3] py-3 text-sm font-normal text-gray-500"
-            >
-              Очистить корзину
             </button>
 
             <div className="mt-3 flex items-center justify-center gap-3 text-[11px] font-normal text-gray-400">
