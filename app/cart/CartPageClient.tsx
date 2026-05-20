@@ -292,7 +292,16 @@ export default function CartPageClient() {
   const isPageLoading = !cartReady || loadingProducts;
 
   return (
-    <main className="min-h-screen bg-[#F5F5F5] px-4 pt-[76px] pb-36 font-[var(--font-geist-sans)]">
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&display=swap');
+
+        .cart-onest {
+          font-family: 'Onest', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+        }
+      `}</style>
+
+      <main className="cart-onest min-h-screen bg-[#F5F5F5] px-4 pt-[76px] pb-36">
       <div className="mb-5 flex items-center justify-center">
         <h1 className="text-[20px] font-medium text-black">Корзина</h1>
       </div>
@@ -373,11 +382,11 @@ export default function CartPageClient() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <div className="mb-1 truncate text-[10px] font-normal uppercase tracking-[0.14em] text-gray-400">
+                        <div className="mb-1 truncate text-[10px] font-normal uppercase tracking-[0.16em] text-[#8B8B8B]">
                           {product?.brand || "MONTREAUX"}
                         </div>
 
-                        <h2 className="line-clamp-2 text-[14px] font-medium leading-[1.25] text-black">
+                        <h2 className="line-clamp-2 text-[15px] font-medium leading-[1.2] tracking-[-0.02em] text-black">
                           {item.name}
                         </h2>
                       </div>
@@ -456,17 +465,23 @@ export default function CartPageClient() {
           })}
 
           <div className="rounded-[24px] border border-white bg-white p-4 shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
-            <div className="mb-3 flex items-center justify-between">
+            <div className="mb-4 flex items-center justify-between">
               <span className="text-sm text-gray-500">Итого</span>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-[6px]">
                 {totalOld > total && (
-                  <span className="text-[13px] text-gray-400 line-through">
+                  <span className="text-[12px] font-normal leading-none text-[#999] line-through">
                     {formatPrice(totalOld)} ₽
                   </span>
                 )}
 
-                <span className="text-[18px] font-bold tracking-[-0.035em] text-[#16A34A]">
+                {totalOld > total && (
+                  <span className="text-[12px] font-semibold leading-none text-[#e13a3a]">
+                    −{getDiscountPercent(totalOld, total)}%
+                  </span>
+                )}
+
+                <span className="text-[20px] font-extrabold leading-none tracking-[-0.04em] text-[#128243]">
                   {formatPrice(total)} ₽
                 </span>
               </div>
@@ -491,6 +506,7 @@ export default function CartPageClient() {
       )}
 
       <BottomNav />
-    </main>
+      </main>
+    </>
   );
 }
