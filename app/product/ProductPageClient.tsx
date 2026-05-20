@@ -420,7 +420,7 @@ export default function ProductPageClient({
 
         .pd-price {
           color: #128243;
-          font-size: 17px;
+          font-size: 22px;
           line-height: 1;
           font-weight: 800;
           letter-spacing: -0.045em;
@@ -429,7 +429,7 @@ export default function ProductPageClient({
 
         .pd-old-price {
           color: #999;
-          font-size: 11px;
+          font-size: 13px;
           line-height: 1;
           font-weight: 500;
           text-decoration: line-through;
@@ -438,7 +438,7 @@ export default function ProductPageClient({
 
         .pd-discount-inline {
           color: #e13a3a;
-          font-size: 11px;
+          font-size: 13px;
           line-height: 1;
           font-weight: 700;
           font-family: 'Onest', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
@@ -512,37 +512,33 @@ export default function ProductPageClient({
 
         <div className="p-5">
           <div className="mb-4">
-            <div className="pd-price-row">
-              {product.oldPrice ? (
-                <span className="pd-old-price">{formatPrice(product.oldPrice)} ₽</span>
-              ) : null}
+            <div className="flex items-center justify-between gap-3">
+              <div className="pd-price-row min-w-0">
+                {product.oldPrice ? (
+                  <span className="pd-old-price">{formatPrice(product.oldPrice)} ₽</span>
+                ) : null}
 
-              {discountPercent > 0 ? (
-                <span className="pd-discount-inline">−{discountPercent}%</span>
-              ) : null}
+                {discountPercent > 0 ? (
+                  <span className="pd-discount-inline">−{discountPercent}%</span>
+                ) : null}
 
-              <span className="pd-price">{formatPrice(product.price)} ₽</span>
+                <span className="pd-price">{formatPrice(product.price)} ₽</span>
+              </div>
+
+              {product.badge ? (
+                <div className="shrink-0 rounded-full bg-[#F3F3F3] px-3 py-1 text-[10px] font-normal text-[#777]">
+                  {product.badge}
+                </div>
+              ) : null}
             </div>
 
             <div className="mt-4 h-px w-full bg-[#ECECEC]" />
           </div>
 
-          <div className="mb-2 flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <div className="truncate text-[10px] font-normal uppercase tracking-[0.14em] text-gray-400">
-                {product.brand}
-              </div>
-
-              <h1 className="mt-1 text-[24px] font-medium leading-tight text-black">
-                {product.name}
-              </h1>
-            </div>
-
-            {product.badge ? (
-              <div className="mt-[1px] shrink-0 rounded-full bg-[#F3F3F3] px-3 py-1 text-[10px] font-normal text-[#777]">
-                {product.badge}
-              </div>
-            ) : null}
+          <div className="mb-2">
+            <h1 className="text-[21px] font-medium leading-tight text-black">
+              {product.name}
+            </h1>
           </div>
 
           <div className="mt-5">
@@ -679,6 +675,13 @@ export default function ProductPageClient({
                       {article}
                       <IconCopy copied={articleCopied} />
                     </button>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-4 py-2.5">
+                    <span className="text-[12px] text-[#999]">Бренд</span>
+                    <span className="text-right text-[12px] text-[#555]">
+                      {product.brand}
+                    </span>
                   </div>
 
                   <div className="flex items-center justify-between gap-4 py-2.5">
