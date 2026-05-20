@@ -506,6 +506,12 @@ export default function CartPageClient() {
             >
               Очистить корзину
             </button>
+
+            <div className="mt-3 flex items-center justify-center gap-3 text-[11px] font-normal text-gray-400">
+              <span>Ваши данные защищены</span>
+              <span className="h-1 w-1 rounded-full bg-gray-300" />
+              <span>Безопасная оплата</span>
+            </div>
           </div>
         </div>
       )}
