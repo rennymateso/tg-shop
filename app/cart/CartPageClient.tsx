@@ -467,7 +467,9 @@ export default function CartPageClient() {
           <div className="rounded-[24px] border border-white bg-white p-4 shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
             <div className="mb-4 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-[13px] font-normal text-gray-500">Товары</span>
+                <span className="text-[13px] font-normal text-gray-500">
+                  Товары ({cart.reduce((sum, item) => sum + (item.quantity || 1), 0)} шт.)
+                </span>
                 <span className="text-[14px] font-medium text-black">
                   {formatPrice(totalOld)} ₽
                 </span>
@@ -484,7 +486,7 @@ export default function CartPageClient() {
 
               <div className="flex items-end justify-between border-t border-[#EFEFEF] pt-3">
                 <span className="text-[15px] font-medium text-black">Итого</span>
-                <span className="text-[22px] font-extrabold leading-none tracking-[-0.04em] text-[#128243]">
+                <span className="text-[22px] font-extrabold leading-none tracking-[-0.04em] text-[#16A34A]">
                   {formatPrice(total)} ₽
                 </span>
               </div>
