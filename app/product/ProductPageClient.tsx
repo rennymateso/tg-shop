@@ -380,41 +380,7 @@ export default function ProductPageClient({
 
   if (!product) {
     return (
-      <main className="mn-product-page min-h-screen bg-[#F5F5F5] px-4 pt-[76px] pb-32">
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&display=swap');
-
-        .mn-product-page {
-          font-family: 'Onest', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        }
-
-        .mn-product-price {
-          color: #16A34A;
-          font-family: 'Onest', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-          font-size: 22px;
-          line-height: 1;
-          font-weight: 700;
-          letter-spacing: -0.045em;
-        }
-      `}</style>
-
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&display=swap');
-
-        .mn-product-page {
-          font-family: 'Onest', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        }
-
-        .mn-product-price {
-          color: #16A34A;
-          font-family: 'Onest', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-          font-size: 22px;
-          line-height: 1;
-          font-weight: 700;
-          letter-spacing: -0.045em;
-        }
-      `}</style>
-
+      <main className="min-h-screen bg-[#F5F5F5] px-4 pt-[76px] pb-32">
         <div className="mb-5 flex items-center justify-center">
           <h1 className="text-[20px] font-medium">Товар</h1>
         </div>
@@ -434,7 +400,52 @@ export default function ProductPageClient({
   }
 
   return (
-    <main className="mn-product-page min-h-screen bg-[#F5F5F5] px-4 pt-[76px] pb-32">
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&display=swap');
+
+        .pd-product-page {
+          font-family: 'Onest', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+        }
+
+        .pd-price-row {
+          margin-top: 0;
+          display: flex;
+          align-items: baseline;
+          flex-wrap: wrap;
+          gap: 5px;
+          white-space: nowrap;
+          font-family: 'Onest', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+        }
+
+        .pd-price {
+          color: #128243;
+          font-size: 17px;
+          line-height: 1;
+          font-weight: 800;
+          letter-spacing: -0.045em;
+          font-family: 'Onest', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+        }
+
+        .pd-old-price {
+          color: #999;
+          font-size: 11px;
+          line-height: 1;
+          font-weight: 500;
+          text-decoration: line-through;
+          font-family: 'Onest', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+        }
+
+        .pd-discount-inline {
+          color: #e13a3a;
+          font-size: 11px;
+          line-height: 1;
+          font-weight: 700;
+          font-family: 'Onest', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+        }
+      `}</style>
+
+      <main className="pd-product-page min-h-screen bg-[#F5F5F5] px-4 pt-[76px] pb-32">
       <div className="overflow-hidden rounded-[24px] bg-white shadow-[0_10px_30px_rgba(0,0,0,0.05)]">
         <div
           className="relative aspect-[3/4] overflow-hidden bg-[#ECECEC]"
@@ -501,22 +512,16 @@ export default function ProductPageClient({
 
         <div className="p-5">
           <div className="mb-4">
-            <div className="flex items-baseline gap-[5px] whitespace-nowrap">
+            <div className="pd-price-row">
               {product.oldPrice ? (
-                <span className="text-[13px] font-medium leading-none text-[#999] line-through">
-                  {formatPrice(product.oldPrice)} ₽
-                </span>
+                <span className="pd-old-price">{formatPrice(product.oldPrice)} ₽</span>
               ) : null}
 
               {discountPercent > 0 ? (
-                <span className="text-[13px] font-bold leading-none text-[#e13a3a]">
-                  −{discountPercent}%
-                </span>
+                <span className="pd-discount-inline">−{discountPercent}%</span>
               ) : null}
 
-              <span className="mn-product-price">
-                {formatPrice(product.price)} ₽
-              </span>
+              <span className="pd-price">{formatPrice(product.price)} ₽</span>
             </div>
 
             <div className="mt-4 h-px w-full bg-[#ECECEC]" />
@@ -752,6 +757,7 @@ export default function ProductPageClient({
       </div>
 
       <BottomNav />
-    </main>
+      </main>
+    </>
   );
 }
