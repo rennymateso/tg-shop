@@ -104,69 +104,9 @@ type PaymentAttemptStatus = {
   updated_at: string;
 };
 
-const citySuggestions = [
-  "Казань",
-  "Москва",
-  "Санкт-Петербург",
-  "Краснодар",
-  "Калининград",
-  "Калуга",
-  "Кемерово",
-  "Киров",
-  "Кострома",
-  "Курск",
-  "Набережные Челны",
-  "Нижний Новгород",
-  "Екатеринбург",
-  "Самара",
-  "Уфа",
-  "Сочи",
-  "Ростов-на-Дону",
-  "Воронеж",
-  "Пермь",
-  "Челябинск",
-  "Новосибирск",
-  "Омск",
-  "Тюмень",
-  "Саратов",
-  "Ижевск",
-];
-
-const streetSuggestions = [
-  "Академика Глушко",
-  "Баумана",
-  "Пушкина",
-  "Петербургская",
-  "Чистопольская",
-  "Сибгата Хакима",
-  "Ямашева",
-  "Декабристов",
-  "Вишневского",
-  "Островского",
-  "Габдуллы Тукая",
-  "Мусина",
-  "Павлюхина",
-  "Ершова",
-  "Кремлевская",
-  "Карла Маркса",
-  "Ленина",
-  "Советская",
-  "Центральная",
-  "Мира",
-  "Гагарина",
-  "Московская",
-  "Комсомольская",
-];
-
-function getFilteredSuggestions(list: string[], query: string) {
-  const normalized = query.trim().toLowerCase();
-
-  if (normalized.length < 1) return [];
-
-  return list
-    .filter((item) => item.toLowerCase().includes(normalized))
-    .slice(0, 6);
-}
+type DadataSuggestion = {
+  value: string;
+};
 
 function isKazanCity(value: string) {
   return value.trim().toLowerCase() === "казань";
@@ -435,6 +375,8 @@ export default function CheckoutPageClient() {
   const [deliveryComment, setDeliveryComment] = useState("");
   const [showCitySuggestions, setShowCitySuggestions] = useState(false);
   const [showStreetSuggestions, setShowStreetSuggestions] = useState(false);
+  const [citySuggestions, setCitySuggestions] = useState<string[]>([]);
+  const [streetSuggestions, setStreetSuggestions] = useState<string[]>([]);
 
   const [promoCode, setPromoCode] = useState("");
   const [isPaying, setIsPaying] = useState(false);
@@ -782,15 +724,75 @@ export default function CheckoutPageClient() {
     house,
   });
 
-  const filteredCitySuggestions = useMemo(
-    () => getFilteredSuggestions(citySuggestions, city),
-    [city]
-  );
+  useEffect(() => {
+    const loadCitySuggestions = async () => {
+      if (city.trim().length < 2) {
+        setCitySuggestions([]);
+        return;
+      }
 
-  const filteredStreetSuggestions = useMemo(
-    () => getFilteredSuggestions(streetSuggestions, street),
-    [street]
-  );
+      try {
+        const response = await fetch("/api/address/suggest", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            query: city,
+          }),
+        });
+
+        const data = await response.json();
+
+        setCitySuggestions(
+          ((data.suggestions || []) as DadataSuggestion[])
+            .map((item) => item.value)
+            .filter(Boolean)
+        );
+      } catch {
+        setCitySuggestions([]);
+      }
+    };
+
+    const timeout = window.setTimeout(loadCitySuggestions, 250);
+
+    return () => window.clearTimeout(timeout);
+  }, [city]);
+
+  useEffect(() => {
+    const loadStreetSuggestions = async () => {
+      if (street.trim().length < 2) {
+        setStreetSuggestions([]);
+        return;
+      }
+
+      try {
+        const response = await fetch("/api/address/suggest", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            query: city.trim() ? `${city}, ${street}` : street,
+          }),
+        });
+
+        const data = await response.json();
+
+        setStreetSuggestions(
+          ((data.suggestions || []) as DadataSuggestion[])
+            .map((item) => item.value)
+            .filter(Boolean)
+        );
+      } catch {
+        setStreetSuggestions([]);
+      }
+    };
+
+    const timeout = window.setTimeout(loadStreetSuggestions, 250);
+
+    return () => window.clearTimeout(timeout);
+  }, [city, street]);
 
   const getProductById = (id: string) => productsMap[id];
 
@@ -1515,9 +1517,9 @@ export default function CheckoutPageClient() {
                 className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
               />
 
-              {showCitySuggestions && filteredCitySuggestions.length > 0 && (
+              {showCitySuggestions && citySuggestions.length > 0 && (
                 <div className="absolute left-0 right-0 top-[52px] z-40 overflow-hidden rounded-2xl bg-white shadow-[0_12px_30px_rgba(0,0,0,0.10)]">
-                  {filteredCitySuggestions.map((suggestion) => (
+                  {citySuggestions.map((suggestion) => (
                     <button
                       key={suggestion}
                       type="button"
@@ -1547,9 +1549,9 @@ export default function CheckoutPageClient() {
                   className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
                 />
 
-                {showStreetSuggestions && filteredStreetSuggestions.length > 0 && (
+                {showStreetSuggestions && streetSuggestions.length > 0 && (
                   <div className="absolute left-0 right-0 top-[52px] z-40 overflow-hidden rounded-2xl bg-white shadow-[0_12px_30px_rgba(0,0,0,0.10)]">
-                    {filteredStreetSuggestions.map((suggestion) => (
+                    {streetSuggestions.map((suggestion) => (
                       <button
                         key={suggestion}
                         type="button"
