@@ -179,6 +179,7 @@ export default function CartPageClient() {
   const [cartReady, setCartReady] = useState(false);
   const [productsMap, setProductsMap] = useState<Record<string, Product>>({});
   const [loadingProducts, setLoadingProducts] = useState(true);
+  const [viewedProducts, setViewedProducts] = useState<Product[]>([]);
 
   useEffect(() => {
     const readCart = () => {
@@ -202,6 +203,27 @@ export default function CartPageClient() {
       window.removeEventListener("focus", readCart);
       window.removeEventListener("storage", readCart);
       window.removeEventListener("cart-updated", readCart);
+    };
+  }, []);
+
+  useEffect(() => {
+    const readViewedProducts = () => {
+      try {
+        const data = JSON.parse(localStorage.getItem("viewed-products") || "[]");
+        setViewedProducts(Array.isArray(data) ? data.slice(0, 8) : []);
+      } catch {
+        setViewedProducts([]);
+      }
+    };
+
+    readViewedProducts();
+
+    window.addEventListener("focus", readViewedProducts);
+    window.addEventListener("storage", readViewedProducts);
+
+    return () => {
+      window.removeEventListener("focus", readViewedProducts);
+      window.removeEventListener("storage", readViewedProducts);
     };
   }, []);
 
@@ -514,6 +536,66 @@ export default function CartPageClient() {
             </div>
           </div>
         </div>
+      )}
+
+      {viewedProducts.length > 0 && (
+        <section className="mt-8">
+          <h2 className="mb-4 text-[18px] font-medium text-black">
+            Вы смотрели
+          </h2>
+
+          <div className="flex gap-3 overflow-x-auto pb-1">
+            {viewedProducts.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => router.push(`/product?id=${item.id}`)}
+                className="w-[142px] shrink-0 text-left"
+              >
+                <div className="overflow-hidden rounded-[18px] bg-[#EFEFEF]">
+                  <div className="aspect-[3/4]">
+                    <img
+                      src={item.image}
+                      alt={item.name}
+                      className="h-full w-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.src = "/products/product-1.jpg";
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-2">
+                  <div className="truncate text-[9px] font-normal uppercase tracking-[0.18em] text-[#aaa]">
+                    {item.brand}
+                  </div>
+
+                  <div className="mt-1 line-clamp-2 text-[14px] font-medium leading-[1.2] tracking-[-0.02em] text-black">
+                    {item.name}
+                  </div>
+
+                  <div className="mt-2 flex items-baseline gap-[5px] whitespace-nowrap">
+                    {item.oldPrice ? (
+                      <span className="text-[11px] font-normal leading-none text-[#999] line-through">
+                        {formatPrice(item.oldPrice)} ₽
+                      </span>
+                    ) : null}
+
+                    {getDiscountPercent(item.oldPrice, item.price) > 0 ? (
+                      <span className="text-[11px] font-semibold leading-none text-[#e13a3a]">
+                        −{getDiscountPercent(item.oldPrice, item.price)}%
+                      </span>
+                    ) : null}
+
+                    <span className="text-[16px] font-bold leading-none tracking-[-0.035em] text-[#16A34A]">
+                      {formatPrice(item.price)} ₽
+                    </span>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </section>
       )}
 
       <BottomNav />
