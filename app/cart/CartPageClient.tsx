@@ -1,28 +1,12 @@
 "use client";
 
-import { useMemo, useRef, useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import BottomNav from "../components/BottomNav";
-
-export type Product = {
-  id: string;
-  name: string;
-  brand: string;
-  price: number;
-  oldPrice: number | null;
-  badge: string;
-  image: string;
-  images: string[];
-  colorImages?: Record<string, string>;
-  galleryByColor?: Record<string, string[]>;
-  defaultColor: string;
-  type: "top" | "bottom";
-  category: "Футболки" | "Поло" | "Джинсы" | "Брюки" | "Костюмы";
-  colors: string[];
-  sizes: string[];
-  composition: string[];
-  description: string;
-};
+import { useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import {
+  syncTelegramCustomer,
+  type CustomerProfile,
+} from "../lib/customer-profile";
+import { getTelegramWebApp } from "../lib/telegram-mini-app";
 
 type CartItem = {
   id: string;
@@ -33,495 +17,197 @@ type CartItem = {
   quantity: number;
 };
 
-function getDiscountPercent(oldPrice: number | null, price: number) {
-  if (!oldPrice || oldPrice <= price) return 0;
-  return Math.round(((oldPrice - price) / oldPrice) * 100);
+function getCartCount() {
+  try {
+    const raw = localStorage.getItem("cart") || "[]";
+    const cart = JSON.parse(raw) as CartItem[];
+    if (!Array.isArray(cart)) return 0;
+    return cart.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+  } catch {
+    return 0;
+  }
 }
 
-function IconTrash() {
-  return (
-    <svg
-      width="17"
-      height="17"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M4 7h16" />
-      <path d="M10 11v6" />
-      <path d="M14 11v6" />
-      <path d="M6 7l1 14h10l1-14" />
-      <path d="M9 7V4h6v3" />
-    </svg>
-  );
+function getFavoritesCount() {
+  try {
+    const raw = localStorage.getItem("favorites") || "[]";
+    const favorites = JSON.parse(raw) as string[];
+    if (!Array.isArray(favorites)) return 0;
+    return favorites.length;
+  } catch {
+    return 0;
+  }
 }
 
-export default function ProductPageClient({
-  initialProduct,
-  initialError,
-}: {
-  initialProduct: Product | null;
-  initialError: string;
-}) {
+function getCachedCustomer() {
+  try {
+    const raw = localStorage.getItem("customer_profile_cache") || "null";
+    const parsed = JSON.parse(raw) as CustomerProfile | null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function setCachedCustomer(customer: CustomerProfile | null) {
+  if (!customer) return;
+  localStorage.setItem("customer_profile_cache", JSON.stringify(customer));
+  window.dispatchEvent(new Event("customer-profile-updated"));
+}
+
+export default function BottomNav() {
   const router = useRouter();
+  const pathname = usePathname();
 
-  const [product] = useState<Product | null>(initialProduct);
-  const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
-  const [selectedColor, setSelectedColor] = useState(
-    initialProduct?.defaultColor || ""
-  );
-  const [favorites, setFavorites] = useState<string[]>([]);
-  const [showFullDescription, setShowFullDescription] = useState(false);
-  const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const [justAdded, setJustAdded] = useState(false);
-
-  const touchStartXRef = useRef<number | null>(null);
-  const addedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [cartCount, setCartCount] = useState(0);
+  const [favoritesCount, setFavoritesCount] = useState(0);
+  const [customer, setCustomer] = useState<CustomerProfile | null>(null);
 
   useEffect(() => {
-    const data = JSON.parse(localStorage.getItem("favorites") || "[]");
-    setFavorites(Array.isArray(data) ? data : []);
-  }, []);
+    const syncCounts = () => {
+      setCartCount(getCartCount());
+      setFavoritesCount(getFavoritesCount());
+    };
 
-  useEffect(() => {
+    syncCounts();
+
+    const handleStorage = () => syncCounts();
+    const handleFocus = () => syncCounts();
+    const handleCartUpdated = () => syncCounts();
+    const handleFavoritesUpdated = () => syncCounts();
+    const handleVisibility = () => {
+      if (!document.hidden) syncCounts();
+    };
+
+    window.addEventListener("storage", handleStorage);
+    window.addEventListener("focus", handleFocus);
+    window.addEventListener("cart-updated", handleCartUpdated);
+    window.addEventListener("favorites-updated", handleFavoritesUpdated);
+    document.addEventListener("visibilitychange", handleVisibility);
+
     return () => {
-      if (addedTimerRef.current) {
-        clearTimeout(addedTimerRef.current);
+      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener("focus", handleFocus);
+      window.removeEventListener("cart-updated", handleCartUpdated);
+      window.removeEventListener("favorites-updated", handleFavoritesUpdated);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [pathname]);
+
+  useEffect(() => {
+    const loadCustomer = async () => {
+      const cached = getCachedCustomer();
+      if (cached) {
+        setCustomer(cached);
       }
+
+      const webApp = getTelegramWebApp();
+      if (!webApp?.initData) return;
+
+      const profile = await syncTelegramCustomer();
+      if (profile) {
+        setCustomer(profile);
+        setCachedCustomer(profile);
+      }
+    };
+
+    loadCustomer();
+
+    const handleProfileUpdated = () => {
+      const cached = getCachedCustomer();
+      setCustomer(cached);
+    };
+
+    window.addEventListener("customer-profile-updated", handleProfileUpdated);
+    window.addEventListener("focus", handleProfileUpdated);
+
+    return () => {
+      window.removeEventListener("customer-profile-updated", handleProfileUpdated);
+      window.removeEventListener("focus", handleProfileUpdated);
     };
   }, []);
 
-  const galleryImages = useMemo(() => {
-    if (!product) return [];
-    const colorGallery = product.galleryByColor?.[selectedColor] || [];
-    if (colorGallery.length > 0) return colorGallery;
-    return product.images?.length ? product.images : [product.image];
-  }, [product, selectedColor]);
+  const cartBadge = useMemo(() => {
+    if (cartCount <= 0) return "";
+    if (cartCount > 99) return "99+";
+    return String(cartCount);
+  }, [cartCount]);
 
-  const activeImage = galleryImages[activeImageIndex] || product?.image || "";
+  const favoritesBadge = useMemo(() => {
+    if (favoritesCount <= 0) return "";
+    if (favoritesCount > 99) return "99+";
+    return String(favoritesCount);
+  }, [favoritesCount]);
 
-  const toggleFavorite = () => {
-    if (!product) return;
+  const activeClass = (path: string) =>
+    pathname === path ? "text-blue-500" : "text-gray-400";
 
-    const updated = favorites.includes(product.id)
-      ? favorites.filter((i) => i !== product.id)
-      : [...favorites, product.id];
-
-    setFavorites(updated);
-    localStorage.setItem("favorites", JSON.stringify(updated));
-    window.dispatchEvent(new Event("favorites-updated"));
-  };
-
-  const topSizes = [
-    { label: "S", sub: "46" },
-    { label: "M", sub: "48" },
-    { label: "L", sub: "50" },
-    { label: "XL", sub: "52" },
-    { label: "XXL", sub: "54" },
-  ];
-
-  const bottomSizes = [
-    { label: "30", sub: "46" },
-    { label: "31", sub: "46-48" },
-    { label: "32", sub: "48" },
-    { label: "33", sub: "48-50" },
-    { label: "34", sub: "50" },
-    { label: "36", sub: "52" },
-    { label: "38", sub: "54" },
-  ];
-
-  const sizes = product?.type === "bottom" ? bottomSizes : topSizes;
-
-  const article = product ? `ART-${product.id}` : "";
-  const description = product?.description || "";
-  const canOrder = selectedSizes.length > 0 && !!selectedColor;
-  const discountPercent = product
-    ? getDiscountPercent(product.oldPrice, product.price)
-    : 0;
-
-  const toggleSize = (value: string) => {
-    setSelectedSizes((prev) =>
-      prev.includes(value)
-        ? prev.filter((item) => item !== value)
-        : [...prev, value]
-    );
-  };
-
-  const selectColor = (value: string) => {
-    setSelectedColor(value);
-    setSelectedSizes([]);
-    setActiveImageIndex(0);
-    setJustAdded(false);
-  };
-
-  const nextImage = () => {
-    if (galleryImages.length <= 1) return;
-    setActiveImageIndex((prev) =>
-      prev >= galleryImages.length - 1 ? 0 : prev + 1
-    );
-  };
-
-  const prevImage = () => {
-    if (galleryImages.length <= 1) return;
-    setActiveImageIndex((prev) =>
-      prev <= 0 ? galleryImages.length - 1 : prev - 1
-    );
-  };
-
-  const onTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
-    touchStartXRef.current = e.touches[0]?.clientX ?? null;
-  };
-
-  const onTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (touchStartXRef.current === null) return;
-    const endX = e.changedTouches[0]?.clientX ?? null;
-    if (endX === null) return;
-
-    const diff = touchStartXRef.current - endX;
-
-    if (Math.abs(diff) > 40) {
-      if (diff > 0) nextImage();
-      else prevImage();
-    }
-
-    touchStartXRef.current = null;
-  };
-
-  const handleImageTap = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (galleryImages.length <= 1) return;
-
-    const rect = e.currentTarget.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const half = rect.width / 2;
-
-    if (clickX >= half) {
-      nextImage();
-    } else {
-      prevImage();
-    }
-  };
-
-  const addToCart = () => {
-    if (!product || !canOrder) return;
-
-    const existingCart: CartItem[] = JSON.parse(
-      localStorage.getItem("cart") || "[]"
-    );
-
-    const newItems: CartItem[] = selectedSizes.map((size) => ({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      size,
-      color: selectedColor,
-      quantity: 1,
-    }));
-
-    const updatedCart = [...existingCart];
-
-    newItems.forEach((newItem) => {
-      const existingIndex = updatedCart.findIndex(
-        (item) =>
-          item.id === newItem.id &&
-          item.size === newItem.size &&
-          item.color === newItem.color
-      );
-
-      if (existingIndex >= 0) {
-        updatedCart[existingIndex].quantity += newItem.quantity;
-      } else {
-        updatedCart.push(newItem);
-      }
-    });
-
-    localStorage.setItem("cart", JSON.stringify(updatedCart));
-    window.dispatchEvent(new Event("cart-updated"));
-
-    setJustAdded(true);
-
-    if (addedTimerRef.current) {
-      clearTimeout(addedTimerRef.current);
-    }
-
-    addedTimerRef.current = setTimeout(() => {
-      setJustAdded(false);
-    }, 1800);
-  };
-
-  if (!product) {
-    return (
-      <main className="min-h-screen bg-[#F5F5F5] px-4 pt-[86px] pb-36 font-[var(--font-geist-sans)]">
-        <div className="mb-5 flex items-center justify-center">
-          <h1 className="text-[20px] font-medium">Товар</h1>
-        </div>
-
-        <div className="rounded-[24px] bg-white p-5 shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
-          <p className="text-sm text-gray-500">Товар не найден</p>
-          {initialError && (
-            <p className="mt-2 break-words text-xs text-gray-400">
-              {initialError}
-            </p>
-          )}
-        </div>
-
-        <BottomNav />
-      </main>
-    );
-  }
+  const profileInitial =
+    customer?.first_name?.trim()?.charAt(0)?.toUpperCase() || "P";
 
   return (
-    <main className="min-h-screen bg-[#F5F5F5] px-4 pt-[76px] pb-32">
-      <div className="mb-4 flex items-center justify-end">
-        <button
-          onClick={toggleFavorite}
-          aria-label="В избранное"
-          className={`flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-2xl transition-all duration-200 active:scale-[0.99] ${
-            favorites.includes(product.id)
-              ? "bg-black text-white"
-              : "bg-white text-black shadow-[0_4px_16px_rgba(0,0,0,0.04)]"
-          }`}
-        >
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill={favorites.includes(product.id) ? "currentColor" : "none"}
-            stroke="currentColor"
-            strokeWidth="1.8"
-          >
-            <path d="M20.8 4.6c-1.8-1.8-4.7-1.8-6.5 0L12 6.9l-2.3-2.3c-1.8-1.8-4.7-1.8-6.5 0s-1.8 4.7 0 6.5L12 21l8.8-9.9c1.8-1.8 1.8-4.7 0-6.5z" />
-          </svg>
-        </button>
-      </div>
+    <div className="fixed bottom-4 left-4 right-4 z-50 flex justify-between rounded-[34px] border border-gray-100 bg-white px-4 py-3 shadow-2xl">
+      <button
+        onClick={() => router.push("/")}
+        className={`flex flex-1 flex-col items-center gap-1 ${activeClass("/")}`}
+      >
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M3 10.5L12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" />
+        </svg>
+        <span className="text-[13px]">Главная</span>
+      </button>
 
-      <div className="overflow-hidden rounded-[24px] bg-white shadow-[0_10px_30px_rgba(0,0,0,0.05)]">
-        <div
-          className="relative aspect-[3/4] overflow-hidden bg-[#ECECEC]"
-          onTouchStart={onTouchStart}
-          onTouchEnd={onTouchEnd}
-          onClick={handleImageTap}
-        >
-          <img
-            src={activeImage || product.image || "/products/product-1.jpg"}
-            alt={product.name}
-            className="h-full w-full object-cover"
-            onError={(e) => {
-              e.currentTarget.src = "/products/product-1.jpg";
-            }}
-          />
+      <button
+        onClick={() => router.push("/favorites")}
+        className={`relative flex flex-1 flex-col items-center gap-1 ${activeClass("/favorites")}`}
+      >
+        {favoritesBadge && (
+          <span className="absolute right-[calc(50%-24px)] top-0 min-w-[18px] rounded-full bg-black px-1.5 py-[1px] text-center text-[10px] font-medium leading-[16px] text-white">
+            {favoritesBadge}
+          </span>
+        )}
 
-          <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-1.5">
-            {galleryImages.map((_, index) => (
-              <button
-                key={`${product.id}-dot-${index}`}
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setActiveImageIndex(index);
-                }}
-                className={`block rounded-full ${
-                  index === activeImageIndex
-                    ? "h-1.5 w-4 bg-white"
-                    : "h-1.5 w-1.5 bg-white/45"
-                }`}
-                aria-label={`Фото ${index + 1}`}
-              />
-            ))}
-          </div>
-        </div>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 21l-1.4-1.3C5.4 15 2 11.9 2 8.1 2 5 4.4 3 7.4 3c1.7 0 3.4.8 4.6 2.1C13.2 3.8 14.9 3 16.6 3 19.6 3 22 5 22 8.1c0 3.8-3.4 6.9-8.6 11.6z" />
+        </svg>
+        <span className="text-[13px]">Избранное</span>
+      </button>
 
-        <div className="p-5">
-          <div className="mb-2 flex items-center justify-between gap-3">
-            <div className="text-[11px] uppercase tracking-[0.16em] text-gray-400">
-              {product.brand}
-            </div>
+      <button
+        onClick={() => router.push("/cart")}
+        className={`relative flex flex-1 flex-col items-center gap-1 ${activeClass("/cart")}`}
+      >
+        {cartBadge && (
+          <span className="absolute right-[calc(50%-24px)] top-0 min-w-[18px] rounded-full bg-black px-1.5 py-[1px] text-center text-[10px] font-medium leading-[16px] text-white">
+            {cartBadge}
+          </span>
+        )}
 
-            <div className="text-[11px] uppercase tracking-[0.16em] text-gray-400">
-              {article}
-            </div>
-          </div>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M7 18c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm10 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM7.2 14h9.9c.8 0 1.5-.5 1.8-1.2L22 6H6.2L5.3 4H2v2h2l3.6 7.6-1.3 2.4c-.2.3-.3.7-.3 1 0 1.1.9 2 2 2H20v-2H8.4c-.1 0-.2-.1-.2-.2v-.1l1-1.7z" />
+        </svg>
+        <span className="text-[13px]">Корзина</span>
+      </button>
 
-          <div className="mb-3 flex items-start justify-between gap-3">
-            <div className="flex items-center gap-2">
-              {product.oldPrice && (
-                <span className="text-[14px] font-normal leading-none text-gray-400 line-through">
-                  {product.oldPrice} ₽
-                </span>
-              )}
-
-              <span className="text-[21px] font-semibold leading-none tracking-[-0.02em] text-[#16A34A]">
-                {product.price} ₽
-              </span>
-
-              {discountPercent > 0 && (
-                <span className="rounded-full bg-[#E8F7EE] px-1.5 py-0.5 text-[10px] font-medium text-[#16A34A]">
-                  -{discountPercent}%
-                </span>
-              )}
-            </div>
-
-            {product.badge ? (
-              <div
-                className={`shrink-0 rounded-full px-3 py-1 text-[10px] font-medium ${
-                  product.badge === "Из-за рубежа"
-                    ? "bg-black text-white"
-                    : "bg-[#F5F5F5] text-black"
-                }`}
-              >
-                {product.badge}
-              </div>
-            ) : null}
-          </div>
-
-          <div className="mt-5">
-            <p className="mb-2 text-sm text-gray-500">Размер</p>
-            <div className="grid grid-cols-5 gap-1.5">
-              {sizes.map((s) => (
-                <button
-                  key={s.label}
-                  onClick={() => toggleSize(s.label)}
-                  className={`rounded-xl border px-1.5 py-2 text-center transition-all duration-200 active:scale-95 ${
-                    selectedSizes.includes(s.label)
-                      ? "border-black bg-black text-white"
-                      : "border-gray-200 bg-white text-black"
-                  }`}
-                >
-                  <div className="text-[11px] font-medium">{s.label}</div>
-                  <div
-                    className={`mt-0.5 text-[9px] ${
-                      selectedSizes.includes(s.label)
-                        ? "text-white/70"
-                        : "text-gray-400"
-                    }`}
-                  >
-                    {s.sub}
-                  </div>
-                </button>
-              ))}
-            </div>
-
-            <div className="mt-2 text-[12px] text-gray-400">
-              {selectedSizes.length > 0
-                ? `Выбрано размеров: ${selectedSizes.join(", ")}`
-                : "Можно выбрать несколько размеров"}
-            </div>
-          </div>
-
-          <div className="mt-5">
-            <p className="mb-2 text-sm text-gray-500">Цвет</p>
-            <div className="grid grid-cols-4 gap-2">
-              {product.colors.map((c) => {
-                const preview =
-                  product.galleryByColor?.[c]?.[0] ||
-                  product.colorImages?.[c] ||
-                  product.image ||
-                  "/products/product-1.jpg";
-
-                const isSelected = selectedColor === c;
-
-                return (
-                  <button
-                    key={c}
-                    onClick={() => selectColor(c)}
-                    className={`overflow-hidden rounded-2xl border bg-white transition-all duration-200 active:scale-95 ${
-                      isSelected
-                        ? "border-black ring-2 ring-black/10"
-                        : "border-gray-200"
-                    }`}
-                  >
-                    <div className="aspect-[3/4] w-full overflow-hidden bg-[#ECECEC]">
-                      <img
-                        src={preview}
-                        alt={c}
-                        className="h-full w-full object-cover"
-                        onError={(e) => {
-                          e.currentTarget.src = "/products/product-1.jpg";
-                        }}
-                      />
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="mt-2 text-[12px] text-gray-400">
-              {selectedColor ? `Выбран цвет: ${selectedColor}` : "Выберите цвет"}
-            </div>
-          </div>
-
-          {product.composition.length > 0 && (
-            <div className="mt-5">
-              <p className="mb-2 text-sm text-gray-500">Состав</p>
-              <div className="flex flex-wrap gap-2">
-                {product.composition.map((item) => (
-                  <span
-                    key={item}
-                    className="rounded-full bg-[#F5F5F5] px-3 py-1.5 text-[12px] text-gray-700"
-                  >
-                    {item}
-                  </span>
-                ))}
-              </div>
+      <button
+        onClick={() => router.push("/profile")}
+        className={`flex flex-1 flex-col items-center gap-1 ${activeClass("/profile")}`}
+      >
+        <div className="h-7 w-7 overflow-hidden rounded-full border border-current bg-[#F5F5F5]">
+          {customer?.photo_url ? (
+            <img
+              src={customer.photo_url}
+              alt="Профиль"
+              className="h-full w-full rounded-full object-cover"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-sm">
+              {profileInitial}
             </div>
           )}
-
-          <div className="mt-5">
-            <h1 className="text-[24px] font-medium leading-tight text-black">
-              {product.name}
-            </h1>
-          </div>
-
-          <div className="mt-5">
-            <p className="text-[14px] leading-6 text-gray-600">
-              {description.length > 110 && !showFullDescription
-                ? `${description.slice(0, 110)}...`
-                : description}
-            </p>
-
-            {description.length > 110 && (
-              <button
-                onClick={() => setShowFullDescription((prev) => !prev)}
-                className="mt-2 text-[13px] text-black underline underline-offset-2"
-              >
-                {showFullDescription ? "Свернуть" : "Читать полностью"}
-              </button>
-            )}
-          </div>
-
-          <div className="mt-6 flex items-center justify-between rounded-2xl bg-[#F7F7F7] px-4 py-3">
-            <span className="text-sm text-gray-500">Товаров к добавлению</span>
-            <span className="text-[18px] font-semibold tracking-[-0.02em] text-black">
-              {selectedSizes.length * (selectedColor ? 1 : 0)}
-            </span>
-          </div>
-
-          <div className="mt-5">
-            <button
-              onClick={addToCart}
-              disabled={!canOrder}
-              className={`w-full rounded-2xl py-3.5 text-sm font-medium transition-all duration-200 ${
-                !canOrder
-                  ? "bg-gray-200 text-gray-500"
-                  : justAdded
-                  ? "bg-[#16A34A] text-white"
-                  : "bg-black text-white active:scale-[0.99]"
-              }`}
-            >
-              {!canOrder
-                ? "Добавить в корзину"
-                : justAdded
-                ? "Добавлено"
-                : "Добавить в корзину"}
-            </button>
-          </div>
         </div>
-      </div>
-
-      <BottomNav />
-    </main>
+        <span className="text-[13px]">Профиль</span>
+      </button>
+    </div>
   );
 }
