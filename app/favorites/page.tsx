@@ -60,6 +60,72 @@ type ProductRow = {
   updated_at: string;
 };
 
+type FavoriteItem = {
+  id: string;
+  color: string;
+};
+
+type FavoriteProductCard = {
+  product: Product;
+  color: string;
+  image: string;
+  favoriteKey: string;
+};
+
+function normalizeFavoriteItems(data: unknown): FavoriteItem[] {
+  if (!Array.isArray(data)) return [];
+
+  return data
+    .map((item) => {
+      if (typeof item === "string") {
+        return { id: item, color: "" };
+      }
+
+      if (
+        item &&
+        typeof item === "object" &&
+        "id" in item &&
+        typeof item.id === "string"
+      ) {
+        return {
+          id: item.id,
+          color:
+            "color" in item && typeof item.color === "string"
+              ? item.color
+              : "",
+        };
+      }
+
+      return null;
+    })
+    .filter(Boolean) as FavoriteItem[];
+}
+
+function syncFavoriteStorage(items: FavoriteItem[]) {
+  const uniqueItems = items.filter(
+    (item, index, array) =>
+      array.findIndex(
+        (current) => current.id === item.id && current.color === item.color
+      ) === index
+  );
+
+  const uniqueIds = Array.from(new Set(uniqueItems.map((item) => item.id)));
+
+  localStorage.setItem("favorite_items", JSON.stringify(uniqueItems));
+  localStorage.setItem("favorites", JSON.stringify(uniqueIds));
+
+  return uniqueItems;
+}
+
+function getFavoriteProductImage(product: Product, color: string) {
+  return (
+    (color ? product.colorImages?.[color] : "") ||
+    product.image ||
+    product.images?.[0] ||
+    "/products/product-1.jpg"
+  );
+}
+
 function getDiscountPercent(oldPrice: number | null, price: number) {
   if (!oldPrice || oldPrice <= price) return 0;
   return Math.round(((oldPrice - price) / oldPrice) * 100);
@@ -137,14 +203,33 @@ function mapRowToProduct(row: ProductRow): Product {
 export default function FavoritesPage() {
   const router = useRouter();
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
+  const [favoriteItems, setFavoriteItems] = useState<FavoriteItem[]>([]);
   const [viewedProducts, setViewedProducts] = useState<Product[]>([]);
   const [productsMap, setProductsMap] = useState<Record<string, Product>>({});
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [pageReady, setPageReady] = useState(false);
 
   useEffect(() => {
-    const saved = JSON.parse(localStorage.getItem("favorites") || "[]");
-    setFavoriteIds(Array.isArray(saved) ? saved : []);
+    const favoriteIdsData = JSON.parse(localStorage.getItem("favorites") || "[]");
+    const favoriteItemsData = JSON.parse(
+      localStorage.getItem("favorite_items") || "[]"
+    );
+
+    const normalizedItems = normalizeFavoriteItems(favoriteItemsData);
+    const fallbackItems = normalizeFavoriteItems(favoriteIdsData);
+
+    const nextItems =
+      normalizedItems.length > 0
+        ? normalizedItems
+        : fallbackItems.map((item) => ({
+            id: item.id,
+            color: "",
+          }));
+
+    const syncedItems = syncFavoriteStorage(nextItems);
+
+    setFavoriteItems(syncedItems);
+    setFavoriteIds(Array.from(new Set(syncedItems.map((item) => item.id))));
 
     try {
       const viewed = JSON.parse(localStorage.getItem("viewed-products") || "[]");
@@ -235,13 +320,24 @@ export default function FavoritesPage() {
     };
   }, []);
 
-  const favoriteProducts = useMemo(
-    () =>
-      Object.values(productsMap).filter((product) =>
-        favoriteIds.includes(product.id)
-      ),
-    [favoriteIds, productsMap]
-  );
+  const favoriteProducts = useMemo<FavoriteProductCard[]>(() => {
+    return favoriteItems
+      .map((item) => {
+        const product = productsMap[item.id];
+
+        if (!product) return null;
+
+        const color = item.color || product.defaultColor || product.colors?.[0] || "";
+
+        return {
+          product,
+          color,
+          image: getFavoriteProductImage(product, color),
+          favoriteKey: `${product.id}-${color || "default"}`,
+        };
+      })
+      .filter(Boolean) as FavoriteProductCard[];
+  }, [favoriteItems, productsMap]);
 
   const recommendedProducts = useMemo(() => {
     const allProducts = Object.values(productsMap);
@@ -281,13 +377,15 @@ export default function FavoritesPage() {
     return (personalized.length > 0 ? personalized : fallback).slice(0, 10);
   }, [favoriteIds, productsMap, viewedProducts]);
 
-  const toggleFavorite = (id: string) => {
-    const updated = favoriteIds.includes(id)
-      ? favoriteIds.filter((item) => item !== id)
-      : [...favoriteIds, id];
+  const toggleFavorite = (id: string, color: string) => {
+    const updatedItems = favoriteItems.filter(
+      (item) => !(item.id === id && item.color === color)
+    );
 
-    setFavoriteIds(updated);
-    localStorage.setItem("favorites", JSON.stringify(updated));
+    const syncedItems = syncFavoriteStorage(updatedItems);
+
+    setFavoriteItems(syncedItems);
+    setFavoriteIds(Array.from(new Set(syncedItems.map((item) => item.id))));
     window.dispatchEvent(new Event("favorites-updated"));
   };
 
@@ -356,18 +454,18 @@ export default function FavoritesPage() {
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3">
-          {favoriteProducts.map((p) => {
+          {favoriteProducts.map(({ product: p, color, image, favoriteKey }) => {
             const discountPercent = getDiscountPercent(p.oldPrice, p.price);
 
             return (
               <div
-                key={p.id}
+                key={favoriteKey}
                 onClick={() => router.push(`/product?id=${p.id}`)}
                 className="cursor-pointer overflow-hidden rounded-[20px] bg-white shadow-[0_10px_28px_rgba(0,0,0,0.05)] transition-all duration-300 active:scale-[0.985]"
               >
                 <div className="relative aspect-[3/4] overflow-hidden bg-[#EAEAEA]">
                   <img
-                    src={p.image}
+                    src={image}
                     alt={p.name}
                     className="h-full w-full object-cover"
                     onError={(e) => {
@@ -379,7 +477,7 @@ export default function FavoritesPage() {
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      toggleFavorite(p.id);
+                      toggleFavorite(p.id, color);
                     }}
                     className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-black shadow-sm backdrop-blur"
                     aria-label="Убрать из избранного"
@@ -388,16 +486,22 @@ export default function FavoritesPage() {
                   </button>
                 </div>
 
-                <div className="flex min-h-[136px] flex-col p-3">
+                <div className="flex flex-col p-3">
                   <div className="truncate text-[9px] font-normal uppercase tracking-[0.18em] text-[#aaa]">
                     {p.brand}
                   </div>
 
-                  <h3 className="mt-1 line-clamp-2 min-h-[34px] text-[14px] font-medium leading-[1.2] tracking-[-0.02em] text-black">
+                  <h3 className="mt-1 line-clamp-2 text-[14px] font-medium leading-[1.2] tracking-[-0.02em] text-black">
                     {p.name}
                   </h3>
 
-                  <div className="mt-auto flex items-baseline gap-[5px] whitespace-nowrap pt-2">
+                  {color && (
+                    <div className="mt-1 truncate text-[11px] text-gray-400">
+                      Цвет: {color}
+                    </div>
+                  )}
+
+                  <div className="mt-2 flex items-baseline gap-[5px] whitespace-nowrap">
                     {p.oldPrice && (
                       <span className="text-[11px] font-normal leading-none text-[#999] line-through">
                         {formatPrice(p.oldPrice)} ₽

@@ -33,6 +33,56 @@ type CartItem = {
   quantity: number;
 };
 
+type FavoriteItem = {
+  id: string;
+  color: string;
+};
+
+function normalizeFavoriteItems(data: unknown): FavoriteItem[] {
+  if (!Array.isArray(data)) return [];
+
+  return data
+    .map((item) => {
+      if (typeof item === "string") {
+        return { id: item, color: "" };
+      }
+
+      if (
+        item &&
+        typeof item === "object" &&
+        "id" in item &&
+        typeof item.id === "string"
+      ) {
+        return {
+          id: item.id,
+          color:
+            "color" in item && typeof item.color === "string"
+              ? item.color
+              : "",
+        };
+      }
+
+      return null;
+    })
+    .filter(Boolean) as FavoriteItem[];
+}
+
+function syncFavoriteStorage(items: FavoriteItem[]) {
+  const uniqueItems = items.filter(
+    (item, index, array) =>
+      array.findIndex(
+        (current) => current.id === item.id && current.color === item.color
+      ) === index
+  );
+
+  const uniqueIds = Array.from(new Set(uniqueItems.map((item) => item.id)));
+
+  localStorage.setItem("favorite_items", JSON.stringify(uniqueItems));
+  localStorage.setItem("favorites", JSON.stringify(uniqueIds));
+
+  return uniqueItems;
+}
+
 function getDiscountPercent(oldPrice: number | null, price: number) {
   if (!oldPrice || oldPrice <= price) return 0;
   return Math.round(((oldPrice - price) / oldPrice) * 100);
@@ -173,6 +223,7 @@ export default function ProductPageClient({
     initialProduct?.defaultColor || initialProduct?.colors?.[0] || ""
   );
   const [favorites, setFavorites] = useState<string[]>([]);
+  const [favoriteItems, setFavoriteItems] = useState<FavoriteItem[]>([]);
   const [viewedProducts, setViewedProducts] = useState<Product[]>([]);
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -187,8 +238,26 @@ export default function ProductPageClient({
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    const data = JSON.parse(localStorage.getItem("favorites") || "[]");
-    setFavorites(Array.isArray(data) ? data : []);
+    const favoriteIdsData = JSON.parse(localStorage.getItem("favorites") || "[]");
+    const favoriteItemsData = JSON.parse(
+      localStorage.getItem("favorite_items") || "[]"
+    );
+
+    const normalizedItems = normalizeFavoriteItems(favoriteItemsData);
+    const fallbackItems = normalizeFavoriteItems(favoriteIdsData);
+
+    const nextItems =
+      normalizedItems.length > 0
+        ? normalizedItems
+        : fallbackItems.map((item) => ({
+            id: item.id,
+            color: "",
+          }));
+
+    const syncedItems = syncFavoriteStorage(nextItems);
+
+    setFavoriteItems(syncedItems);
+    setFavorites(Array.from(new Set(syncedItems.map((item) => item.id))));
   }, []);
 
   useEffect(() => {
@@ -253,15 +322,37 @@ export default function ProductPageClient({
 
   const activeImage = galleryImages[activeImageIndex] || product?.image || "";
 
+  const isSelectedColorFavorite = product
+    ? favoriteItems.some(
+        (item) => item.id === product.id && item.color === selectedColor
+      )
+    : false;
+
   const toggleFavorite = () => {
     if (!product) return;
 
-    const updated = favorites.includes(product.id)
-      ? favorites.filter((i) => i !== product.id)
-      : [...favorites, product.id];
+    const favoriteColor = selectedColor || product.defaultColor || "";
 
-    setFavorites(updated);
-    localStorage.setItem("favorites", JSON.stringify(updated));
+    const exists = favoriteItems.some(
+      (item) => item.id === product.id && item.color === favoriteColor
+    );
+
+    const updatedItems = exists
+      ? favoriteItems.filter(
+          (item) => !(item.id === product.id && item.color === favoriteColor)
+        )
+      : [
+          ...favoriteItems,
+          {
+            id: product.id,
+            color: favoriteColor,
+          },
+        ];
+
+    const syncedItems = syncFavoriteStorage(updatedItems);
+
+    setFavoriteItems(syncedItems);
+    setFavorites(Array.from(new Set(syncedItems.map((item) => item.id))));
     window.dispatchEvent(new Event("favorites-updated"));
   };
 
@@ -564,12 +655,12 @@ export default function ProductPageClient({
             }}
             aria-label="В избранное"
             className={`absolute right-3 top-3 z-20 flex h-10 w-10 items-center justify-center rounded-full shadow-[0_4px_16px_rgba(0,0,0,0.06)] backdrop-blur-md ${
-              favorites.includes(product.id)
+              isSelectedColorFavorite
                 ? "bg-black text-white"
                 : "bg-white/90 text-black"
             }`}
           >
-            <IconHeart active={favorites.includes(product.id)} />
+            <IconHeart active={isSelectedColorFavorite} />
           </button>
 
           <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-1.5">
