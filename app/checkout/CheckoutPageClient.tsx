@@ -330,6 +330,28 @@ function writeLocalAddresses(addresses: CustomerAddress[]) {
   localStorage.setItem("customer_addresses_local", JSON.stringify(addresses));
 }
 
+function readDeletedAddressIds() {
+  try {
+    const data = JSON.parse(localStorage.getItem("deleted_customer_address_ids") || "[]");
+    return Array.isArray(data) ? (data as string[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeDeletedAddressIds(ids: string[]) {
+  localStorage.setItem("deleted_customer_address_ids", JSON.stringify(Array.from(new Set(ids))));
+}
+
+function readCheckoutDraftSelectedAddressId() {
+  try {
+    const draft = JSON.parse(localStorage.getItem("checkout_draft") || "null") as CheckoutDraft | null;
+    return draft?.selectedAddressId || "";
+  } catch {
+    return "";
+  }
+}
+
 function getCheckoutItemImage(product: Product | undefined, color: string) {
   if (!product) return "/products/product-1.jpg";
 
@@ -490,18 +512,26 @@ export default function CheckoutPageClient() {
 
   const loadAddresses = async () => {
     if (!initData) {
-      const localAddresses = readLocalAddresses();
+      const deletedIds = readDeletedAddressIds();
+      const localAddresses = readLocalAddresses().filter(
+        (address) => !deletedIds.includes(address.id)
+      );
+
       setSavedAddresses(localAddresses);
 
-      const defaultAddress = localAddresses.find((item) => item.is_default) || localAddresses[0];
+      const selectedIdFromDraft = readCheckoutDraftSelectedAddressId();
+      const selectedAddress =
+        localAddresses.find((item) => item.id === selectedIdFromDraft) ||
+        localAddresses.find((item) => item.is_default) ||
+        localAddresses[0];
 
-      if (defaultAddress && !selectedAddressId) {
-        setSelectedAddressId(defaultAddress.id);
-        setCity(defaultAddress.city || "");
-        setStreet(defaultAddress.street || "");
-        setHouse(defaultAddress.house || "");
-        setApartment(defaultAddress.apartment || "");
-        setDeliveryComment(defaultAddress.comment || "");
+      if (selectedAddress) {
+        setSelectedAddressId(selectedAddress.id);
+        setCity(selectedAddress.city || "");
+        setStreet(selectedAddress.street || "");
+        setHouse(selectedAddress.house || "");
+        setApartment(selectedAddress.apartment || "");
+        setDeliveryComment(selectedAddress.comment || "");
         setShowNewAddressForm(false);
         setShowSavedAddressesModal(false);
       }
@@ -865,6 +895,30 @@ export default function CheckoutPageClient() {
     setDeliveryComment(address.comment || "");
     setShowNewAddressForm(false);
     setShowSavedAddressesModal(false);
+
+    try {
+      const draft = JSON.parse(localStorage.getItem("checkout_draft") || "null") as CheckoutDraft | null;
+
+      localStorage.setItem(
+        "checkout_draft",
+        JSON.stringify({
+          ...(draft || {}),
+          name,
+          phone,
+          deliveryMethod,
+          paymentMethod,
+          city: address.city || "",
+          street: address.street || "",
+          house: address.house || "",
+          apartment: address.apartment || "",
+          deliveryComment: address.comment || "",
+          promoCode,
+          selectedAddressId: address.id,
+        })
+      );
+    } catch {
+      //
+    }
   };
 
   const handleNewAddress = () => {
@@ -904,7 +958,10 @@ export default function CheckoutPageClient() {
     await saveAddressIfNeeded();
   };
 
-  const handleDeleteAddress = (addressId: string) => {
+  const handleDeleteAddress = async (addressId: string) => {
+    const deletedIds = readDeletedAddressIds();
+    writeDeletedAddressIds([...deletedIds, addressId]);
+
     const nextAddresses = savedAddresses.filter((address) => address.id !== addressId);
 
     const normalizedAddresses =
@@ -930,6 +987,42 @@ export default function CheckoutPageClient() {
         setHouse("");
         setApartment("");
         setDeliveryComment("");
+
+        try {
+          const draft = JSON.parse(localStorage.getItem("checkout_draft") || "null") as CheckoutDraft | null;
+
+          localStorage.setItem(
+            "checkout_draft",
+            JSON.stringify({
+              ...(draft || {}),
+              selectedAddressId: "",
+              city: "",
+              street: "",
+              house: "",
+              apartment: "",
+              deliveryComment: "",
+            })
+          );
+        } catch {
+          //
+        }
+      }
+    }
+
+    if (initData && !addressId.startsWith("local-")) {
+      try {
+        await fetch("/api/customer/addresses", {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            initData,
+            addressId,
+          }),
+        });
+      } catch {
+        //
       }
     }
   };
