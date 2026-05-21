@@ -190,6 +190,28 @@ function TrashIcon() {
   );
 }
 
+function AddressDeleteIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M4 7h16" />
+      <path d="M10 11v6" />
+      <path d="M14 11v6" />
+      <path d="M6 7l1 14h10l1-14" />
+      <path d="M9 7V4h6v3" />
+    </svg>
+  );
+}
+
 function formatPhone(value: string) {
   const digits = value.replace(/\D/g, "").replace(/^7/, "").slice(0, 10);
 
@@ -842,6 +864,7 @@ export default function CheckoutPageClient() {
     setApartment(address.apartment || "");
     setDeliveryComment(address.comment || "");
     setShowNewAddressForm(false);
+    setShowSavedAddressesModal(false);
   };
 
   const handleNewAddress = () => {
@@ -879,6 +902,36 @@ export default function CheckoutPageClient() {
     setShowSavedAddressesModal(false);
 
     await saveAddressIfNeeded();
+  };
+
+  const handleDeleteAddress = (addressId: string) => {
+    const nextAddresses = savedAddresses.filter((address) => address.id !== addressId);
+
+    const normalizedAddresses =
+      nextAddresses.length > 0 && !nextAddresses.some((address) => address.is_default)
+        ? nextAddresses.map((address, index) => ({
+            ...address,
+            is_default: index === 0,
+          }))
+        : nextAddresses;
+
+    setSavedAddresses(normalizedAddresses);
+    writeLocalAddresses(normalizedAddresses);
+
+    if (selectedAddressId === addressId) {
+      const nextSelected = normalizedAddresses[0];
+
+      if (nextSelected) {
+        handleSelectSavedAddress(nextSelected);
+      } else {
+        setSelectedAddressId("");
+        setCity("");
+        setStreet("");
+        setHouse("");
+        setApartment("");
+        setDeliveryComment("");
+      }
+    }
   };
 
   const pickupAddress =
@@ -1289,19 +1342,7 @@ export default function CheckoutPageClient() {
                 {deliveryMethod === "delivery" ? (
                   <>
                     <div className="mb-4">
-                      <div className="mb-2 flex items-center justify-between">
-                        <p className="text-sm text-gray-500">Адрес доставки</p>
-
-                        {savedAddresses.length > 0 && (
-                          <button
-                            type="button"
-                            onClick={() => setShowSavedAddressesModal(true)}
-                            className="text-[12px] text-gray-400"
-                          >
-                            Выбрать →
-                          </button>
-                        )}
-                      </div>
+                      <p className="mb-2 text-sm text-gray-500">Адрес доставки</p>
 
                       {loadingAddresses ? (
                         <div className="rounded-2xl bg-[#F5F5F5] p-3 text-sm text-gray-500">
@@ -1311,7 +1352,7 @@ export default function CheckoutPageClient() {
                         <button
                           type="button"
                           onClick={() => setShowSavedAddressesModal(true)}
-                          className="w-full rounded-2xl bg-[#F5F5F5] p-3 text-left"
+                          className="w-full rounded-2xl border border-[#16A34A]/35 bg-[#EAF8F0] p-3 text-left"
                         >
                           <div className="flex items-center justify-between gap-3">
                             <div className="min-w-0">
@@ -1325,14 +1366,14 @@ export default function CheckoutPageClient() {
                                 )}
                               </div>
                             </div>
-                            <span className="shrink-0 text-gray-400">›</span>
+                            <span className="shrink-0 text-[22px] leading-none text-gray-400">›</span>
                           </div>
                         </button>
                       ) : city || street || house ? (
                         <button
                           type="button"
                           onClick={() => setShowAddressModal(true)}
-                          className="w-full rounded-2xl bg-[#F5F5F5] p-3 text-left"
+                          className="w-full rounded-2xl border border-[#16A34A]/35 bg-[#EAF8F0] p-3 text-left"
                         >
                           <div className="flex items-center justify-between gap-3">
                             <div className="min-w-0">
@@ -1347,18 +1388,22 @@ export default function CheckoutPageClient() {
                                   .join(", ")}
                               </div>
                             </div>
-                            <span className="shrink-0 text-gray-400">›</span>
+                            <span className="shrink-0 text-[22px] leading-none text-gray-400">›</span>
                           </div>
                         </button>
                       ) : (
-                        <button
-                          type="button"
-                          onClick={handleNewAddress}
-                          className="w-full rounded-2xl border border-dashed border-gray-300 bg-white p-3 text-sm text-black"
-                        >
-                          + Ввести новый адрес
-                        </button>
+                        <div className="rounded-2xl bg-[#F5F5F5] p-3 text-sm text-gray-500">
+                          Адрес не выбран
+                        </div>
                       )}
+
+                      <button
+                        type="button"
+                        onClick={handleNewAddress}
+                        className="mt-2 w-full rounded-2xl border border-dashed border-gray-300 bg-white p-3 text-sm text-black"
+                      >
+                        + Создать новый адрес
+                      </button>
                     </div>
 
                   </>
@@ -1496,38 +1541,46 @@ export default function CheckoutPageClient() {
 
             <div className="space-y-2">
               {savedAddresses.map((address) => (
-                <button
+                <div
                   key={address.id}
-                  type="button"
-                  onClick={() => handleSelectSavedAddress(address)}
-                  className={`w-full rounded-2xl border p-3 text-left ${
+                  className={`flex items-center gap-2 rounded-2xl border p-2 ${
                     selectedAddressId === address.id
                       ? "border-[#16A34A]/40 bg-[#EAF8F0]"
                       : "border-gray-200 bg-[#F5F5F5]"
                   }`}
                 >
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-black">{address.label}</span>
-                    {address.is_default && (
-                      <span className="rounded-full bg-white px-2 py-0.5 text-[10px] text-black">
-                        Основной
-                      </span>
-                    )}
-                  </div>
-                  <p className="mt-1 text-sm text-gray-500">
-                    {formatSavedAddress(address)}
-                  </p>
-                </button>
-              ))}
+                  <button
+                    type="button"
+                    onClick={() => handleSelectSavedAddress(address)}
+                    className="min-w-0 flex-1 p-1 text-left"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-black">{address.label}</span>
+                      {address.is_default && (
+                        <span className="rounded-full bg-white px-2 py-0.5 text-[10px] text-black">
+                          Основной
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-1 truncate text-sm text-gray-500">
+                      {formatSavedAddress(address)}
+                    </p>
+                  </button>
 
-              <button
-                type="button"
-                onClick={handleNewAddress}
-                className="w-full rounded-2xl border border-dashed border-gray-300 bg-white p-3 text-sm text-black"
-              >
-                + Ввести новый адрес
-              </button>
-            </div>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteAddress(address.id);
+                    }}
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/80 text-gray-400"
+                    aria-label="Удалить адрес"
+                  >
+                    <AddressDeleteIcon />
+                  </button>
+                </div>
+              ))}
+</div>
           </div>
         </div>
       )}
