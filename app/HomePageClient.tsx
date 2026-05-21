@@ -192,52 +192,6 @@ export default function HomePageClient({
   }, []);
 
   useEffect(() => {
-    const viewport = document.querySelector('meta[name="viewport"]');
-    const previousViewport = viewport?.getAttribute("content") || "";
-
-    viewport?.setAttribute(
-      "content",
-      "width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover"
-    );
-
-    const preventGesture = (event: Event) => {
-      event.preventDefault();
-    };
-
-    const preventMultiTouch = (event: TouchEvent) => {
-      if (event.touches.length > 1) event.preventDefault();
-    };
-
-    let lastTouchEnd = 0;
-
-    const preventDoubleTapZoom = (event: TouchEvent) => {
-      const now = Date.now();
-
-      if (now - lastTouchEnd <= 300) {
-        event.preventDefault();
-      }
-
-      lastTouchEnd = now;
-    };
-
-    document.addEventListener("gesturestart", preventGesture);
-    document.addEventListener("gesturechange", preventGesture);
-    document.addEventListener("gestureend", preventGesture);
-    document.addEventListener("touchmove", preventMultiTouch, { passive: false });
-    document.addEventListener("touchend", preventDoubleTapZoom, { passive: false });
-
-    return () => {
-      if (viewport) viewport.setAttribute("content", previousViewport);
-
-      document.removeEventListener("gesturestart", preventGesture);
-      document.removeEventListener("gesturechange", preventGesture);
-      document.removeEventListener("gestureend", preventGesture);
-      document.removeEventListener("touchmove", preventMultiTouch);
-      document.removeEventListener("touchend", preventDoubleTapZoom);
-    };
-  }, []);
-
-  useEffect(() => {
     const data = JSON.parse(localStorage.getItem("favorites") || "[]");
     setFavorites(Array.isArray(data) ? data : []);
   }, []);
@@ -370,8 +324,8 @@ export default function HomePageClient({
         @import url('https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&display=swap');
 
         *, *::before, *::after { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        html { width: 100%; height: 100%; background: #f5f5f5; overflow: hidden; overscroll-behavior: none; -webkit-text-size-adjust: 100%; touch-action: pan-y; }
-        body { width: 100%; height: 100%; margin: 0; background: #f5f5f5; overflow: hidden !important; max-width: 100vw !important; overscroll-behavior: none; touch-action: pan-y; }
+        html { background: #f5f5f5; overscroll-behavior-x: none; }
+        body { margin: 0; background: #f5f5f5; overflow-x: hidden !important; max-width: 100vw !important; overscroll-behavior: none; }
         button, input { font: inherit; }
         button { touch-action: manipulation; }
         button:focus-visible, input:focus-visible { outline: 2px solid rgba(17,17,17,.4); outline-offset: 2px; }
@@ -383,20 +337,13 @@ export default function HomePageClient({
           --muted: #7b7b7b;
           --soft: #efefef;
           --line: rgba(17,17,17,.08);
-          --green: #128243;
+          --green: #16A34A;
           --red: #e13a3a;
           font-family: 'Onest', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
           width: 100%;
           max-width: 100vw;
-          position: fixed;
-          inset: 0;
-          height: 100vh;
-          height: 100dvh;
-          overflow-y: auto;
+          min-height: 100vh;
           overflow-x: hidden;
-          overscroll-behavior: contain;
-          -webkit-overflow-scrolling: touch;
-          touch-action: pan-y;
           background: var(--bg);
           color: var(--text);
           padding-bottom: calc(104px + env(safe-area-inset-bottom, 0px));
@@ -1220,12 +1167,6 @@ export default function HomePageClient({
                           </div>
 
                           <div className="mn-name">{p.name}</div>
-
-                          {p.selectedColor && (
-                            <div className="mn-color-name">
-                              {p.selectedColor}
-                            </div>
-                          )}
 
                           <div className="mn-price-row">
                             <span className="mn-price">{formatPrice(p.price)} ₽</span>
