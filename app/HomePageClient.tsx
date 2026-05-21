@@ -39,58 +39,14 @@ export type HomeProduct = {
   description?: string;
 };
 
-
-type FavoriteItem = {
-  id: string;
-  color: string;
+type HomeColorProduct = HomeProduct & {
+  cardKey: string;
+  selectedColor: string;
+  cardImages: string[];
+  cardImage: string;
 };
 
-function normalizeFavoriteItems(data: unknown): FavoriteItem[] {
-  if (!Array.isArray(data)) return [];
-
-  return data
-    .map((item) => {
-      if (typeof item === "string") {
-        return { id: item, color: "" };
-      }
-
-      if (
-        item &&
-        typeof item === "object" &&
-        "id" in item &&
-        typeof item.id === "string"
-      ) {
-        return {
-          id: item.id,
-          color:
-            "color" in item && typeof item.color === "string"
-              ? item.color
-              : "",
-        };
-      }
-
-      return null;
-    })
-    .filter(Boolean) as FavoriteItem[];
-}
-
-function syncFavoriteStorage(items: FavoriteItem[]) {
-  const uniqueItems = items.filter(
-    (item, index, array) =>
-      array.findIndex(
-        (current) => current.id === item.id && current.color === item.color
-      ) === index
-  );
-
-  const uniqueIds = Array.from(new Set(uniqueItems.map((item) => item.id)));
-
-  localStorage.setItem("favorite_items", JSON.stringify(uniqueItems));
-  localStorage.setItem("favorites", JSON.stringify(uniqueIds));
-
-  return uniqueItems;
-}
-
-function getCardColorGallery(product: HomeProduct, color: string) {
+function getHomeColorImages(product: HomeProduct, color: string) {
   const colorGallery = color ? product.galleryByColor?.[color] || [] : [];
   const colorImage = color ? product.colorImages?.[color] : "";
 
@@ -211,7 +167,6 @@ export default function HomePageClient({
 }) {
   const router = useRouter();
   const [favorites, setFavorites] = useState<string[]>([]);
-  const [favoriteItems, setFavoriteItems] = useState<FavoriteItem[]>([]);
   const [selectedDepartment, setSelectedDepartment] = useState<Department>("Мужчинам");
   const [selectedMensCategory, setSelectedMensCategory] = useState<MensCategory>("Все");
   const [selectedWomensCategory, setSelectedWomensCategory] = useState<WomensCategory>("Все");
@@ -283,26 +238,8 @@ export default function HomePageClient({
   }, []);
 
   useEffect(() => {
-    const favoriteIdsData = JSON.parse(localStorage.getItem("favorites") || "[]");
-    const favoriteItemsData = JSON.parse(
-      localStorage.getItem("favorite_items") || "[]"
-    );
-
-    const normalizedItems = normalizeFavoriteItems(favoriteItemsData);
-    const fallbackItems = normalizeFavoriteItems(favoriteIdsData);
-
-    const nextItems =
-      normalizedItems.length > 0
-        ? normalizedItems
-        : fallbackItems.map((item) => ({
-            id: item.id,
-            color: "",
-          }));
-
-    const syncedItems = syncFavoriteStorage(nextItems);
-
-    setFavoriteItems(syncedItems);
-    setFavorites(Array.from(new Set(syncedItems.map((item) => item.id))));
+    const data = JSON.parse(localStorage.getItem("favorites") || "[]");
+    setFavorites(Array.isArray(data) ? data : []);
   }, []);
 
   useEffect(() => {
@@ -327,23 +264,10 @@ export default function HomePageClient({
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const toggleFavorite = (id: string, color: string) => {
-    const favoriteColor = color || "";
-
-    const exists = favoriteItems.some(
-      (item) => item.id === id && item.color === favoriteColor
-    );
-
-    const updatedItems = exists
-      ? favoriteItems.filter(
-          (item) => !(item.id === id && item.color === favoriteColor)
-        )
-      : [...favoriteItems, { id, color: favoriteColor }];
-
-    const syncedItems = syncFavoriteStorage(updatedItems);
-
-    setFavoriteItems(syncedItems);
-    setFavorites(Array.from(new Set(syncedItems.map((item) => item.id))));
+  const toggleFavorite = (id: string) => {
+    const updated = favorites.includes(id) ? favorites.filter((x) => x !== id) : [...favorites, id];
+    setFavorites(updated);
+    localStorage.setItem("favorites", JSON.stringify(updated));
     window.dispatchEvent(new Event("favorites-updated"));
   };
 
@@ -390,14 +314,14 @@ export default function HomePageClient({
     return result;
   }, [departmentProducts, currentCategory, selectedBrand, selectedSort, selectedAvailability, search]);
 
-  const productCards = useMemo(() => {
+  const productCards = useMemo<HomeColorProduct[]>(() => {
     return filteredProducts.flatMap((product) => {
       const colors = product.colors?.length
         ? product.colors
         : [product.defaultColor || ""];
 
       return colors.map((color) => {
-        const cardImages = getCardColorGallery(product, color);
+        const cardImages = getHomeColorImages(product, color);
         const cardImage =
           cardImages[0] || product.image || "/products/product-1.jpg";
 
@@ -459,7 +383,7 @@ export default function HomePageClient({
           --muted: #7b7b7b;
           --soft: #efefef;
           --line: rgba(17,17,17,.08);
-          --green: #16A34A;
+          --green: #128243;
           --red: #e13a3a;
           font-family: 'Onest', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
           width: 100%;
@@ -1261,24 +1185,12 @@ export default function HomePageClient({
                     const curIdx = Math.min(cardImageIndexes[p.cardKey] || 0, total - 1);
                     const curImg = imgs[curIdx] || p.cardImage || "/products/product-1.jpg";
                     const isForeign = p.badge?.trim().toLowerCase() === "из-за рубежа";
-                    const isFavorite =
-                      favoriteItems.some(
-                        (item) =>
-                          item.id === p.id && item.color === p.selectedColor
-                      ) ||
-                      (p.selectedColor === "" && favorites.includes(p.id));
 
                     return (
                       <article
                         key={p.cardKey}
                         className="mn-card"
-                        onClick={() =>
-                          router.push(
-                            `/product?id=${p.id}&color=${encodeURIComponent(
-                              p.selectedColor
-                            )}`
-                          )
-                        }
+                        onClick={() => router.push(`/product?id=${p.id}&color=${encodeURIComponent(p.selectedColor)}`)}
                         onMouseEnter={() => router.prefetch(`/product?id=${p.id}`)}
                       >
                         <div
@@ -1288,16 +1200,8 @@ export default function HomePageClient({
                         >
                           <img src={curImg} alt={p.name} className="mn-img" loading="lazy" onError={(e) => { e.currentTarget.src = "/products/product-1.jpg"; }} />
 
-                          <button
-                            type="button"
-                            className="mn-heart"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleFavorite(p.id, p.selectedColor);
-                            }}
-                            aria-label="Добавить в избранное"
-                          >
-                            <IconHeart active={isFavorite} />
+                          <button type="button" className="mn-heart" onClick={(e) => { e.stopPropagation(); toggleFavorite(p.id); }} aria-label="Добавить в избранное">
+                            <IconHeart active={favorites.includes(p.id)} />
                           </button>
 
                           {total > 1 && (
@@ -1318,7 +1222,9 @@ export default function HomePageClient({
                           <div className="mn-name">{p.name}</div>
 
                           {p.selectedColor && (
-                            <div className="mn-color-name">{p.selectedColor}</div>
+                            <div className="mn-color-name">
+                              {p.selectedColor}
+                            </div>
                           )}
 
                           <div className="mn-price-row">
