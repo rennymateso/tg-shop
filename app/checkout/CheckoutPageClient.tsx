@@ -352,6 +352,17 @@ function readCheckoutDraftSelectedAddressId() {
   }
 }
 
+function readSelectedAddressId() {
+  return (
+    localStorage.getItem("checkout_selected_address_id") ||
+    readCheckoutDraftSelectedAddressId()
+  );
+}
+
+function writeSelectedAddressId(addressId: string) {
+  localStorage.setItem("checkout_selected_address_id", addressId);
+}
+
 function getCheckoutItemImage(product: Product | undefined, color: string) {
   if (!product) return "/products/product-1.jpg";
 
@@ -511,22 +522,27 @@ export default function CheckoutPageClient() {
   }, []);
 
   const loadAddresses = async () => {
-    if (!initData) {
-      const deletedIds = readDeletedAddressIds();
-      const localAddresses = readLocalAddresses().filter(
+    setLoadingAddresses(true);
+
+    const deletedIds = readDeletedAddressIds();
+    const selectedIdFromStorage = readSelectedAddressId();
+
+    const applyAddresses = (rawAddresses: CustomerAddress[]) => {
+      const addresses = rawAddresses.filter(
         (address) => !deletedIds.includes(address.id)
       );
 
-      setSavedAddresses(localAddresses);
+      setSavedAddresses(addresses);
 
-      const selectedIdFromDraft = readCheckoutDraftSelectedAddressId();
       const selectedAddress =
-        localAddresses.find((item) => item.id === selectedIdFromDraft) ||
-        localAddresses.find((item) => item.is_default) ||
-        localAddresses[0];
+        addresses.find((item) => item.id === selectedIdFromStorage) ||
+        addresses.find((item) => item.id === selectedAddressId) ||
+        addresses.find((item) => item.is_default) ||
+        addresses[0];
 
       if (selectedAddress) {
         setSelectedAddressId(selectedAddress.id);
+        writeSelectedAddressId(selectedAddress.id);
         setCity(selectedAddress.city || "");
         setStreet(selectedAddress.street || "");
         setHouse(selectedAddress.house || "");
@@ -534,37 +550,42 @@ export default function CheckoutPageClient() {
         setDeliveryComment(selectedAddress.comment || "");
         setShowNewAddressForm(false);
         setShowSavedAddressesModal(false);
+      } else {
+        setSelectedAddressId("");
+        writeSelectedAddressId("");
       }
+    };
 
+    if (!initData) {
+      applyAddresses(readLocalAddresses());
       setLoadingAddresses(false);
       return;
     }
 
-    setLoadingAddresses(true);
+    try {
+      const response = await fetch(
+        `/api/customer/addresses?initData=${encodeURIComponent(initData)}`
+      );
+      const result = await response.json();
 
-    const response = await fetch(
-      `/api/customer/addresses?initData=${encodeURIComponent(initData)}`
-    );
-    const result = await response.json();
+      if (response.ok && result?.success && Array.isArray(result.addresses)) {
+        const serverAddresses = result.addresses as CustomerAddress[];
+        const localAddresses = readLocalAddresses();
 
-    if (response.ok && result?.success && Array.isArray(result.addresses)) {
-      const addresses = result.addresses as CustomerAddress[];
-      setSavedAddresses(addresses);
+        const mergedAddresses = [
+          ...localAddresses,
+          ...serverAddresses.filter(
+            (serverAddress) =>
+              !localAddresses.some((localAddress) => localAddress.id === serverAddress.id)
+          ),
+        ];
 
-      const defaultAddress = addresses.find((item) => item.is_default);
-      if (defaultAddress && !selectedAddressId) {
-        setSelectedAddressId(defaultAddress.id);
-        setCity(defaultAddress.city || "");
-        setStreet(defaultAddress.street || "");
-        setHouse(defaultAddress.house || "");
-        setApartment(defaultAddress.apartment || "");
-        setDeliveryComment(defaultAddress.comment || "");
-        setShowNewAddressForm(false);
-    setShowSavedAddressesModal(false);
+        applyAddresses(mergedAddresses);
+      } else {
+        applyAddresses(readLocalAddresses());
       }
-    } else {
-      const localAddresses = readLocalAddresses();
-      setSavedAddresses(localAddresses);
+    } catch {
+      applyAddresses(readLocalAddresses());
     }
 
     setLoadingAddresses(false);
@@ -593,6 +614,9 @@ export default function CheckoutPageClient() {
         setDeliveryComment(savedDraft.deliveryComment || "");
         setPromoCode(savedDraft.promoCode || "");
         setSelectedAddressId(savedDraft.selectedAddressId || "");
+        if (savedDraft.selectedAddressId) {
+          writeSelectedAddressId(savedDraft.selectedAddressId);
+        }
         setShowNewAddressForm(
           !savedDraft.selectedAddressId &&
             Boolean(savedDraft.city || savedDraft.street || savedDraft.house)
@@ -888,6 +912,7 @@ export default function CheckoutPageClient() {
 
   const handleSelectSavedAddress = (address: CustomerAddress) => {
     setSelectedAddressId(address.id);
+    writeSelectedAddressId(address.id);
     setCity(address.city || "");
     setStreet(address.street || "");
     setHouse(address.house || "");
@@ -950,6 +975,7 @@ export default function CheckoutPageClient() {
     setSavedAddresses(nextAddresses);
     writeLocalAddresses(nextAddresses);
     setSelectedAddressId(newAddress.id);
+    writeSelectedAddressId(newAddress.id);
 
     setShowAddressModal(false);
     setShowNewAddressForm(false);
@@ -982,6 +1008,7 @@ export default function CheckoutPageClient() {
         handleSelectSavedAddress(nextSelected);
       } else {
         setSelectedAddressId("");
+        writeSelectedAddressId("");
         setCity("");
         setStreet("");
         setHouse("");
