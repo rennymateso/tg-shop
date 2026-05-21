@@ -68,6 +68,7 @@ type FavoriteItem = {
 type FavoriteProductCard = {
   product: Product;
   color: string;
+  storageColor: string;
   image: string;
   favoriteKey: string;
 };
@@ -327,13 +328,14 @@ export default function FavoritesPage() {
 
         if (!product) return null;
 
-        const color = item.color || product.defaultColor || product.colors?.[0] || "";
+        const color = item.color || product.colors?.[0] || "";
 
         return {
           product,
           color,
+          storageColor: item.color,
           image: getFavoriteProductImage(product, color),
-          favoriteKey: `${product.id}-${color || "default"}`,
+          favoriteKey: `${product.id}-${item.color || color || "default"}`,
         };
       })
       .filter(Boolean) as FavoriteProductCard[];
@@ -454,7 +456,7 @@ export default function FavoritesPage() {
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3">
-          {favoriteProducts.map(({ product: p, color, image, favoriteKey }) => {
+          {favoriteProducts.map(({ product: p, color, storageColor, image, favoriteKey }) => {
             const discountPercent = getDiscountPercent(p.oldPrice, p.price);
 
             return (
@@ -477,7 +479,7 @@ export default function FavoritesPage() {
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      toggleFavorite(p.id, color);
+                      toggleFavorite(p.id, storageColor);
                     }}
                     className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-black shadow-sm backdrop-blur"
                     aria-label="Убрать из избранного"
