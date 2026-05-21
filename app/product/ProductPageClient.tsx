@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import BottomNav from "../components/BottomNav";
 
 export type Product = {
@@ -216,12 +216,17 @@ export default function ProductPageClient({
   initialError: string;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const colorFromUrl = decodeURIComponent(searchParams.get("color") || "");
+  const initialColor =
+    initialProduct?.colors?.includes(colorFromUrl)
+      ? colorFromUrl
+      : initialProduct?.defaultColor || initialProduct?.colors?.[0] || "";
 
   const [product] = useState<Product | null>(initialProduct);
   const [selectedSize, setSelectedSize] = useState(getDefaultSize(initialProduct));
-  const [selectedColor, setSelectedColor] = useState(
-    initialProduct?.defaultColor || initialProduct?.colors?.[0] || ""
-  );
+  const [selectedColor, setSelectedColor] = useState(initialColor);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [favoriteItems, setFavoriteItems] = useState<FavoriteItem[]>([]);
   const [viewedProducts, setViewedProducts] = useState<Product[]>([]);
@@ -236,6 +241,17 @@ export default function ProductPageClient({
   const touchStartXRef = useRef<number | null>(null);
   const addedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!product) return;
+
+    const nextColor = decodeURIComponent(searchParams.get("color") || "");
+
+    if (nextColor && product.colors.includes(nextColor)) {
+      setSelectedColor(nextColor);
+      setActiveImageIndex(0);
+    }
+  }, [product, searchParams]);
 
   useEffect(() => {
     const favoriteIdsData = JSON.parse(localStorage.getItem("favorites") || "[]");
