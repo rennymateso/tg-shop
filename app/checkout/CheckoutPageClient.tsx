@@ -210,9 +210,12 @@ function buildDeliveryAddress(params: {
   apartment: string;
   deliveryComment: string;
 }) {
+  const city = cleanCityValue(params.city);
+  const street = cleanStreetValue(params.street, city);
+
   const parts: string[] = [
-    `г. ${params.city.trim()}`,
-    `ул. ${params.street.trim()}`,
+    `г. ${city}`,
+    `ул. ${street}`,
     `д. ${params.house.trim()}`,
   ];
 
@@ -259,6 +262,37 @@ function formatSavedAddress(address: CustomerAddress) {
 
 function normalizeAddressPart(value: string | null | undefined) {
   return (value || "").trim().toLowerCase();
+}
+
+function cleanCityValue(value: string) {
+  return value
+    .replace(/^\s*г\.?\s*/i, "")
+    .replace(/^\s*город\s+/i, "")
+    .trim();
+}
+
+function cleanStreetValue(value: string, cityValue = "") {
+  let next = value.trim();
+
+  const city = cleanCityValue(cityValue);
+
+  next = next
+    .replace(/^\s*г\.?\s*/i, "")
+    .replace(/^\s*город\s+/i, "")
+    .trim();
+
+  if (city) {
+    next = next
+      .replace(new RegExp(`^${city.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\s*,?\s*`, "i"), "")
+      .trim();
+  }
+
+  next = next
+    .replace(/^\s*ул\.?\s*/i, "")
+    .replace(/^\s*улица\s+/i, "")
+    .trim();
+
+  return next;
 }
 
 function readLocalAddresses() {
@@ -773,7 +807,7 @@ export default function CheckoutPageClient() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            query: city.trim() ? `${city}, ${street}` : street,
+            query: city.trim() ? `${cleanCityValue(city)}, ${street}` : street,
           }),
         });
 
@@ -827,8 +861,8 @@ export default function CheckoutPageClient() {
     const newAddress: CustomerAddress = {
       id: `local-${Date.now()}`,
       label: savedAddresses.length === 0 ? "Основной адрес" : "Адрес доставки",
-      city: city.trim(),
-      street: street.trim(),
+      city: cleanCityValue(city),
+      street: cleanStreetValue(street, city),
       house: house.trim(),
       apartment: apartment.trim() || null,
       comment: deliveryComment.trim() || null,
@@ -899,8 +933,8 @@ export default function CheckoutPageClient() {
       body: JSON.stringify({
         initData,
         label: "Другой адрес",
-        city,
-        street,
+        city: cleanCityValue(city),
+        street: cleanStreetValue(street, city),
         house,
         apartment,
         comment: deliveryComment,
@@ -1304,7 +1338,13 @@ export default function CheckoutPageClient() {
                             <div className="min-w-0">
                               <div className="text-sm font-medium text-black">Новый адрес</div>
                               <div className="mt-1 truncate text-sm text-gray-500">
-                                {[city, street, house].filter(Boolean).join(", ")}
+                                {[
+                                  city ? `г. ${cleanCityValue(city)}` : "",
+                                  street ? `ул. ${cleanStreetValue(street, city)}` : "",
+                                  house ? `д. ${house}` : "",
+                                ]
+                                  .filter(Boolean)
+                                  .join(", ")}
                               </div>
                             </div>
                             <span className="shrink-0 text-gray-400">›</span>
