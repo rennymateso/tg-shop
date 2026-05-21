@@ -108,6 +108,13 @@ type DadataSuggestion = {
   value: string;
 };
 
+const promoCodes: Record<string, number> = {
+  MONTREAUX10: 10,
+  SALE10: 10,
+  WELCOME10: 10,
+  VIP15: 15,
+};
+
 function isKazanCity(value: string) {
   return value.trim().toLowerCase() === "казань";
 }
@@ -208,6 +215,44 @@ function AddressDeleteIcon() {
       <path d="M14 11v6" />
       <path d="M6 7l1 14h10l1-14" />
       <path d="M9 7V4h6v3" />
+    </svg>
+  );
+}
+
+function ShieldIcon() {
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M12 3 19 6v5c0 4.6-2.9 8.4-7 10-4.1-1.6-7-5.4-7-10V6l7-3Z" />
+      <path d="m9 12 2 2 4-4" />
+    </svg>
+  );
+}
+
+function LockIcon() {
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <rect x="5" y="10" width="14" height="10" rx="2" />
+      <path d="M8 10V7a4 4 0 0 1 8 0v3" />
     </svg>
   );
 }
@@ -468,6 +513,8 @@ export default function CheckoutPageClient() {
   const [streetSuggestions, setStreetSuggestions] = useState<string[]>([]);
 
   const [promoCode, setPromoCode] = useState("");
+  const [appliedPromoCode, setAppliedPromoCode] = useState("");
+  const [promoMessage, setPromoMessage] = useState("");
   const [isPaying, setIsPaying] = useState(false);
   const [paymentError, setPaymentError] = useState("");
   const [paymentCheckMessage, setPaymentCheckMessage] = useState("");
@@ -806,9 +853,23 @@ export default function CheckoutPageClient() {
   const itemsCount = items.reduce((sum, item) => sum + item.quantity, 0);
   const deliveryPrice =
     deliveryMethod === "delivery" && !isKazanCity(city) ? 500 : 0;
+  const promoPercent = appliedPromoCode
+    ? promoCodes[appliedPromoCode.toUpperCase()] || 0
+    : 0;
+  const productDiscountAmount = Math.max(
+    0,
+    totals.oldItemsTotal - totals.newItemsTotal
+  );
+  const promoDiscountAmount =
+    promoPercent > 0
+      ? Math.round((totals.newItemsTotal * promoPercent) / 100)
+      : 0;
+  const discountAmount = productDiscountAmount + promoDiscountAmount;
   const finalOldTotal = totals.oldItemsTotal + deliveryPrice;
-  const finalNewTotal = totals.newItemsTotal + deliveryPrice;
-  const discountAmount = Math.max(0, totals.oldItemsTotal - totals.newItemsTotal);
+  const finalNewTotal = Math.max(
+    0,
+    totals.newItemsTotal + deliveryPrice - promoDiscountAmount
+  );
 
   const phoneDigitsCount = phone.replace(/\D/g, "").replace(/^7/, "").length;
   const isPhoneValid = phoneDigitsCount === 10;
@@ -905,6 +966,28 @@ export default function CheckoutPageClient() {
   }, [city, street]);
 
   const getProductById = (id: string) => productsMap[id];
+
+  const handleApplyPromoCode = () => {
+    const normalizedCode = promoCode.trim().toUpperCase();
+
+    if (!normalizedCode) {
+      setAppliedPromoCode("");
+      setPromoMessage("");
+      return;
+    }
+
+    const percent = promoCodes[normalizedCode];
+
+    if (!percent) {
+      setAppliedPromoCode("");
+      setPromoMessage("Промокод не найден");
+      return;
+    }
+
+    setAppliedPromoCode(normalizedCode);
+    setPromoCode(normalizedCode);
+    setPromoMessage(`Промокод применён: −${percent}%`);
+  };
 
   const handlePhoneChange = (value: string) => {
     setPhone(formatPhone(value));
@@ -1568,12 +1651,39 @@ export default function CheckoutPageClient() {
                   </div>
                 )}
 
-                <input
-                  placeholder="Промокод"
-                  value={promoCode}
-                  onChange={(e) => setPromoCode(e.target.value)}
-                  className="mb-4 w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-                />
+                <div className="mb-4">
+                  <div className="flex gap-2">
+                    <input
+                      placeholder="Промокод"
+                      value={promoCode}
+                      onChange={(e) => {
+                        setPromoCode(e.target.value);
+                        setAppliedPromoCode("");
+                        setPromoMessage("");
+                      }}
+                      className="min-w-0 flex-1 rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
+                    />
+
+                    <button
+                      type="button"
+                      onClick={handleApplyPromoCode}
+                      disabled={!promoCode.trim()}
+                      className="shrink-0 rounded-2xl bg-black px-4 text-sm font-medium text-white disabled:bg-[#E5E5E5] disabled:text-gray-400"
+                    >
+                      Применить
+                    </button>
+                  </div>
+
+                  {promoMessage && (
+                    <p
+                      className={`mt-2 text-[12px] ${
+                        appliedPromoCode ? "text-[#16A34A]" : "text-[#e13a3a]"
+                      }`}
+                    >
+                      {promoMessage}
+                    </p>
+                  )}
+                </div>
 
                 <div className="mb-4 rounded-2xl bg-[#F7F7F7] px-4 py-4 text-sm">
                   <div className="mb-3 flex items-center justify-between">
@@ -1592,6 +1702,17 @@ export default function CheckoutPageClient() {
                     <span className="text-gray-500">Скидка</span>
                     <span className="text-[#e13a3a]">−{formatPrice(discountAmount)} ₽</span>
                   </div>
+
+                  {promoDiscountAmount > 0 && (
+                    <div className="mb-2 flex items-center justify-between">
+                      <span className="text-gray-500">
+                        Промокод {appliedPromoCode}
+                      </span>
+                      <span className="text-[#e13a3a]">
+                        −{formatPrice(promoDiscountAmount)} ₽
+                      </span>
+                    </div>
+                  )}
 
                   <div className="mb-3 flex items-center justify-between">
                     <span className="text-gray-500">Доставка</span>
@@ -1633,6 +1754,17 @@ export default function CheckoutPageClient() {
                     {isPaying ? "Сохраняем..." : "Оформить заказ"}
                   </button>
                 )}
+
+                <div className="mt-3 flex items-center justify-center gap-3 text-[11px] font-normal text-gray-400">
+                  <span className="inline-flex items-center gap-1">
+                    <ShieldIcon />
+                    Ваши данные защищены
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <LockIcon />
+                    Безопасная оплата
+                  </span>
+                </div>
               </div>
             </div>
           )}
