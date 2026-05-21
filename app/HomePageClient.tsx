@@ -39,6 +39,8 @@ export type HomeProduct = {
   description?: string;
 };
 
+
+
 type FavoriteItem = {
   id: string;
   color: string;
@@ -89,6 +91,27 @@ function syncFavoriteStorage(items: FavoriteItem[]) {
   return uniqueItems;
 }
 
+function getCardColorGallery(product: HomeProduct, color: string) {
+  const colorGallery = color ? product.galleryByColor?.[color] || [] : [];
+  const colorImage = color ? product.colorImages?.[color] : "";
+
+  if (colorGallery.length > 0) return colorGallery;
+  if (colorImage) return [colorImage];
+
+  return product.images?.length
+    ? product.images
+    : [product.image || "/products/product-1.jpg"];
+}
+
+const colorSwatches: Record<string, string> = {
+  Черный: "#111111",
+  Белый: "#F7F5EF",
+  Серый: "#9E9E9E",
+  Синий: "#2563EB",
+  Бежевый: "#C8B49A",
+  Зеленый: "#4A7A3D",
+  Коричневый: "#7A5230",
+};
 
 function getDiscountPercent(oldPrice: number | null, price: number) {
   if (!oldPrice || oldPrice <= price) return 0;
@@ -315,13 +338,7 @@ export default function HomePageClient({
       ? favoriteItems.filter(
           (item) => !(item.id === id && item.color === favoriteColor)
         )
-      : [
-          ...favoriteItems,
-          {
-            id,
-            color: favoriteColor,
-          },
-        ];
+      : [...favoriteItems, { id, color: favoriteColor }];
 
     const syncedItems = syncFavoriteStorage(updatedItems);
 
@@ -375,25 +392,21 @@ export default function HomePageClient({
 
   const productCards = useMemo(() => {
     return filteredProducts.flatMap((product) => {
-      const colors =
-        product.colors?.length > 0
-          ? product.colors
-          : [product.defaultColor || ""];
+      const colors = product.colors?.length
+        ? product.colors
+        : [product.defaultColor || ""];
 
       return colors.map((color) => {
-        const colorGallery = color ? product.galleryByColor?.[color] || [] : [];
-        const colorImage =
-          (color ? product.colorImages?.[color] : "") ||
-          colorGallery[0] ||
-          product.image ||
-          "/products/product-1.jpg";
+        const cardImages = getCardColorGallery(product, color);
+        const cardImage =
+          cardImages[0] || product.image || "/products/product-1.jpg";
 
         return {
           ...product,
           cardKey: `${product.id}-${color || "default"}`,
           selectedColor: color,
-          cardImages: colorGallery.length > 0 ? colorGallery : [colorImage],
-          cardImage: colorImage,
+          cardImages,
+          cardImage,
         };
       });
     });
@@ -999,17 +1012,6 @@ export default function HomePageClient({
         .mn-swatch.active { box-shadow: 0 0 0 2px #111; }
         .mn-extra { color: #888; font-size: 10px; font-weight: 600; }
 
-        .mn-card-color {
-          margin-top: 4px;
-          color: #8b8b8b;
-          font-size: 10px;
-          line-height: 1;
-          font-weight: 400;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-
         .mn-price-row {
           margin-top: 8px;
           display: flex;
@@ -1182,7 +1184,7 @@ export default function HomePageClient({
               <div className="mn-catalog-head">
                 <div>
                   <h2 className="mn-title">Каталог</h2>
-                  <div className="mn-subtitle">{productCards.length} товаров</div>
+                  <div className="mn-subtitle">{filteredProducts.length} товаров</div>
                 </div>
                 {activeFiltersCount > 0 && <button className="mn-reset" type="button" onClick={resetFilters}>Сбросить</button>}
               </div>
@@ -1254,29 +1256,19 @@ export default function HomePageClient({
                 <div className="mn-grid">
                   {productCards.map((p) => {
                     const discount = getDiscountPercent(p.oldPrice, p.price);
+                    const selColor = p.selectedColor || "";
                     const imgs = p.cardImages?.length ? p.cardImages : [p.cardImage];
                     const total = imgs.length || 1;
                     const curIdx = Math.min(cardImageIndexes[p.cardKey] || 0, total - 1);
                     const curImg = imgs[curIdx] || p.cardImage || "/products/product-1.jpg";
                     const isForeign = p.badge?.trim().toLowerCase() === "из-за рубежа";
-                    const isFavorite = favoriteItems.some(
-                      (item) => item.id === p.id && item.color === p.selectedColor
-                    );
 
                     return (
                       <article
                         key={p.cardKey}
                         className="mn-card"
-                        onClick={() =>
-                          router.push(
-                            `/product?id=${p.id}&color=${encodeURIComponent(p.selectedColor || "")}`
-                          )
-                        }
-                        onMouseEnter={() =>
-                          router.prefetch(
-                            `/product?id=${p.id}&color=${encodeURIComponent(p.selectedColor || "")}`
-                          )
-                        }
+                        onClick={() => router.push(`/product?id=${p.id}&color=${encodeURIComponent(p.selectedColor)}`)}
+                        onMouseEnter={() => router.prefetch(`/product?id=${p.id}`)}
                       >
                         <div
                           className="mn-img-wrap"
@@ -1290,11 +1282,17 @@ export default function HomePageClient({
                             className="mn-heart"
                             onClick={(e) => {
                               e.stopPropagation();
-                              toggleFavorite(p.id, p.selectedColor || "");
+                              toggleFavorite(p.id, p.selectedColor);
                             }}
                             aria-label="Добавить в избранное"
                           >
-                            <IconHeart active={isFavorite} />
+                            <IconHeart
+                              active={favoriteItems.some(
+                                (item) =>
+                                  item.id === p.id &&
+                                  item.color === p.selectedColor
+                              )}
+                            />
                           </button>
 
                           {total > 1 && (
@@ -1315,7 +1313,9 @@ export default function HomePageClient({
                           <div className="mn-name">{p.name}</div>
 
                           {p.selectedColor && (
-                            <div className="mn-card-color">Цвет: {p.selectedColor}</div>
+                            <div className="mn-color-name">
+                              {p.selectedColor}
+                            </div>
                           )}
 
                           <div className="mn-price-row">
