@@ -977,7 +977,7 @@ export default function HomePageClient({
                       <article
                         key={p.cardKey}
                         className="mn-card"
-                        onClick={() => router.push(`/product?id=${p.id}&color=${encodeURIComponent(p.selectedColor)}`)}
+                        onClick={() => router.push(`/product?id=${p.id}&color=${encodeURIComponent((p.selectedColor || "").trim())}`)}
                         onMouseEnter={() => router.prefetch(`/product?id=${p.id}`)}
                       >
                         <div

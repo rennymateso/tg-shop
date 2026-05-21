@@ -93,6 +93,27 @@ function formatPrice(value: number | null | undefined) {
   return value.toLocaleString("ru-RU");
 }
 
+
+function normalizeColorValue(value: string | null | undefined) {
+  return (value || "").trim().toLowerCase();
+}
+
+function resolveProductColor(product: Product | null, value: string) {
+  if (!product) return "";
+
+  const normalizedValue = normalizeColorValue(value);
+
+  if (!normalizedValue) {
+    return product.defaultColor || product.colors?.[0] || "";
+  }
+
+  const matchedColor = product.colors.find(
+    (color) => normalizeColorValue(color) === normalizedValue
+  );
+
+  return matchedColor || product.defaultColor || product.colors?.[0] || "";
+}
+
 function getDefaultSize(product: Product | null) {
   if (!product) return "S";
 
@@ -217,12 +238,8 @@ export default function ProductPageClient({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-
-  const colorFromUrl = decodeURIComponent(searchParams.get("color") || "");
-  const initialColor =
-    initialProduct?.colors?.includes(colorFromUrl)
-      ? colorFromUrl
-      : initialProduct?.defaultColor || initialProduct?.colors?.[0] || "";
+  const colorFromUrl = searchParams.get("color") || "";
+  const initialColor = resolveProductColor(initialProduct, colorFromUrl);
 
   const [product] = useState<Product | null>(initialProduct);
   const [selectedSize, setSelectedSize] = useState(getDefaultSize(initialProduct));
@@ -245,13 +262,14 @@ export default function ProductPageClient({
   useEffect(() => {
     if (!product) return;
 
-    const nextColor = decodeURIComponent(searchParams.get("color") || "");
+    const nextColor = resolveProductColor(product, colorFromUrl);
 
-    if (nextColor && product.colors.includes(nextColor)) {
+    if (nextColor && nextColor !== selectedColor) {
       setSelectedColor(nextColor);
       setActiveImageIndex(0);
+      setJustAdded(false);
     }
-  }, [product, searchParams]);
+  }, [product, colorFromUrl, selectedColor]);
 
   useEffect(() => {
     const favoriteIdsData = JSON.parse(localStorage.getItem("favorites") || "[]");
