@@ -65,6 +65,29 @@ function getDiscountPercent(oldPrice: number | null, price: number) {
   return Math.round(((oldPrice - price) / oldPrice) * 100);
 }
 
+function formatPrice(value: number | null | undefined) {
+  if (!value) return "";
+  return value.toLocaleString("ru-RU");
+}
+
+function HeartRemoveIcon() {
+  return (
+    <svg
+      width="17"
+      height="17"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      stroke="currentColor"
+      strokeWidth="1.65"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M20.8 4.6c-1.8-1.8-4.7-1.8-6.5 0L12 6.9 9.7 4.6c-1.8-1.8-4.7-1.8-6.5 0s-1.8 4.7 0 6.5L12 21l8.8-9.9c1.8-1.8 1.8-4.7 0-6.5Z" />
+    </svg>
+  );
+}
+
 function mapRowToProduct(row: ProductRow): Product {
   const normalizedColorImages: Record<string, string> = {};
 
@@ -177,7 +200,16 @@ export default function FavoritesPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#F5F5F5] px-3 pt-[76px] pb-32">
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&display=swap');
+
+        .favorites-onest {
+          font-family: 'Onest', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+        }
+      `}</style>
+
+      <main className="favorites-onest min-h-screen bg-[#F5F5F5] px-4 pt-[76px] pb-32">
       <div className="mb-5 flex items-center justify-center">
         <h1 className="text-[20px] font-medium">Избранное</h1>
       </div>
@@ -199,73 +231,95 @@ export default function FavoritesPage() {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-3">
           {favoriteProducts.map((p) => {
             const discountPercent = getDiscountPercent(p.oldPrice, p.price);
 
             return (
               <div
                 key={p.id}
-                onClick={() => router.push(`/product?id=${p.id}`)}
-                className="cursor-pointer overflow-hidden rounded-[20px] bg-white shadow-[0_10px_28px_rgba(0,0,0,0.05)] transition-all duration-300 active:scale-[0.985]"
+                className="rounded-[22px] bg-white p-3 shadow-[0_8px_24px_rgba(0,0,0,0.04)]"
               >
-                <div className="relative aspect-[3/4] overflow-hidden bg-[#EAEAEA]">
-                  <img
-                    src={p.image}
-                    alt={p.name}
-                    className="h-full w-full object-cover"
-                  />
-
+                <div className="flex gap-3">
                   <button
                     type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleFavorite(p.id);
-                    }}
-                    className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 backdrop-blur shadow-sm"
+                    onClick={() => router.push(`/product?id=${p.id}`)}
+                    className="aspect-[3/4] w-[82px] shrink-0 overflow-hidden rounded-[16px] bg-[#ECECEC]"
+                    aria-label="Открыть товар"
                   >
-                    <svg
-                      width="18"
-                      height="18"
-                      viewBox="0 0 24 24"
-                      fill="black"
-                      stroke="black"
-                      strokeWidth="1.7"
-                    >
-                      <path d="M20.8 4.6c-1.8-1.8-4.7-1.8-6.5 0L12 6.9l-2.3-2.3c-1.8-1.8-4.7-1.8-6.5 0s-1.8 4.7 0 6.5L12 21l8.8-9.9c1.8-1.8 1.8-4.7 0-6.5z" />
-                    </svg>
+                    <img
+                      src={p.image}
+                      alt={p.name}
+                      className="h-full w-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.src = "/products/product-1.jpg";
+                      }}
+                    />
                   </button>
-                </div>
 
-                <div className="flex min-h-[150px] flex-col p-3">
-                  <div className="h-[20px] overflow-hidden text-[10px] text-gray-400">
-                    <span className="max-w-[110px] break-words uppercase tracking-[0.14em]">
-                      {p.brand}
-                    </span>
-                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <button
+                        type="button"
+                        onClick={() => router.push(`/product?id=${p.id}`)}
+                        className="min-w-0 flex-1 text-left"
+                      >
+                        <div className="mb-1 truncate text-[9px] font-normal uppercase tracking-[0.18em] text-[#aaa]">
+                          {p.brand}
+                        </div>
 
-                  <h3 className="mt-1 min-h-[36px] text-[14px] font-medium leading-[1.2] text-black">
-                    {p.name}
-                  </h3>
+                        <h2 className="line-clamp-2 text-[15px] font-medium leading-[1.2] tracking-[-0.02em] text-black">
+                          {p.name}
+                        </h2>
+                      </button>
 
-                  <div className="mt-auto flex items-center justify-between gap-2 pt-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      {p.oldPrice && (
-                        <span className="text-[12px] font-normal leading-none text-gray-400 line-through">
-                          {p.oldPrice} ₽
-                        </span>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => toggleFavorite(p.id)}
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#F6F6F6] text-black"
+                        aria-label="Убрать из избранного"
+                      >
+                        <HeartRemoveIcon />
+                      </button>
+                    </div>
 
-                      <span className="text-[16px] font-semibold leading-none tracking-[-0.02em] text-[#16A34A]">
-                        {p.price} ₽
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      <span className="rounded-full bg-[#F3F3F3] px-2 py-1 text-[10px] text-gray-600">
+                        {p.category}
                       </span>
 
-                      {discountPercent > 0 && (
-                        <span className="rounded-full bg-[#E8F7EE] px-1.5 py-0.5 text-[10px] font-medium text-[#16A34A]">
-                          -{discountPercent}%
+                      {p.badge && (
+                        <span className="rounded-full bg-[#F3F3F3] px-2 py-1 text-[10px] text-gray-600">
+                          {p.badge}
                         </span>
                       )}
                     </div>
+
+                    <div className="mt-4 flex items-baseline gap-[5px] whitespace-nowrap">
+                      {p.oldPrice && (
+                        <span className="text-[11px] font-normal leading-none text-[#999] line-through">
+                          {formatPrice(p.oldPrice)} ₽
+                        </span>
+                      )}
+
+                      {discountPercent > 0 && (
+                        <span className="text-[11px] font-semibold leading-none text-[#e13a3a]">
+                          −{discountPercent}%
+                        </span>
+                      )}
+
+                      <span className="text-[16px] font-bold leading-none tracking-[-0.035em] text-[#16A34A]">
+                        {formatPrice(p.price)} ₽
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => router.push(`/product?id=${p.id}`)}
+                      className="mt-3 w-full rounded-2xl bg-black py-2.5 text-[13px] font-medium text-white"
+                    >
+                      Открыть товар
+                    </button>
                   </div>
                 </div>
               </div>
@@ -275,6 +329,7 @@ export default function FavoritesPage() {
       )}
 
       <BottomNav />
-    </main>
+      </main>
+    </>
   );
 }
