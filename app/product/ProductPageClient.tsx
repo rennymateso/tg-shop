@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import BottomNav from "../components/BottomNav";
 
 export type Product = {
@@ -193,23 +193,7 @@ function IconCopy({ copied }: { copied: boolean }) {
   );
 }
 
-function IconShield() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 3 19 6v5c0 4.6-2.9 8.4-7 10-4.1-1.6-7-5.4-7-10V6l7-3Z" />
-      <path d="m9 12 2 2 4-4" />
-    </svg>
-  );
-}
 
-function IconLock() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="5" y="10" width="14" height="10" rx="2" />
-      <path d="M8 10V7a4 4 0 0 1 8 0v3" />
-    </svg>
-  );
-}
 
 function IconChevron({ open }: { open: boolean }) {
   return (
@@ -237,13 +221,16 @@ export default function ProductPageClient({
   initialError: string;
 }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const colorFromUrl = searchParams.get("color") || "";
-  const initialColor = resolveProductColor(initialProduct, colorFromUrl);
+  const initialColorFromUrl =
+    typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search).get("color") || ""
+      : "";
+  const initialColor = resolveProductColor(initialProduct, initialColorFromUrl);
 
   const [product] = useState<Product | null>(initialProduct);
   const [selectedSize, setSelectedSize] = useState(getDefaultSize(initialProduct));
   const [selectedColor, setSelectedColor] = useState(initialColor);
+  const [urlColor] = useState(initialColorFromUrl);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [favoriteItems, setFavoriteItems] = useState<FavoriteItem[]>([]);
   const [viewedProducts, setViewedProducts] = useState<Product[]>([]);
@@ -260,16 +247,30 @@ export default function ProductPageClient({
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (!product) return;
+    const viewport = document.querySelector('meta[name="viewport"]');
+    const previousViewport = viewport?.getAttribute("content") || "";
 
-    const nextColor = resolveProductColor(product, colorFromUrl);
+    viewport?.setAttribute(
+      "content",
+      "width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover"
+    );
 
-    if (nextColor && nextColor !== selectedColor) {
+    return () => {
+      if (viewport) viewport.setAttribute("content", previousViewport);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!product || !urlColor) return;
+
+    const nextColor = resolveProductColor(product, urlColor);
+
+    if (nextColor) {
       setSelectedColor(nextColor);
       setActiveImageIndex(0);
       setJustAdded(false);
     }
-  }, [product, colorFromUrl, selectedColor]);
+  }, [product, urlColor]);
 
   useEffect(() => {
     const favoriteIdsData = JSON.parse(localStorage.getItem("favorites") || "[]");
@@ -591,7 +592,7 @@ export default function ProductPageClient({
                       </span>
                     ) : null}
 
-                    <span className="text-[16px] font-bold leading-none tracking-[-0.035em] text-[#128243]">
+                    <span className="text-[16px] font-bold leading-none tracking-[-0.035em] text-[#22C55E]">
                       {formatPrice(item.price)} ₽
                     </span>
                   </div>
@@ -615,6 +616,29 @@ export default function ProductPageClient({
           font-family: 'Onest', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
         }
 
+        html,
+        body {
+          width: 100%;
+          height: 100%;
+          overflow: hidden;
+          overscroll-behavior: none;
+          -webkit-text-size-adjust: 100%;
+          touch-action: pan-y;
+        }
+
+        .pd-product-page {
+          position: fixed;
+          inset: 0;
+          width: 100%;
+          height: 100vh;
+          height: 100dvh;
+          overflow-y: auto;
+          overflow-x: hidden;
+          overscroll-behavior: contain;
+          -webkit-overflow-scrolling: touch;
+          touch-action: pan-y;
+        }
+
         .pd-price-row {
           margin-top: 0;
           display: flex;
@@ -626,7 +650,7 @@ export default function ProductPageClient({
         }
 
         .pd-price {
-          color: #128243;
+          color: #22C55E;
           font-size: 22px;
           line-height: 1;
           font-weight: 800;
@@ -652,7 +676,7 @@ export default function ProductPageClient({
         }
       `}</style>
 
-      <main className="pd-product-page min-h-screen bg-[#F5F5F5] px-4 pt-[76px] pb-32">
+      <main className="pd-product-page bg-[#F5F5F5] px-4 pt-[76px] pb-32">
       <div className="overflow-hidden rounded-[24px] bg-white shadow-[0_10px_30px_rgba(0,0,0,0.05)]">
         <div
           className="relative aspect-[3/4] overflow-hidden bg-[#ECECEC]"
@@ -958,17 +982,6 @@ export default function ProductPageClient({
                 ? `Добавить в корзину · ${cartProductCount}`
                 : "Добавить в корзину"}
             </button>
-
-            <div className="mt-2 flex items-center justify-center gap-3 text-[11px] text-gray-400">
-              <span className="inline-flex items-center gap-1">
-                <IconShield />
-                Ваши данные защищены
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <IconLock />
-                Безопасная оплата
-              </span>
-            </div>
           </div>
         </div>
       </div>
