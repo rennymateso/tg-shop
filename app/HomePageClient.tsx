@@ -722,6 +722,18 @@ export default function HomePageClient({
           white-space: nowrap;
         }
 
+        .mn-in-stock {
+          flex: 0 0 auto;
+          color: #16A34A;
+          background: #EAF8F0;
+          border-radius: 999px;
+          padding: 3px 6px;
+          font-size: 9px;
+          line-height: 1;
+          font-weight: 500;
+          white-space: nowrap;
+        }
+
         .mn-name {
           margin-top: 5px;
           min-height: 32px;
@@ -971,7 +983,9 @@ export default function HomePageClient({
                     const total = imgs.length || 1;
                     const curIdx = Math.min(cardImageIndexes[p.cardKey] || 0, total - 1);
                     const curImg = imgs[curIdx] || p.cardImage || "/products/product-1.jpg";
-                    const isForeign = p.badge?.trim().toLowerCase() === "из-за рубежа";
+                    const normalizedBadge = p.badge?.trim().toLowerCase();
+                    const isForeign = normalizedBadge === "из-за рубежа";
+                    const isInStock = normalizedBadge === "в наличии";
 
                     return (
                       <article
@@ -1003,6 +1017,7 @@ export default function HomePageClient({
                         <div className="mn-body">
                           <div className="mn-brand-row">
                             <span className="mn-brand">{p.brand}</span>
+                            {isInStock && <span className="mn-in-stock">В наличии</span>}
                             {isForeign && <span className="mn-foreign">из-за рубежа</span>}
                           </div>
 
@@ -1016,7 +1031,11 @@ export default function HomePageClient({
 
                           <div className="mn-delivery">
                             <IconDelivery />
-                            <span>Доставка 7–14 дней</span>
+                            <span>
+                              {isInStock
+                                ? "Самовывоз/Быстрая доставка"
+                                : "Доставка 7–14 дней"}
+                            </span>
                           </div>
                         </div>
                       </article>
