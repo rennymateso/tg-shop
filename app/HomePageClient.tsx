@@ -1033,7 +1033,7 @@ export default function HomePageClient({
                             <IconDelivery />
                             <span>
                               {isInStock
-                                ? "Самовывоз/Быстрая доставка"
+                                ? "Доставка 1–3 дня"
                                 : "Доставка 7–14 дней"}
                             </span>
                           </div>
