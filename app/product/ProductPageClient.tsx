@@ -592,7 +592,7 @@ export default function ProductPageClient({
                       </span>
                     ) : null}
 
-                    <span className="text-[16px] font-bold leading-none tracking-[-0.035em] text-[#22C55E]">
+                    <span className="text-[16px] font-bold leading-none tracking-[-0.035em] text-[#16A34A]">
                       {formatPrice(item.price)} ₽
                     </span>
                   </div>
@@ -650,7 +650,7 @@ export default function ProductPageClient({
         }
 
         .pd-price {
-          color: #22C55E;
+          color: #16A34A;
           font-size: 22px;
           line-height: 1;
           font-weight: 800;
