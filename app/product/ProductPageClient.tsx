@@ -674,6 +674,12 @@ export default function ProductPageClient({
           font-weight: 700;
           font-family: 'Onest', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
         }
+
+        .pd-badge-in-stock {
+          color: #16A34A !important;
+          background: #EAF8F0 !important;
+          border-color: rgba(22, 163, 74, 0.18) !important;
+        }
       `}</style>
 
       <main className="pd-product-page bg-[#F5F5F5] px-4 pt-[76px] pb-32">
@@ -757,8 +763,7 @@ export default function ProductPageClient({
               </div>
 
               {product.badge ? (
-                <div className="shrink-0 rounded-full bg-[#F3F3F3] px-3 py-1 text-[10px] font-normal text-[#777]">
-                  {product.badge}
+                <div className={`${product.badge?.trim().toLowerCase() === "в наличии" ? "pd-badge-in-stock " : ""}shrink-0 rounded-full bg-[#F3F3F3] px-3 py-1 text-[10px] font-normal text-[#777]`}>{product.badge}
                 </div>
               ) : null}
             </div>
