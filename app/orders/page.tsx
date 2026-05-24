@@ -1,538 +1,355 @@
 "use client";
 
-import { useMemo, useRef, useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import BottomNav from "../components/BottomNav";
+import { supabase } from "../lib/supabase";
+import {
+  syncTelegramCustomer,
+  type CustomerProfile,
+} from "../lib/customer-profile";
 
-export type Product = {
+type OrderStatus =
+  | "Новый"
+  | "Оплачен"
+  | "В обработке"
+  | "Частично готов"
+  | "В пути из-за рубежа"
+  | "Собран"
+  | "В доставке"
+  | "Доставлен"
+  | "Отменен";
+
+type OrderRow = {
   id: string;
-  name: string;
-  brand: string;
-  price: number;
-  oldPrice: number | null;
-  badge: string;
-  image: string;
-  images: string[];
-  colorImages?: Record<string, string>;
-  galleryByColor?: Record<string, string[]>;
-  defaultColor: string;
-  type: "top" | "bottom";
-  category: "Футболки" | "Поло" | "Джинсы" | "Брюки" | "Костюмы";
-  colors: string[];
-  sizes: string[];
-  composition: string[];
-  description: string;
+  customer_id: string | null;
+  customer: string;
+  phone: string;
+  total: number;
+  payment: string;
+  delivery: string;
+  address: string;
+  status: OrderStatus;
+  comment: string | null;
+  promo_code: string | null;
+  created_at?: string;
+  updated_at?: string;
 };
 
-type CartItem = {
-  id: string;
+type OrderItemRow = {
+  id?: string;
+  order_id: string;
+  product_id: string | null;
   name: string;
-  price: number;
-  size: string;
-  color: string;
+  size: string | null;
+  color: string | null;
   quantity: number;
+  price: number;
 };
 
-function getDiscountPercent(oldPrice: number | null, price: number) {
-  if (!oldPrice || oldPrice <= price) return 0;
-  return Math.round(((oldPrice - price) / oldPrice) * 100);
+function getStatusClasses(status: OrderStatus) {
+  switch (status) {
+    case "Новый":
+      return "bg-[#F3F4F6] text-gray-700";
+    case "Оплачен":
+      return "bg-[#E8F7EE] text-[#15803D]";
+    case "В обработке":
+      return "bg-[#FEF3C7] text-[#B45309]";
+    case "Частично готов":
+      return "bg-[#FFF7ED] text-[#C2410C]";
+    case "В пути из-за рубежа":
+      return "bg-[#E0E7FF] text-[#4338CA]";
+    case "Собран":
+      return "bg-[#DBEAFE] text-[#1D4ED8]";
+    case "В доставке":
+      return "bg-[#EDE9FE] text-[#6D28D9]";
+    case "Доставлен":
+      return "bg-[#DCFCE7] text-[#166534]";
+    case "Отменен":
+      return "bg-[#FEE2E2] text-[#B91C1C]";
+    default:
+      return "bg-[#F3F4F6] text-gray-700";
+  }
 }
 
-export default function ProductPageClient({
-  initialProduct,
-  initialError,
-}: {
-  initialProduct: Product | null;
-  initialError: string;
-}) {
-  const router = useRouter();
-
-  const [product] = useState<Product | null>(initialProduct);
-  const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
-  const [selectedColor, setSelectedColor] = useState(
-    initialProduct?.defaultColor || ""
-  );
-  const [favorites, setFavorites] = useState<string[]>([]);
-  const [showFullDescription, setShowFullDescription] = useState(false);
-  const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const [justAdded, setJustAdded] = useState(false);
-
-  const touchStartXRef = useRef<number | null>(null);
-  const addedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    let touchStartX = 0;
-    let touchStartY = 0;
-
-    const handleTouchStart = (event: TouchEvent) => {
-      const touch = event.changedTouches[0];
-
-      if (!touch) return;
-
-      touchStartX = touch.screenX;
-      touchStartY = touch.screenY;
-    };
-
-    const handleTouchEnd = (event: TouchEvent) => {
-      const touch = event.changedTouches[0];
-
-      if (!touch) return;
-
-      const diffX = touch.screenX - touchStartX;
-      const diffY = Math.abs(touch.screenY - touchStartY);
-
-      if (touchStartX < 45 && diffX > 90 && diffY < 70) {
-        router.back();
-      }
-    };
-
-    document.addEventListener("touchstart", handleTouchStart, { passive: true });
-    document.addEventListener("touchend", handleTouchEnd, { passive: true });
-
-    return () => {
-      document.removeEventListener("touchstart", handleTouchStart);
-      document.removeEventListener("touchend", handleTouchEnd);
-    };
-  }, [router]);
-
-  useEffect(() => {
-    const data = JSON.parse(localStorage.getItem("favorites") || "[]");
-    setFavorites(Array.isArray(data) ? data : []);
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (addedTimerRef.current) {
-        clearTimeout(addedTimerRef.current);
-      }
-    };
-  }, []);
-
-  const galleryImages = useMemo(() => {
-    if (!product) return [];
-    const colorGallery = product.galleryByColor?.[selectedColor] || [];
-    if (colorGallery.length > 0) return colorGallery;
-    return product.images?.length ? product.images : [product.image];
-  }, [product, selectedColor]);
-
-  const activeImage = galleryImages[activeImageIndex] || product?.image || "";
-
-  const toggleFavorite = () => {
-    if (!product) return;
-
-    const updated = favorites.includes(product.id)
-      ? favorites.filter((i) => i !== product.id)
-      : [...favorites, product.id];
-
-    setFavorites(updated);
-    localStorage.setItem("favorites", JSON.stringify(updated));
-    window.dispatchEvent(new Event("favorites-updated"));
-  };
-
-  const topSizes = [
-    { label: "S", sub: "46" },
-    { label: "M", sub: "48" },
-    { label: "L", sub: "50" },
-    { label: "XL", sub: "52" },
-    { label: "XXL", sub: "54" },
-  ];
-
-  const bottomSizes = [
-    { label: "30", sub: "46" },
-    { label: "31", sub: "46-48" },
-    { label: "32", sub: "48" },
-    { label: "33", sub: "48-50" },
-    { label: "34", sub: "50" },
-    { label: "36", sub: "52" },
-    { label: "38", sub: "54" },
-  ];
-
-  const sizes = product?.type === "bottom" ? bottomSizes : topSizes;
-
-  const article = product ? `ART-${product.id}` : "";
-  const description = product?.description || "";
-  const canOrder = selectedSizes.length > 0 && !!selectedColor;
-  const discountPercent = product
-    ? getDiscountPercent(product.oldPrice, product.price)
-    : 0;
-
-  const toggleSize = (value: string) => {
-    setSelectedSizes((prev) =>
-      prev.includes(value)
-        ? prev.filter((item) => item !== value)
-        : [...prev, value]
-    );
-  };
-
-  const selectColor = (value: string) => {
-    setSelectedColor(value);
-    setSelectedSizes([]);
-    setActiveImageIndex(0);
-    setJustAdded(false);
-  };
-
-  const nextImage = () => {
-    if (galleryImages.length <= 1) return;
-    setActiveImageIndex((prev) =>
-      prev >= galleryImages.length - 1 ? 0 : prev + 1
-    );
-  };
-
-  const prevImage = () => {
-    if (galleryImages.length <= 1) return;
-    setActiveImageIndex((prev) =>
-      prev <= 0 ? galleryImages.length - 1 : prev - 1
-    );
-  };
-
-  const onTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
-    touchStartXRef.current = e.touches[0]?.clientX ?? null;
-  };
-
-  const onTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (touchStartXRef.current === null) return;
-    const endX = e.changedTouches[0]?.clientX ?? null;
-    if (endX === null) return;
-
-    const diff = touchStartXRef.current - endX;
-
-    if (Math.abs(diff) > 40) {
-      if (diff > 0) nextImage();
-      else prevImage();
-    }
-
-    touchStartXRef.current = null;
-  };
-
-  const handleImageTap = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (galleryImages.length <= 1) return;
-
-    const rect = e.currentTarget.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const half = rect.width / 2;
-
-    if (clickX >= half) {
-      nextImage();
-    } else {
-      prevImage();
-    }
-  };
-
-  const addToCart = () => {
-    if (!product || !canOrder) return;
-
-    const existingCart: CartItem[] = JSON.parse(
-      localStorage.getItem("cart") || "[]"
-    );
-
-    const newItems: CartItem[] = selectedSizes.map((size) => ({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      size,
-      color: selectedColor,
-      quantity: 1,
-    }));
-
-    const updatedCart = [...existingCart];
-
-    newItems.forEach((newItem) => {
-      const existingIndex = updatedCart.findIndex(
-        (item) =>
-          item.id === newItem.id &&
-          item.size === newItem.size &&
-          item.color === newItem.color
-      );
-
-      if (existingIndex >= 0) {
-        updatedCart[existingIndex].quantity += newItem.quantity;
-      } else {
-        updatedCart.push(newItem);
-      }
-    });
-
-    localStorage.setItem("cart", JSON.stringify(updatedCart));
-    window.dispatchEvent(new Event("cart-updated"));
-
-    setJustAdded(true);
-
-    if (addedTimerRef.current) {
-      clearTimeout(addedTimerRef.current);
-    }
-
-    addedTimerRef.current = setTimeout(() => {
-      setJustAdded(false);
-    }, 1800);
-  };
-
-  if (!product) {
-    return (
-      <main className="min-h-screen bg-[#F5F5F5] px-4 pt-[76px] pb-32">
-        <div className="mb-5 flex items-center justify-center">
-          <h1 className="text-[20px] font-medium">Товар</h1>
-        </div>
-
-        <div className="rounded-[24px] bg-white p-5 shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
-          <p className="text-sm text-gray-500">Товар не найден</p>
-          {initialError && (
-            <p className="mt-2 break-words text-xs text-gray-400">
-              {initialError}
-            </p>
-          )}
-        </div>
-
-        <BottomNav />
-      </main>
-    );
+function getStatusHint(status: OrderStatus) {
+  switch (status) {
+    case "Новый":
+      return "Заказ создан и ожидает подтверждения";
+    case "Оплачен":
+      return "Оплата получена";
+    case "В обработке":
+      return "Мы начали подготовку заказа";
+    case "Частично готов":
+      return "Часть товаров уже готова";
+    case "В пути из-за рубежа":
+      return "Ожидаем поступление зарубежных позиций";
+    case "Собран":
+      return "Все товары готовы";
+    case "В доставке":
+      return "Заказ передан в доставку";
+    case "Доставлен":
+      return "Заказ успешно получен";
+    case "Отменен":
+      return "Заказ отменён";
+    default:
+      return "";
   }
+}
+
+function formatDate(value?: string) {
+  if (!value) return "Дата не указана";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return "Дата не указана";
+
+  return new Intl.DateTimeFormat("ru-RU", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function OrdersSkeleton() {
+  return (
+    <div className="space-y-3">
+      {[1, 2, 3].map((item) => (
+        <div
+          key={item}
+          className="animate-pulse rounded-[24px] bg-white p-4 shadow-[0_8px_28px_rgba(0,0,0,0.05)]"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1">
+              <div className="h-5 w-40 rounded-full bg-[#ECECEC]" />
+              <div className="mt-3 h-4 w-28 rounded-full bg-[#ECECEC]" />
+              <div className="mt-3 h-4 w-24 rounded-full bg-[#ECECEC]" />
+            </div>
+
+            <div className="h-7 w-24 rounded-full bg-[#ECECEC]" />
+          </div>
+
+          <div className="mt-4 h-10 w-full rounded-2xl bg-[#ECECEC]" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export default function OrdersPage() {
+  const router = useRouter();
+  const [customer, setCustomer] = useState<CustomerProfile | null>(null);
+  const [orders, setOrders] = useState<OrderRow[]>([]);
+  const [orderItemsMap, setOrderItemsMap] = useState<Record<string, OrderItemRow[]>>({});
+  const [loading, setLoading] = useState(true);
+  const [copiedOrderId, setCopiedOrderId] = useState("");
+
+  useEffect(() => {
+    const loadOrders = async () => {
+      setLoading(true);
+
+      const profile = await syncTelegramCustomer();
+      setCustomer(profile);
+
+      if (!profile?.id) {
+        setOrders([]);
+        setOrderItemsMap({});
+        setLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("orders")
+        .select("*")
+        .eq("customer_id", profile.id)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Ошибка загрузки заказов:", error.message);
+        setOrders([]);
+        setOrderItemsMap({});
+        setLoading(false);
+        return;
+      }
+
+      const safeOrders = (data || []) as OrderRow[];
+      setOrders(safeOrders);
+
+      if (safeOrders.length === 0) {
+        setOrderItemsMap({});
+        setLoading(false);
+        return;
+      }
+
+      const orderIds = safeOrders.map((order) => order.id);
+
+      const { data: itemsData, error: itemsError } = await supabase
+        .from("order_items")
+        .select("*")
+        .in("order_id", orderIds);
+
+      if (itemsError) {
+        console.error("Ошибка загрузки товаров заказов:", itemsError.message);
+        setOrderItemsMap({});
+        setLoading(false);
+        return;
+      }
+
+      const nextMap: Record<string, OrderItemRow[]> = {};
+
+      ((itemsData || []) as OrderItemRow[]).forEach((item) => {
+        if (!nextMap[item.order_id]) {
+          nextMap[item.order_id] = [];
+        }
+        nextMap[item.order_id].push(item);
+      });
+
+      setOrderItemsMap(nextMap);
+      setLoading(false);
+    };
+
+    loadOrders();
+  }, []);
+
+  const hasOrders = useMemo(() => orders.length > 0, [orders]);
+
+  const getItemsCount = (orderId: string) => {
+    const items = orderItemsMap[orderId] || [];
+    return items.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+  };
+
+  const copyOrderId = async (orderId: string) => {
+    try {
+      await navigator.clipboard.writeText(orderId);
+      setCopiedOrderId(orderId);
+
+      window.setTimeout(() => {
+        setCopiedOrderId("");
+      }, 1600);
+    } catch {
+      //
+    }
+  };
 
   return (
     <main className="min-h-screen bg-[#F5F5F5] px-4 pt-[76px] pb-32">
-      <div className="mb-4 flex items-center justify-end">
-        <button
-          onClick={toggleFavorite}
-          aria-label="В избранное"
-          className={`flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-2xl transition-all duration-200 active:scale-[0.99] ${
-            favorites.includes(product.id)
-              ? "bg-black text-white"
-              : "bg-white text-black shadow-[0_4px_16px_rgba(0,0,0,0.04)]"
-          }`}
-        >
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill={favorites.includes(product.id) ? "currentColor" : "none"}
-            stroke="currentColor"
-            strokeWidth="1.8"
-          >
-            <path d="M20.8 4.6c-1.8-1.8-4.7-1.8-6.5 0L12 6.9l-2.3-2.3c-1.8-1.8-4.7-1.8-6.5 0s-1.8 4.7 0 6.5L12 21l8.8-9.9c1.8-1.8 1.8-4.7 0-6.5z" />
-          </svg>
-        </button>
+      <div className="mb-5 flex items-center justify-center">
+        <h1 className="text-[20px] font-medium">Мои заказы</h1>
       </div>
 
-      <div className="overflow-hidden rounded-[24px] bg-white shadow-[0_10px_30px_rgba(0,0,0,0.05)]">
-        <div
-          className="relative aspect-[3/4] overflow-hidden bg-[#ECECEC]"
-          onTouchStart={onTouchStart}
-          onTouchEnd={onTouchEnd}
-          onClick={handleImageTap}
-        >
-          <img
-            src={activeImage || product.image || "/products/product-1.jpg"}
-            alt={product.name}
-            className="h-full w-full object-cover"
-            onError={(e) => {
-              e.currentTarget.src = "/products/product-1.jpg";
-            }}
-          />
-
-          <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-1.5">
-            {galleryImages.map((_, index) => (
-              <button
-                key={`${product.id}-dot-${index}`}
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setActiveImageIndex(index);
-                }}
-                className={`block rounded-full ${
-                  index === activeImageIndex
-                    ? "h-1.5 w-4 bg-white"
-                    : "h-1.5 w-1.5 bg-white/45"
-                }`}
-                aria-label={`Фото ${index + 1}`}
-              />
-            ))}
-          </div>
+      {loading ? (
+        <OrdersSkeleton />
+      ) : !customer ? (
+        <div className="rounded-[24px] bg-white p-6 text-center shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
+          <p className="text-[16px] font-medium text-black">
+            Не удалось загрузить профиль
+          </p>
+          <p className="mt-2 text-sm text-gray-500">
+            Откройте приложение через Telegram Mini App
+          </p>
         </div>
+      ) : !hasOrders ? (
+        <div className="rounded-[24px] bg-white p-6 text-center shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
+          <p className="text-[16px] font-medium text-black">
+            У вас пока нет заказов
+          </p>
+          <p className="mt-2 text-sm text-gray-500">
+            После оформления заказа он появится здесь
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {orders.map((order) => {
+            const itemsCount = getItemsCount(order.id);
 
-        <div className="p-5">
-          <div className="mb-2 flex items-center justify-between gap-3">
-            <div className="text-[11px] uppercase tracking-[0.16em] text-gray-400">
-              {product.brand}
-            </div>
-
-            <div className="text-[11px] uppercase tracking-[0.16em] text-gray-400">
-              {article}
-            </div>
-          </div>
-
-          <div className="mb-3 flex items-start justify-between gap-3">
-            <div className="flex items-center gap-2">
-              {product.oldPrice && (
-                <span className="text-[14px] font-normal leading-none text-gray-400 line-through">
-                  {product.oldPrice} ₽
-                </span>
-              )}
-
-              <span className="text-[21px] font-semibold leading-none tracking-[-0.02em] text-[#16A34A]">
-                {product.price} ₽
-              </span>
-
-              {discountPercent > 0 && (
-                <span className="rounded-full bg-[#E8F7EE] px-1.5 py-0.5 text-[10px] font-medium text-[#16A34A]">
-                  -{discountPercent}%
-                </span>
-              )}
-            </div>
-
-            {product.badge ? (
+            return (
               <div
-                className={`shrink-0 rounded-full px-3 py-1 text-[10px] font-medium ${
-                  product.badge === "Из-за рубежа"
-                    ? "bg-black text-white"
-                    : "bg-[#F5F5F5] text-black"
-                }`}
+                key={order.id}
+                className="rounded-[24px] bg-white p-4 shadow-[0_8px_28px_rgba(0,0,0,0.05)]"
               >
-                {product.badge}
-              </div>
-            ) : null}
-          </div>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="truncate text-[16px] font-medium text-black">
+                        Заказ {order.id}
+                      </p>
 
-          <div className="mt-5">
-            <p className="mb-2 text-sm text-gray-500">Размер</p>
-            <div className="grid grid-cols-5 gap-1.5">
-              {sizes.map((s) => (
-                <button
-                  key={s.label}
-                  onClick={() => toggleSize(s.label)}
-                  className={`rounded-xl border px-1.5 py-2 text-center transition-all duration-200 active:scale-95 ${
-                    selectedSizes.includes(s.label)
-                      ? "border-black bg-black text-white"
-                      : "border-gray-200 bg-white text-black"
-                  }`}
-                >
-                  <div className="text-[11px] font-medium">{s.label}</div>
-                  <div
-                    className={`mt-0.5 text-[9px] ${
-                      selectedSizes.includes(s.label)
-                        ? "text-white/70"
-                        : "text-gray-400"
-                    }`}
-                  >
-                    {s.sub}
-                  </div>
-                </button>
-              ))}
-            </div>
-
-            <div className="mt-2 text-[12px] text-gray-400">
-              {selectedSizes.length > 0
-                ? `Выбрано размеров: ${selectedSizes.join(", ")}`
-                : "Можно выбрать несколько размеров"}
-            </div>
-          </div>
-
-          <div className="mt-5">
-            <p className="mb-2 text-sm text-gray-500">Цвет</p>
-            <div className="grid grid-cols-4 gap-2">
-              {product.colors.map((c) => {
-                const preview =
-                  product.galleryByColor?.[c]?.[0] ||
-                  product.colorImages?.[c] ||
-                  product.image ||
-                  "/products/product-1.jpg";
-
-                const isSelected = selectedColor === c;
-
-                return (
-                  <button
-                    key={c}
-                    onClick={() => selectColor(c)}
-                    className={`overflow-hidden rounded-2xl border bg-white transition-all duration-200 active:scale-95 ${
-                      isSelected
-                        ? "border-black ring-2 ring-black/10"
-                        : "border-gray-200"
-                    }`}
-                  >
-                    <div className="aspect-[3/4] w-full overflow-hidden bg-[#ECECEC]">
-                      <img
-                        src={preview}
-                        alt={c}
-                        className="h-full w-full object-cover"
-                        onError={(e) => {
-                          e.currentTarget.src = "/products/product-1.jpg";
-                        }}
-                      />
+                      <button
+                        type="button"
+                        onClick={() => copyOrderId(order.id)}
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#F5F5F5]"
+                        aria-label="Скопировать номер заказа"
+                      >
+                        <svg
+                          width="15"
+                          height="15"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="black"
+                          strokeWidth="1.8"
+                        >
+                          <rect x="9" y="9" width="10" height="10" rx="2" />
+                          <path d="M5 15V7a2 2 0 0 1 2-2h8" />
+                        </svg>
+                      </button>
                     </div>
-                  </button>
-                );
-              })}
-            </div>
 
-            <div className="mt-2 text-[12px] text-gray-400">
-              {selectedColor ? `Выбран цвет: ${selectedColor}` : "Выберите цвет"}
-            </div>
-          </div>
+                    <p className="mt-1 text-sm text-gray-500">
+                      {copiedOrderId === order.id
+                        ? "Номер заказа скопирован"
+                        : formatDate(order.created_at || order.updated_at)}
+                    </p>
+                  </div>
 
-          {product.composition.length > 0 && (
-            <div className="mt-5">
-              <p className="mb-2 text-sm text-gray-500">Состав</p>
-              <div className="flex flex-wrap gap-2">
-                {product.composition.map((item) => (
                   <span
-                    key={item}
-                    className="rounded-full bg-[#F5F5F5] px-3 py-1.5 text-[12px] text-gray-700"
+                    className={`shrink-0 rounded-full px-3 py-1 text-[11px] font-medium ${getStatusClasses(
+                      order.status
+                    )}`}
                   >
-                    {item}
+                    {order.status}
                   </span>
-                ))}
+                </div>
+
+                <p className="mt-3 text-sm text-gray-500">
+                  {getStatusHint(order.status)}
+                </p>
+
+                <div className="mt-4 space-y-2 text-sm text-gray-600">
+                  <div className="flex items-center justify-between gap-3">
+                    <span>Товаров</span>
+                    <span className="font-medium text-black">{itemsCount}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-3">
+                    <span>Сумма</span>
+                    <span className="font-medium text-black">{order.total} ₽</span>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-3">
+                    <span>Получение</span>
+                    <span className="font-medium text-black">{order.delivery}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-3">
+                    <span>Оплата</span>
+                    <span className="font-medium text-black">{order.payment}</span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => router.push(`/orders/${order.id}`)}
+                  className="mt-4 w-full rounded-2xl bg-[#F5F5F5] py-3 text-sm font-medium text-black"
+                >
+                  Перейти
+                </button>
               </div>
-            </div>
-          )}
-
-          <div className="mt-5">
-            <h1 className="text-[24px] font-medium leading-tight text-black">
-              {product.name}
-            </h1>
-          </div>
-
-          <div className="mt-5">
-            <p className="text-[14px] leading-6 text-gray-600">
-              {description.length > 110 && !showFullDescription
-                ? `${description.slice(0, 110)}...`
-                : description}
-            </p>
-
-            {description.length > 110 && (
-              <button
-                onClick={() => setShowFullDescription((prev) => !prev)}
-                className="mt-2 text-[13px] text-black underline underline-offset-2"
-              >
-                {showFullDescription ? "Свернуть" : "Читать полностью"}
-              </button>
-            )}
-          </div>
-
-          <div className="mt-6 flex items-center justify-between rounded-2xl bg-[#F7F7F7] px-4 py-3">
-            <span className="text-sm text-gray-500">Товаров к добавлению</span>
-            <span className="text-[18px] font-semibold tracking-[-0.02em] text-black">
-              {selectedSizes.length * (selectedColor ? 1 : 0)}
-            </span>
-          </div>
-
-          <div className="mt-5">
-            <button
-              onClick={addToCart}
-              disabled={!canOrder}
-              className={`w-full rounded-2xl py-3.5 text-sm font-medium transition-all duration-200 ${
-                !canOrder
-                  ? "bg-gray-200 text-gray-500"
-                  : justAdded
-                  ? "bg-[#16A34A] text-white"
-                  : "bg-black text-white active:scale-[0.99]"
-              }`}
-            >
-              {!canOrder
-                ? "Добавить в корзину"
-                : justAdded
-                ? "Добавлено"
-                : "Добавить в корзину"}
-            </button>
-          </div>
+            );
+          })}
         </div>
-      </div>
+      )}
 
       <BottomNav />
     </main>
