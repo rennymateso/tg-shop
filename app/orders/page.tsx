@@ -147,6 +147,39 @@ export default function OrdersPage() {
   const [copiedOrderId, setCopiedOrderId] = useState("");
 
   useEffect(() => {
+    let touchStartX = 0;
+    let touchStartY = 0;
+
+    const handleTouchStart = (event: TouchEvent) => {
+      const touch = event.changedTouches[0];
+      if (!touch) return;
+
+      touchStartX = touch.screenX;
+      touchStartY = touch.screenY;
+    };
+
+    const handleTouchEnd = (event: TouchEvent) => {
+      const touch = event.changedTouches[0];
+      if (!touch) return;
+
+      const diffX = touch.screenX - touchStartX;
+      const diffY = Math.abs(touch.screenY - touchStartY);
+
+      if (touchStartX < 45 && diffX > 90 && diffY < 70) {
+        router.back();
+      }
+    };
+
+    document.addEventListener("touchstart", handleTouchStart, { passive: true });
+    document.addEventListener("touchend", handleTouchEnd, { passive: true });
+
+    return () => {
+      document.removeEventListener("touchstart", handleTouchStart);
+      document.removeEventListener("touchend", handleTouchEnd);
+    };
+  }, [router]);
+
+  useEffect(() => {
     const loadOrders = async () => {
       setLoading(true);
 
