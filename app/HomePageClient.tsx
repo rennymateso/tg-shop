@@ -159,6 +159,22 @@ export default function HomePageClient({
   }, []);
 
   useEffect(() => {
+    const viewport = document.querySelector('meta[name="viewport"]');
+    const previousContent = viewport?.getAttribute("content") || "";
+
+    viewport?.setAttribute(
+      "content",
+      "width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover"
+    );
+
+    return () => {
+      if (viewport) {
+        viewport.setAttribute("content", previousContent);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     const data = JSON.parse(localStorage.getItem("favorites") || "[]");
     setFavorites(Array.isArray(data) ? data : []);
   }, []);
@@ -291,8 +307,8 @@ export default function HomePageClient({
         @import url('https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&display=swap');
 
         *, *::before, *::after { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        html { background: #f5f5f5; overscroll-behavior-x: none; }
-        body { margin: 0; background: #f5f5f5; overflow-x: hidden !important; max-width: 100vw !important; overscroll-behavior: none; }
+        html { width: 100%; height: 100%; background: #f5f5f5; overflow: hidden; overscroll-behavior: none; -webkit-text-size-adjust: 100%; touch-action: pan-y; }
+        body { width: 100%; height: 100%; margin: 0; background: #f5f5f5; overflow: hidden !important; max-width: 100vw !important; overscroll-behavior: none; touch-action: pan-y; }
         button, input { font: inherit; }
         button { touch-action: manipulation; }
         button:focus-visible, input:focus-visible { outline: 2px solid rgba(17,17,17,.4); outline-offset: 2px; }
@@ -307,8 +323,15 @@ export default function HomePageClient({
           font-family: 'Onest', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
           width: 100%;
           max-width: 100vw;
-          min-height: 100vh;
+          position: fixed;
+          inset: 0;
+          height: 100vh;
+          height: 100dvh;
+          overflow-y: auto;
           overflow-x: hidden;
+          overscroll-behavior: contain;
+          -webkit-overflow-scrolling: touch;
+          touch-action: pan-y;
           background: var(--bg);
           color: var(--text);
           padding-bottom: calc(104px + env(safe-area-inset-bottom, 0px));
@@ -1033,7 +1056,7 @@ export default function HomePageClient({
                             <IconDelivery />
                             <span>
                               {isInStock
-                                ? "Доставка 1–3 дня"
+                                ? "Самовывоз/Быстрая доставка"
                                 : "Доставка 7–14 дней"}
                             </span>
                           </div>
