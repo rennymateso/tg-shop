@@ -124,6 +124,30 @@ function IconClose() {
 }
 
 
+
+function HomeCatalogSkeleton() {
+  return (
+    <div className="mn-grid" aria-hidden="true">
+      {Array.from({ length: 6 }).map((_, index) => (
+        <div
+          key={index}
+          className="overflow-hidden rounded-[15px] bg-white shadow-[0_8px_24px_rgba(0,0,0,0.04)]"
+        >
+          <div className="aspect-[3/4] animate-pulse bg-[#E9E9E9]" />
+
+          <div className="p-3">
+            <div className="h-3 w-20 animate-pulse rounded-full bg-[#E9E9E9]" />
+            <div className="mt-3 h-4 w-full animate-pulse rounded-full bg-[#E9E9E9]" />
+            <div className="mt-2 h-4 w-3/4 animate-pulse rounded-full bg-[#E9E9E9]" />
+            <div className="mt-4 h-5 w-24 animate-pulse rounded-full bg-[#E9E9E9]" />
+            <div className="mt-3 h-3 w-28 animate-pulse rounded-full bg-[#E9E9E9]" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function HomePageClient({
   initialProducts,
   initialBrands,
@@ -142,6 +166,7 @@ export default function HomePageClient({
   const [selectedAvailability, setSelectedAvailability] = useState("Все товары");
   const [search, setSearch] = useState("");
   const [showSplash, setShowSplash] = useState(true);
+  const [pageReady, setPageReady] = useState(false);
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [showBrandMenu, setShowBrandMenu] = useState(false);
   const [showAvailabilityMenu, setShowAvailabilityMenu] = useState(false);
@@ -189,6 +214,14 @@ export default function HomePageClient({
       sessionStorage.setItem("montreaux_splash_shown", "1");
     }, 3000);
     return () => clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setPageReady(true);
+    }, 450);
+
+    return () => window.clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -992,7 +1025,9 @@ export default function HomePageClient({
                 </div>
               </div>
 
-              {productCards.length === 0 ? (
+              {!pageReady ? (
+                <HomeCatalogSkeleton />
+              ) : productCards.length === 0 ? (
                 <div className="mn-empty">
                   <div className="mn-empty-title">{selectedDepartment === "Женщинам" ? "Женский раздел скоро откроется" : "Ничего не найдено"}</div>
                   <div className="mn-empty-sub">{selectedDepartment === "Женщинам" ? "Скоро здесь появятся товары." : "Попробуйте изменить фильтры или очистить поиск."}</div>
