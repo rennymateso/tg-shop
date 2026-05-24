@@ -127,6 +127,22 @@ export default function ProfilePage() {
     init();
   }, []);
 
+  useEffect(() => {
+    const viewport = document.querySelector('meta[name="viewport"]');
+    const previousContent = viewport?.getAttribute("content") || "";
+
+    viewport?.setAttribute(
+      "content",
+      "width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover"
+    );
+
+    return () => {
+      if (viewport) {
+        viewport.setAttribute("content", previousContent);
+      }
+    };
+  }, []);
+
   const fullName = useMemo(() => {
     if (!customer) return "Профиль";
     return (
@@ -199,24 +215,47 @@ export default function ProfilePage() {
       <style>{`
         html,
         body {
+          width: 100%;
+          height: 100%;
+          overflow: hidden;
           overscroll-behavior: none;
-          overflow-x: hidden;
+          -webkit-text-size-adjust: 100%;
           touch-action: pan-y;
         }
 
-        * {
+        *,
+        *::before,
+        *::after {
+          box-sizing: border-box;
           -webkit-tap-highlight-color: transparent;
         }
 
+        button {
+          touch-action: manipulation;
+          user-select: none;
+        }
+
+        button:focus,
+        button:focus-visible {
+          outline: none;
+          box-shadow: none;
+        }
+
         .profile-scroll {
-          min-height: 100vh;
+          position: fixed;
+          inset: 0;
+          width: 100%;
+          height: 100vh;
+          height: 100dvh;
+          overflow-y: auto;
           overflow-x: hidden;
-          overscroll-behavior-y: contain;
+          overscroll-behavior: contain;
           -webkit-overflow-scrolling: touch;
+          touch-action: pan-y;
         }
       `}</style>
 
-      <main className="profile-scroll min-h-screen bg-[#F5F5F5] px-4 pt-[76px] pb-32">
+      <main className="profile-scroll bg-[#F5F5F5] px-4 pt-[76px] pb-32">
       <div className="mb-5 flex items-center justify-center">
         <h1 className="text-[20px] font-medium tracking-[-0.02em] text-[#111827]">
           Профиль
@@ -328,15 +367,15 @@ export default function ProfilePage() {
 
             <button
               onClick={() => router.push("/support")}
-              className="mt-4 flex w-full items-center gap-3 rounded-[16px] bg-[linear-gradient(135deg,#111827_0%,#020617_100%)] px-4 py-4 text-left text-white shadow-[0_14px_34px_rgba(2,6,23,0.22)]"
+              className="mt-4 flex w-full items-center gap-3 rounded-[15px] bg-[linear-gradient(135deg,#111827_0%,#020617_100%)] px-4 py-3.5 text-left text-white shadow-[0_12px_28px_rgba(2,6,23,0.20)]"
             >
               <div className="shrink-0 text-white">
                 <SupportIcon />
               </div>
 
               <div className="min-w-0 flex-1">
-                <p className="text-[15px] font-medium">Поддержка</p>
-                <p className="mt-0.5 text-[12px] text-white/75">
+                <p className="text-[14px] font-medium">Поддержка</p>
+                <p className="mt-0.5 text-[11px] text-white/75">
                   Связаться с нами по вопросам заказа
                 </p>
               </div>
@@ -348,15 +387,15 @@ export default function ProfilePage() {
 
             <button
               onClick={() => router.push("/channel")}
-              className="flex w-full items-center gap-3 rounded-[16px] bg-[linear-gradient(135deg,#111827_0%,#020617_100%)] px-4 py-4 text-left text-white shadow-[0_14px_34px_rgba(2,6,23,0.22)]"
+              className="flex w-full items-center gap-3 rounded-[15px] bg-[linear-gradient(135deg,#2EA8F7_0%,#177FE7_100%)] px-4 py-3.5 text-left text-white shadow-[0_14px_34px_rgba(34,158,217,0.24)]"
             >
-              <div className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full bg-white/90 text-[#111827]">
+              <div className="flex h-[32px] w-[32px] shrink-0 items-center justify-center rounded-full bg-white/90 text-[#229ED9]">
                 <TelegramIcon />
               </div>
 
               <div className="min-w-0 flex-1">
-                <p className="text-[15px] font-medium">Перейти на наш канал</p>
-                <p className="mt-0.5 text-[12px] text-white/82">
+                <p className="text-[14px] font-medium">Перейти на наш канал</p>
+                <p className="mt-0.5 text-[11px] text-white/82">
                   Новости, поступления и обновления
                 </p>
               </div>
@@ -365,6 +404,10 @@ export default function ProfilePage() {
                 <ChevronIcon />
               </div>
             </button>
+
+            <p className="pt-5 pb-2 text-center text-[11px] font-normal tracking-[0.08em] text-[#A0A7B5]">
+              MONTREAUX 2026г.
+            </p>
           </div>
         </>
       )}
