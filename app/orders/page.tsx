@@ -180,6 +180,22 @@ export default function OrdersPage() {
   }, [router]);
 
   useEffect(() => {
+    const viewport = document.querySelector('meta[name="viewport"]');
+    const previousContent = viewport?.getAttribute("content") || "";
+
+    viewport?.setAttribute(
+      "content",
+      "width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover"
+    );
+
+    return () => {
+      if (viewport) {
+        viewport.setAttribute("content", previousContent);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     const loadOrders = async () => {
       setLoading(true);
 
@@ -267,7 +283,40 @@ export default function OrdersPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#F5F5F5] px-4 pt-[76px] pb-32">
+    <>
+      <style>{`
+        html,
+        body {
+          width: 100%;
+          height: 100%;
+          overflow: hidden;
+          overscroll-behavior: none;
+          -webkit-text-size-adjust: 100%;
+          touch-action: pan-y;
+        }
+
+        *,
+        *::before,
+        *::after {
+          box-sizing: border-box;
+          -webkit-tap-highlight-color: transparent;
+        }
+
+        .orders-fixed-page {
+          position: fixed;
+          inset: 0;
+          width: 100%;
+          height: 100vh;
+          height: 100dvh;
+          overflow-y: auto;
+          overflow-x: hidden;
+          overscroll-behavior: contain;
+          -webkit-overflow-scrolling: touch;
+          touch-action: pan-y;
+        }
+      `}</style>
+
+      <main className="orders-fixed-page bg-[#F5F5F5] px-4 pt-[76px] pb-32">
       <div className="mb-5 flex items-center justify-center">
         <h1 className="text-[20px] font-medium">Мои заказы</h1>
       </div>
@@ -385,6 +434,7 @@ export default function OrdersPage() {
       )}
 
       <BottomNav />
-    </main>
+      </main>
+    </>
   );
 }
