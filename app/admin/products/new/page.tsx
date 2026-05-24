@@ -13,12 +13,17 @@ type BadgeType =
   | "В наличии"
   | "Из-за рубежа";
 
+type ProductGender = "Мужская одежда" | "Женская одежда";
+
 type ProductCategory =
   | "Футболки"
   | "Поло"
   | "Джинсы"
   | "Брюки"
-  | "Костюмы";
+  | "Костюмы"
+  | "Платья"
+  | "Рубашки"
+  | "Юбки";
 
 type ColorGalleryMap = Record<string, string[]>;
 
@@ -28,12 +33,22 @@ type BrandRow = {
   created_at: string;
 };
 
-const categoryOptions: ProductCategory[] = [
+const genderOptions: ProductGender[] = ["Мужская одежда", "Женская одежда"];
+
+const mensCategoryOptions: ProductCategory[] = [
   "Футболки",
   "Поло",
   "Джинсы",
   "Брюки",
   "Костюмы",
+];
+
+const womensCategoryOptions: ProductCategory[] = [
+  "Платья",
+  "Футболки",
+  "Рубашки",
+  "Брюки",
+  "Юбки",
 ];
 
 const badgeOptions: BadgeType[] = [
@@ -94,15 +109,9 @@ const colorSwatches: Record<string, string> = {
   Коричневый: "#7A5230",
 };
 
-function makeArticle(name: string) {
-  const base = name
-    .trim()
-    .toUpperCase()
-    .replace(/[^A-ZА-Я0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 14);
-
-  return base ? `ART-${base}` : "ART-NEW";
+function makeArticle() {
+  const value = Date.now().toString().slice(-7);
+  return value.padStart(7, "0");
 }
 
 function createProductId() {
@@ -117,7 +126,9 @@ export default function AdminNewProductPage() {
 
   const [name, setName] = useState("");
   const [brand, setBrand] = useState("");
+  const [gender, setGender] = useState<ProductGender>("Мужская одежда");
   const [category, setCategory] = useState<ProductCategory>("Поло");
+  const [country, setCountry] = useState("");
   const [price, setPrice] = useState("");
   const [oldPrice, setOldPrice] = useState("");
   const [badge, setBadge] = useState<BadgeType>("Без бейджа");
@@ -125,6 +136,7 @@ export default function AdminNewProductPage() {
   const [description, setDescription] = useState("");
   const [article, setArticle] = useState("");
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
+  const [stockBySize, setStockBySize] = useState<Record<string, number>>({});
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
   const [selectedComposition, setSelectedComposition] = useState<string[]>([]);
   const [activeColor, setActiveColor] = useState<string>("");
@@ -162,12 +174,44 @@ export default function AdminNewProductPage() {
     loadBrands();
   }, []);
 
+  useEffect(() => {
+    const options =
+      gender === "Мужская одежда"
+        ? mensCategoryOptions
+        : womensCategoryOptions;
+
+    if (!options.includes(category)) {
+      setCategory(options[0]);
+    }
+  }, [gender, category]);
+
   const discountPercent = useMemo(() => {
     const p = Number(price);
     const o = Number(oldPrice);
     if (!p || !o || o <= p) return 0;
     return Math.round(((o - p) / o) * 100);
   }, [price, oldPrice]);
+
+  const categoryOptions = useMemo(
+    () =>
+      gender === "Мужская одежда"
+        ? mensCategoryOptions
+        : womensCategoryOptions,
+    [gender]
+  );
+
+  const totalStock = useMemo(() => {
+    return selectedSizes.reduce(
+      (sum, size) => sum + Math.max(0, Number(stockBySize[size]) || 0),
+      0
+    );
+  }, [selectedSizes, stockBySize]);
+
+  const availableSizes = useMemo(
+    () =>
+      selectedSizes.filter((size) => Math.max(0, Number(stockBySize[size]) || 0) > 0),
+    [selectedSizes, stockBySize]
+  );
 
   const activeImages = activeColor ? colorImages[activeColor] || [] : [];
 
@@ -192,11 +236,35 @@ export default function AdminNewProductPage() {
   }, [colorImages]);
 
   const toggleSize = (value: string) => {
-    setSelectedSizes((prev) =>
-      prev.includes(value)
+    setSelectedSizes((prev) => {
+      const exists = prev.includes(value);
+      const next = exists
         ? prev.filter((item) => item !== value)
-        : [...prev, value]
-    );
+        : [...prev, value];
+
+      setStockBySize((current) => {
+        const updated = { ...current };
+
+        if (exists) {
+          delete updated[value];
+        } else {
+          updated[value] = updated[value] || 0;
+        }
+
+        return updated;
+      });
+
+      return next;
+    });
+  };
+
+  const updateSizeStock = (size: string, value: string) => {
+    const quantity = Math.max(0, Number(value.replace(/\D/g, "")) || 0);
+
+    setStockBySize((prev) => ({
+      ...prev,
+      [size]: quantity,
+    }));
   };
 
   const toggleColor = (value: string) => {
@@ -222,7 +290,7 @@ export default function AdminNewProductPage() {
   };
 
   const fillArticle = () => {
-    setArticle(makeArticle(name));
+    setArticle(makeArticle());
   };
 
   const handleColorImagesUpload = async (color: string, files: FileList | null) => {
@@ -240,7 +308,7 @@ export default function AdminNewProductPage() {
       setIsUploadingImages(true);
       setMessage("");
 
-      const tempProductId = article.trim() || makeArticle(name) || createProductId();
+      const tempProductId = article.trim() || makeArticle() || createProductId();
 
       const pickedFiles = Array.from(files).slice(0, freeSlots);
       const uploadedUrls: string[] = [];
@@ -321,6 +389,11 @@ export default function AdminNewProductPage() {
       return;
     }
 
+    if (!country.trim()) {
+      setMessage("Введите страну изготовления");
+      return;
+    }
+
     if (selectedSizes.length === 0) {
       setMessage("Выберите хотя бы один размер");
       return;
@@ -333,6 +406,11 @@ export default function AdminNewProductPage() {
 
     if (selectedComposition.length === 0) {
       setMessage("Выберите хотя бы один состав");
+      return;
+    }
+
+    if (totalStock <= 0 || availableSizes.length === 0) {
+      setMessage("Укажите количество хотя бы для одного размера. Товар без остатков не попадёт в магазин.");
       return;
     }
 
@@ -350,21 +428,24 @@ export default function AdminNewProductPage() {
       setMessage("");
 
       const now = new Date().toISOString();
-      const finalArticle = article.trim() || makeArticle(name);
+      const finalArticle = article.trim() || makeArticle();
       const finalId = createProductId();
 
       const { error } = await supabase.from("products").insert({
         id: finalId,
         name: name.trim(),
         brand: brand.trim(),
+        gender,
         category,
+        country: country.trim(),
         price: Number(price),
         old_price: Number(oldPrice || price),
         badge: badge === "Без бейджа" ? null : badge,
         status,
         description: description.trim(),
         article: finalArticle,
-        sizes: selectedSizes,
+        sizes: availableSizes,
+        stock: stockBySize,
         colors: selectedColors,
         composition: selectedComposition,
         image: previewImage || "",
@@ -392,7 +473,9 @@ export default function AdminNewProductPage() {
   const handleClear = () => {
     setName("");
     setBrand(brands[0]?.name || "");
+    setGender("Мужская одежда");
     setCategory("Поло");
+    setCountry("");
     setPrice("");
     setOldPrice("");
     setBadge("Без бейджа");
@@ -400,6 +483,7 @@ export default function AdminNewProductPage() {
     setDescription("");
     setArticle("");
     setSelectedSizes([]);
+    setStockBySize({});
     setSelectedColors([]);
     setSelectedComposition([]);
     setActiveColor("");
@@ -474,6 +558,19 @@ export default function AdminNewProductPage() {
               </div>
 
               <div>
+                <label className="mb-2 block text-sm text-gray-500">Раздел</label>
+                <select
+                  value={gender}
+                  onChange={(e) => setGender(e.target.value as ProductGender)}
+                  className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
+                >
+                  {genderOptions.map((item) => (
+                    <option key={item}>{item}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
                 <label className="mb-2 block text-sm text-gray-500">Категория</label>
                 <select
                   value={category}
@@ -484,6 +581,16 @@ export default function AdminNewProductPage() {
                     <option key={item}>{item}</option>
                   ))}
                 </select>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm text-gray-500">Страна изготовления</label>
+                <input
+                  value={country}
+                  onChange={(e) => setCountry(e.target.value)}
+                  placeholder="Например: Турция"
+                  className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
+                />
               </div>
 
               <div>
@@ -533,12 +640,12 @@ export default function AdminNewProductPage() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm text-gray-500">Артикул</label>
+                <label className="mb-2 block text-sm text-gray-500">Артикул / короткий код</label>
                 <div className="flex gap-2">
                   <input
                     value={article}
-                    onChange={(e) => setArticle(e.target.value)}
-                    placeholder="ART-POLO-PREMIUM"
+                    onChange={(e) => setArticle(e.target.value.replace(/\D/g, "").slice(0, 7))}
+                    placeholder="1234567"
                     className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
                   />
                   <button
@@ -565,7 +672,11 @@ export default function AdminNewProductPage() {
           </div>
 
           <div className="rounded-[28px] bg-white p-5 shadow-sm">
-            <h2 className="text-lg font-medium text-black">Размеры</h2>
+            <h2 className="text-lg font-medium text-black">Размеры и количество</h2>
+            <p className="mt-1 text-sm text-gray-500">
+              Товар появится в магазине только если у размера указано количество больше 0.
+            </p>
+
             <div className="mt-4 flex flex-wrap gap-2">
               {sizeOptions.map((size) => {
                 const active = selectedSizes.includes(size);
@@ -582,6 +693,33 @@ export default function AdminNewProductPage() {
                   </button>
                 );
               })}
+            </div>
+
+            {selectedSizes.length > 0 && (
+              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {selectedSizes.map((size) => (
+                  <div
+                    key={size}
+                    className="flex items-center justify-between gap-3 rounded-2xl bg-[#F5F5F5] p-3"
+                  >
+                    <div>
+                      <p className="text-sm font-medium text-black">Размер {size}</p>
+                      <p className="text-xs text-gray-500">Остаток, шт.</p>
+                    </div>
+
+                    <input
+                      value={stockBySize[size] ?? 0}
+                      onChange={(e) => updateSizeStock(size, e.target.value)}
+                      inputMode="numeric"
+                      className="w-[88px] rounded-xl bg-white p-2.5 text-center text-sm outline-none"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="mt-4 rounded-2xl bg-[#F7F7F7] p-3 text-sm text-gray-600">
+              Общий остаток: <span className="font-medium text-black">{totalStock} шт.</span>
             </div>
           </div>
 
@@ -876,8 +1014,12 @@ export default function AdminNewProductPage() {
                 </div>
 
                 <div className="mt-3 space-y-1.5 text-xs text-gray-600">
-                  <p>Артикул: {article || "ART-NEW"}</p>
-                  <p>Размеров: {selectedSizes.length}</p>
+                  <p>Артикул: {article || "1234567"}</p>
+                  <p>Раздел: {gender}</p>
+                  <p>Страна: {country || "Не указана"}</p>
+                  <p>Размеров с остатком: {availableSizes.length}</p>
+                  <p>Остаток: {totalStock} шт.</p>
+                  <p>Размеров выбрано: {selectedSizes.length}</p>
                   <p>Цветов: {selectedColors.length}</p>
                   <p>Состав: {selectedComposition.length}</p>
                   <p>Фото: {totalImagesCount}</p>
