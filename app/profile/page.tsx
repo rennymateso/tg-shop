@@ -195,7 +195,28 @@ export default function ProfilePage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#F5F5F5] px-4 pt-[76px] pb-32">
+    <>
+      <style>{`
+        html,
+        body {
+          overscroll-behavior: none;
+          overflow-x: hidden;
+          touch-action: pan-y;
+        }
+
+        * {
+          -webkit-tap-highlight-color: transparent;
+        }
+
+        .profile-scroll {
+          min-height: 100vh;
+          overflow-x: hidden;
+          overscroll-behavior-y: contain;
+          -webkit-overflow-scrolling: touch;
+        }
+      `}</style>
+
+      <main className="profile-scroll min-h-screen bg-[#F5F5F5] px-4 pt-[76px] pb-32">
       <div className="mb-5 flex items-center justify-center">
         <h1 className="text-[20px] font-medium tracking-[-0.02em] text-[#111827]">
           Профиль
@@ -206,7 +227,7 @@ export default function ProfilePage() {
         <ProfilePageSkeleton />
       ) : (
         <>
-          <div className="mb-4 rounded-[20px] bg-[linear-gradient(145deg,#EEF4FF_0%,#FFFFFF_58%,#EAF1FA_100%)] p-4 shadow-[0_12px_34px_rgba(15,23,42,0.07)]">
+          <div className="mb-4 rounded-[20px] bg-white p-4 shadow-[0_12px_34px_rgba(15,23,42,0.07)]">
             <div className="flex items-center gap-4">
               <div className="flex h-[58px] w-[58px] shrink-0 items-center justify-center overflow-hidden rounded-full bg-white text-[22px] font-medium text-[#667085] shadow-[0_8px_18px_rgba(15,23,42,0.07)]">
                 {customer?.photo_url ? (
@@ -327,9 +348,9 @@ export default function ProfilePage() {
 
             <button
               onClick={() => router.push("/channel")}
-              className="flex w-full items-center gap-3 rounded-[16px] bg-[linear-gradient(135deg,#2EA8F7_0%,#177FE7_100%)] px-4 py-4 text-left text-white shadow-[0_14px_34px_rgba(34,158,217,0.24)]"
+              className="flex w-full items-center gap-3 rounded-[16px] bg-[linear-gradient(135deg,#111827_0%,#020617_100%)] px-4 py-4 text-left text-white shadow-[0_14px_34px_rgba(2,6,23,0.22)]"
             >
-              <div className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full bg-white/90 text-[#229ED9]">
+              <div className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full bg-white/90 text-[#111827]">
                 <TelegramIcon />
               </div>
 
@@ -349,6 +370,7 @@ export default function ProfilePage() {
       )}
 
       <BottomNav />
-    </main>
+      </main>
+    </>
   );
 }
