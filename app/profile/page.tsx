@@ -303,7 +303,7 @@ export default function ProfilePage() {
                   type="button"
                   onClick={handleRequestPhone}
                   disabled={isRequestingPhone}
-                  className="w-full rounded-[16px] bg-[linear-gradient(135deg,#08205A_0%,#001848_100%)] py-3.5 text-[15px] font-medium text-white shadow-[0_12px_28px_rgba(0,24,72,0.22)] disabled:opacity-60"
+                  className="w-full rounded-[16px] bg-[linear-gradient(135deg,#2A2A2A_0%,#111111_100%)] py-3.5 text-[15px] font-medium text-white shadow-[0_10px_24px_rgba(17,17,17,0.18)] disabled:opacity-60"
                 >
                   {isRequestingPhone
                     ? "Запрашиваем номер..."
