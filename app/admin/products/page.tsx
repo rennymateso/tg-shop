@@ -17,13 +17,20 @@ type ProductCategory =
   | "Поло"
   | "Джинсы"
   | "Брюки"
-  | "Костюмы";
+  | "Костюмы"
+  | "Платья"
+  | "Рубашки"
+  | "Юбки";
+
+type ProductGender = "Мужская одежда" | "Женская одежда";
 
 type AdminProduct = {
   id: string;
   name: string;
   brand: string;
+  gender: ProductGender;
   category: ProductCategory;
+  country: string;
   price: number;
   oldPrice: number;
   badge: BadgeType;
@@ -31,6 +38,7 @@ type AdminProduct = {
   description: string;
   article: string;
   sizes: string[];
+  stock: Record<string, number>;
   colors: string[];
   image: string;
   colorImages: Record<string, string[]>;
@@ -42,24 +50,44 @@ type ProductRow = {
   id: string;
   name: string;
   brand: string;
+  gender?: string | null;
   category: string;
+  country?: string | null;
   price: number;
   old_price: number;
-  badge: string;
+  badge: string | null;
   status: string;
   description: string;
   article: string;
   sizes: string[] | null;
+  stock?: Record<string, number> | null;
   colors: string[] | null;
-  image: string;
+  image: string | null;
   color_images: Record<string, string[]> | null;
   created_at: string;
   updated_at: string;
 };
 
+type ProductFilter = "Все" | "Активные" | "Скрытые" | "Без остатков";
+
 function getDiscountPercent(oldPrice: number, price: number) {
-  if (oldPrice <= price) return 0;
+  if (!oldPrice || oldPrice <= price) return 0;
   return Math.round(((oldPrice - price) / oldPrice) * 100);
+}
+
+function getStockTotal(stock: Record<string, number>) {
+  return Object.values(stock || {}).reduce(
+    (sum, value) => sum + Math.max(0, Number(value) || 0),
+    0
+  );
+}
+
+function getBadgeClass(badge: BadgeType) {
+  if (badge === "В наличии") return "bg-[#EAF8F0] text-[#16A34A]";
+  if (badge === "Из-за рубежа") return "bg-[#F1F1F1] text-[#666]";
+  if (badge === "Скидка") return "bg-red-50 text-red-600";
+  if (badge === "Новинка") return "bg-blue-50 text-blue-600";
+  return "bg-[#F5F5F5] text-gray-500";
 }
 
 function mapRowToProduct(row: ProductRow): AdminProduct {
@@ -67,14 +95,17 @@ function mapRowToProduct(row: ProductRow): AdminProduct {
     id: row.id,
     name: row.name,
     brand: row.brand,
+    gender: row.gender === "Женская одежда" ? "Женская одежда" : "Мужская одежда",
     category: row.category as ProductCategory,
+    country: row.country || "",
     price: row.price,
     oldPrice: row.old_price,
-    badge: row.badge as BadgeType,
-    status: row.status as ProductStatus,
+    badge: (row.badge || "Без бейджа") as BadgeType,
+    status: row.status === "Скрыт" ? "Скрыт" : "Активен",
     description: row.description || "",
     article: row.article || "",
     sizes: Array.isArray(row.sizes) ? row.sizes : [],
+    stock: row.stock && typeof row.stock === "object" ? row.stock : {},
     colors: Array.isArray(row.colors) ? row.colors : [],
     image: row.image || "",
     colorImages: row.color_images || {},
@@ -85,6 +116,7 @@ function mapRowToProduct(row: ProductRow): AdminProduct {
 
 export default function AdminProductsPage() {
   const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<ProductFilter>("Все");
   const [products, setProducts] = useState<AdminProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
@@ -116,21 +148,42 @@ export default function AdminProductsPage() {
 
   const filteredProducts = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return products;
 
     return products.filter((item) => {
-      return (
+      const stockTotal = getStockTotal(item.stock);
+
+      const matchFilter =
+        filter === "Все" ||
+        (filter === "Активные" && item.status === "Активен") ||
+        (filter === "Скрытые" && item.status === "Скрыт") ||
+        (filter === "Без остатков" && stockTotal <= 0);
+
+      const matchSearch =
+        !q ||
         item.name.toLowerCase().includes(q) ||
         item.brand.toLowerCase().includes(q) ||
         item.category.toLowerCase().includes(q) ||
         item.badge.toLowerCase().includes(q) ||
         item.id.toLowerCase().includes(q) ||
-        item.article.toLowerCase().includes(q)
-      );
+        item.article.toLowerCase().includes(q);
+
+      return matchFilter && matchSearch;
     });
-  }, [products, search]);
+  }, [products, search, filter]);
+
+  const stats = useMemo(() => {
+    const active = products.filter((item) => item.status === "Активен").length;
+    const hidden = products.filter((item) => item.status === "Скрыт").length;
+    const withDiscount = products.filter((item) => item.oldPrice > item.price).length;
+    const outOfStock = products.filter((item) => getStockTotal(item.stock) <= 0).length;
+
+    return { active, hidden, withDiscount, outOfStock };
+  }, [products]);
 
   const handleDelete = async (id: string) => {
+    const confirmed = window.confirm("Удалить товар?");
+    if (!confirmed) return;
+
     const { error } = await supabase.from("products").delete().eq("id", id);
 
     if (error) {
@@ -166,72 +219,104 @@ export default function AdminProductsPage() {
 
   return (
     <>
-      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <p className="text-sm text-gray-500">Админ-панель</p>
-          <h1 className="text-2xl font-semibold text-black">Товары</h1>
-        </div>
+      <div className="mb-5">
+        <div className="rounded-[28px] bg-white p-5 shadow-sm">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-sm text-gray-500">Seller panel</p>
+              <h1 className="mt-1 text-[24px] font-semibold tracking-[-0.04em] text-black">
+                Товары
+              </h1>
+              <p className="mt-1 text-sm text-gray-500">
+                Каталог, остатки и статусы
+              </p>
+            </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <div className="flex items-center gap-2 rounded-2xl bg-white px-4 py-3 shadow-sm">
+            <Link
+              href="/admin/products/new"
+              className="shrink-0 rounded-2xl bg-[#111] px-4 py-2.5 text-sm font-medium text-white"
+            >
+              + Товар
+            </Link>
+          </div>
+
+          <div className="mt-4 flex items-center gap-2 rounded-2xl bg-[#F5F5F5] px-4 py-3">
             <span className="text-gray-400">⌕</span>
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Поиск по товарам"
-              className="w-full bg-transparent text-sm outline-none placeholder:text-gray-400 sm:w-72"
+              placeholder="Поиск товара, бренда, артикула"
+              className="w-full bg-transparent text-[16px] outline-none placeholder:text-gray-400"
             />
           </div>
-
-          <Link
-            href="/admin/products/new"
-            className="rounded-2xl bg-black px-5 py-3 text-center text-sm font-medium text-white"
-          >
-            + Добавить товар
-          </Link>
         </div>
       </div>
 
       {message && (
-        <div className="mb-6 rounded-[24px] bg-white p-4 text-sm text-black shadow-sm">
+        <div className="mb-4 rounded-[22px] bg-white p-4 text-sm text-black shadow-sm">
           {message}
         </div>
       )}
 
-      <section className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <div className="rounded-[28px] bg-white p-5 shadow-sm">
-          <p className="text-sm text-gray-500">Всего товаров</p>
-          <p className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-black">
-            {products.length}
+      <section className="mb-4 grid grid-cols-2 gap-3">
+        <div className="rounded-[24px] bg-white p-4 shadow-sm">
+          <p className="text-xs text-gray-500">Активные</p>
+          <p className="mt-2 text-[22px] font-semibold tracking-[-0.04em]">
+            {stats.active}
           </p>
         </div>
 
-        <div className="rounded-[28px] bg-white p-5 shadow-sm">
-          <p className="text-sm text-gray-500">Активные</p>
-          <p className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-black">
-            {products.filter((item) => item.status === "Активен").length}
+        <div className="rounded-[24px] bg-white p-4 shadow-sm">
+          <p className="text-xs text-gray-500">Без остатков</p>
+          <p className="mt-2 text-[22px] font-semibold tracking-[-0.04em]">
+            {stats.outOfStock}
           </p>
         </div>
 
-        <div className="rounded-[28px] bg-white p-5 shadow-sm">
-          <p className="text-sm text-gray-500">Со скидкой</p>
-          <p className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-black">
-            {products.filter((item) => item.oldPrice > item.price).length}
+        <div className="rounded-[24px] bg-white p-4 shadow-sm">
+          <p className="text-xs text-gray-500">Со скидкой</p>
+          <p className="mt-2 text-[22px] font-semibold tracking-[-0.04em]">
+            {stats.withDiscount}
           </p>
         </div>
 
-        <div className="rounded-[28px] bg-white p-5 shadow-sm">
-          <p className="text-sm text-gray-500">Скрытые</p>
-          <p className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-black">
-            {products.filter((item) => item.status === "Скрыт").length}
+        <div className="rounded-[24px] bg-white p-4 shadow-sm">
+          <p className="text-xs text-gray-500">Скрытые</p>
+          <p className="mt-2 text-[22px] font-semibold tracking-[-0.04em]">
+            {stats.hidden}
           </p>
         </div>
       </section>
 
-      <section className="rounded-[28px] bg-white p-5 shadow-sm">
-        <div className="mb-4">
-          <h2 className="text-lg font-medium text-black">Каталог товаров</h2>
-          <p className="text-sm text-gray-500">Здесь показываются товары из Supabase</p>
+      <section className="mb-4 flex gap-2 overflow-x-auto pb-1">
+        {(["Все", "Активные", "Скрытые", "Без остатков"] as ProductFilter[]).map(
+          (item) => (
+            <button
+              key={item}
+              type="button"
+              onClick={() => setFilter(item)}
+              className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium ${
+                filter === item
+                  ? "bg-[#111] text-white"
+                  : "bg-white text-gray-600 shadow-sm"
+              }`}
+            >
+              {item}
+            </button>
+          )
+        )}
+      </section>
+
+      <section className="rounded-[28px] bg-white p-4 shadow-sm">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold tracking-[-0.03em] text-black">
+              Каталог
+            </h2>
+            <p className="text-sm text-gray-500">
+              {filteredProducts.length} из {products.length} товаров
+            </p>
+          </div>
         </div>
 
         {loading ? (
@@ -240,120 +325,124 @@ export default function AdminProductsPage() {
           </div>
         ) : filteredProducts.length === 0 ? (
           <div className="rounded-[24px] bg-[#F7F7F7] p-8 text-center text-sm text-gray-500">
-            Товаров пока нет
+            Товаров не найдено
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-left">
-              <thead>
-                <tr className="border-b border-black/5 text-xs uppercase tracking-[0.18em] text-gray-400">
-                  <th className="pb-3 pr-4 font-medium">Товар</th>
-                  <th className="pb-3 pr-4 font-medium">Фото</th>
-                  <th className="pb-3 pr-4 font-medium">Цена</th>
-                  <th className="pb-3 pr-4 font-medium">Бейдж</th>
-                  <th className="pb-3 pr-4 font-medium">Статус</th>
-                  <th className="pb-3 font-medium">Действия</th>
-                </tr>
-              </thead>
+          <div className="space-y-3">
+            {filteredProducts.map((item) => {
+              const discount = getDiscountPercent(item.oldPrice, item.price);
+              const stockTotal = getStockTotal(item.stock);
 
-              <tbody>
-                {filteredProducts.map((item) => {
-                  const discount = getDiscountPercent(item.oldPrice, item.price);
-
-                  return (
-                    <tr
-                      key={item.id}
-                      className="border-b border-black/5 align-top last:border-b-0"
+              return (
+                <div
+                  key={item.id}
+                  className="rounded-[24px] bg-[#F7F7F7] p-3"
+                >
+                  <div className="flex gap-3">
+                    <Link
+                      href={`/admin/products/${item.id}`}
+                      className="h-[104px] w-[78px] shrink-0 overflow-hidden rounded-[18px] bg-[#ECECEC]"
                     >
-                      <td className="py-4 pr-4">
-                        <div>
-                          <p className="text-sm font-medium text-black">{item.name}</p>
-                          <p className="mt-1 text-xs text-gray-400">
+                      {item.image ? (
+                        <img
+                          src={item.image}
+                          alt={item.name}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : null}
+                    </Link>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-black">
+                            {item.name}
+                          </p>
+                          <p className="mt-1 truncate text-xs text-gray-500">
                             {item.brand} • {item.category}
                           </p>
-                          <p className="mt-1 text-xs text-gray-400">
-                            {item.article || item.id}
-                          </p>
                         </div>
-                      </td>
 
-                      <td className="py-4 pr-4">
-                        <div className="h-16 w-12 overflow-hidden rounded-xl bg-[#ECECEC]">
-                          {item.image ? (
-                            <img
-                              src={item.image}
-                              alt={item.name}
-                              className="h-full w-full object-cover"
-                            />
-                          ) : null}
-                        </div>
-                      </td>
-
-                      <td className="py-4 pr-4">
-                        <div className="flex flex-col">
-                          <span className="text-sm font-medium text-emerald-600">
-                            {item.price.toLocaleString("ru-RU")} ₽
-                          </span>
-                          <span className="text-xs text-gray-400 line-through">
-                            {item.oldPrice.toLocaleString("ru-RU")} ₽
-                          </span>
-                          {discount > 0 && (
-                            <span className="mt-1 text-xs text-emerald-600">
-                              -{discount}%
-                            </span>
-                          )}
-                        </div>
-                      </td>
-
-                      <td className="py-4 pr-4">
-                        <span
-                          className={`rounded-full px-2.5 py-1 text-xs ${
-                            item.badge === "Из-за рубежа"
-                              ? "bg-black text-white"
-                              : "bg-[#F5F5F5] text-gray-700"
-                          }`}
-                        >
-                          {item.badge}
-                        </span>
-                      </td>
-
-                      <td className="py-4 pr-4">
                         <button
                           type="button"
                           onClick={() => toggleStatus(item.id)}
-                          className={`rounded-full px-2.5 py-1 text-xs ${
+                          className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] ${
                             item.status === "Активен"
                               ? "bg-emerald-100 text-emerald-700"
-                              : "bg-gray-100 text-gray-500"
+                              : "bg-gray-200 text-gray-500"
                           }`}
                         >
                           {item.status}
                         </button>
-                      </td>
+                      </div>
 
-                      <td className="py-4">
-                        <div className="flex flex-wrap gap-2">
-                          <Link
-                            href={`/admin/products/${item.id}`}
-                            className="rounded-2xl bg-[#F5F5F5] px-3 py-2 text-xs text-gray-700"
-                          >
-                            Редактировать
-                          </Link>
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <span className="text-[15px] font-semibold text-[#16A34A]">
+                          {item.price.toLocaleString("ru-RU")} ₽
+                        </span>
 
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(item.id)}
-                            className="rounded-2xl bg-red-50 px-3 py-2 text-xs text-red-600"
-                          >
-                            Удалить
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                        {item.oldPrice > item.price && (
+                          <span className="text-xs text-gray-400 line-through">
+                            {item.oldPrice.toLocaleString("ru-RU")} ₽
+                          </span>
+                        )}
+
+                        {discount > 0 && (
+                          <span className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] text-red-600">
+                            -{discount}%
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <span className={`rounded-full px-2 py-1 text-[10px] ${getBadgeClass(item.badge)}`}>
+                          {item.badge}
+                        </span>
+
+                        <span
+                          className={`rounded-full px-2 py-1 text-[10px] ${
+                            stockTotal > 0
+                              ? "bg-white text-gray-600"
+                              : "bg-red-50 text-red-600"
+                          }`}
+                        >
+                          Остаток: {stockTotal}
+                        </span>
+                      </div>
+
+                      <p className="mt-2 truncate text-xs text-gray-400">
+                        Артикул: {item.article || item.id}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-[1fr_1fr_auto] gap-2">
+                    <Link
+                      href={`/admin/products/${item.id}`}
+                      className="rounded-2xl bg-white px-3 py-2.5 text-center text-xs font-medium text-gray-700"
+                    >
+                      Редактировать
+                    </Link>
+
+                    <button
+                      type="button"
+                      onClick={() => toggleStatus(item.id)}
+                      className="rounded-2xl bg-white px-3 py-2.5 text-xs font-medium text-gray-700"
+                    >
+                      {item.status === "Активен" ? "Скрыть" : "Активировать"}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(item.id)}
+                      className="rounded-2xl bg-red-50 px-3 py-2.5 text-xs font-medium text-red-600"
+                    >
+                      Удалить
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </section>
