@@ -63,8 +63,8 @@ type OrderRowDb = {
   delivery: DeliveryMethod;
   address: string;
   status: OrderStatus;
-  comment: string;
-  promo_code: string;
+  comment: string | null;
+  promo_code: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -134,9 +134,11 @@ type PaymentAttemptRow = {
 type QuickFilter =
   | "Все"
   | "Новый"
+  | "Оплачен"
   | "В обработке"
   | "Частично готов"
   | "В пути из-за рубежа"
+  | "Собран"
   | "В доставке"
   | "Доставлен"
   | "Отменен";
@@ -146,9 +148,11 @@ type DateFilter = "Все даты" | "Только сегодня";
 const quickFilters: QuickFilter[] = [
   "Все",
   "Новый",
+  "Оплачен",
   "В обработке",
   "Частично готов",
   "В пути из-за рубежа",
+  "Собран",
   "В доставке",
   "Доставлен",
   "Отменен",
@@ -156,6 +160,18 @@ const quickFilters: QuickFilter[] = [
 
 const dateFilters: DateFilter[] = ["Все даты", "Только сегодня"];
 const attemptFilters: AttemptFilter[] = ["Все попытки", "Только ожидающие"];
+
+const orderStatusOptions: OrderStatus[] = [
+  "Новый",
+  "Оплачен",
+  "В обработке",
+  "Частично готов",
+  "В пути из-за рубежа",
+  "Собран",
+  "В доставке",
+  "Доставлен",
+  "Отменен",
+];
 
 const itemStatusOptions: OrderItemStatus[] = [
   "Новый",
@@ -172,7 +188,7 @@ const itemStatusOptions: OrderItemStatus[] = [
 function orderStatusClass(status: OrderStatus) {
   switch (status) {
     case "Новый":
-      return "bg-black text-white";
+      return "bg-[#F3F4F6] text-[#111827]";
     case "Оплачен":
       return "bg-emerald-100 text-emerald-700";
     case "В обработке":
@@ -196,8 +212,6 @@ function orderStatusClass(status: OrderStatus) {
 
 function itemStatusClass(status: OrderItemStatus | null) {
   switch (status) {
-    case "Новый":
-      return "bg-gray-100 text-gray-700";
     case "Подтвержден":
       return "bg-amber-100 text-amber-700";
     case "Готов к отправке":
@@ -251,7 +265,12 @@ function formatAttemptStatus(status: PaymentAttemptStatus) {
 
 function formatOrderDate(value: string) {
   try {
-    return new Date(value).toLocaleString("ru-RU");
+    return new Date(value).toLocaleString("ru-RU", {
+      day: "2-digit",
+      month: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   } catch {
     return value;
   }
@@ -260,19 +279,19 @@ function formatOrderDate(value: string) {
 function getOrderHint(status: OrderStatus) {
   switch (status) {
     case "Новый":
-      return "Заказ только создан";
+      return "Заказ нужно проверить и принять";
     case "Оплачен":
-      return "Оплата подтверждена";
+      return "Оплата получена, можно передавать в сборку";
     case "В обработке":
-      return "Начали работу по заказу";
+      return "Заказ готовится";
     case "Частично готов":
-      return "Часть товаров уже готова";
+      return "Часть товаров готова";
     case "В пути из-за рубежа":
-      return "Ждём зарубежные позиции";
+      return "Есть позиции в ожидании";
     case "Собран":
-      return "Все товары готовы";
+      return "Готов к выдаче или доставке";
     case "В доставке":
-      return "Заказ уже отправлен";
+      return "Заказ передан в доставку";
     case "Доставлен":
       return "Заказ завершён";
     case "Отменен":
@@ -336,6 +355,7 @@ export default function AdminOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [updatingItemId, setUpdatingItemId] = useState<number | null>(null);
+  const [updatingOrderId, setUpdatingOrderId] = useState("");
   const [copiedOrderId, setCopiedOrderId] = useState("");
 
   const copyOrderId = async (orderId: string) => {
@@ -603,10 +623,7 @@ export default function AdminOrdersPage() {
     filteredOrders[0] ||
     null;
 
-  const updateItemStatus = async (
-    itemId: number,
-    status: OrderItemStatus
-  ) => {
+  const updateItemStatus = async (itemId: number, status: OrderItemStatus) => {
     setUpdatingItemId(itemId);
     setMessage("");
 
@@ -627,26 +644,33 @@ export default function AdminOrdersPage() {
     setUpdatingItemId(null);
   };
 
+  const updateOrderStatus = async (orderId: string, status: OrderStatus) => {
+    setUpdatingOrderId(orderId);
+    setMessage("");
+
+    const { error } = await supabase
+      .from("orders")
+      .update({
+        status,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", orderId);
+
+    if (error) {
+      setMessage(`Ошибка обновления статуса заказа: ${error.message}`);
+      setUpdatingOrderId("");
+      return;
+    }
+
+    await loadOrders();
+    setUpdatingOrderId("");
+  };
+
   const totalRevenue = useMemo(
     () =>
       orders
         .filter((order) => order.status !== "Отменен")
         .reduce((sum, order) => sum + order.total, 0),
-    [orders]
-  );
-
-  const newOrdersCount = useMemo(
-    () => orders.filter((order) => order.status === "Новый").length,
-    [orders]
-  );
-
-  const deliveryOrdersCount = useMemo(
-    () => orders.filter((order) => order.delivery === "Доставка").length,
-    [orders]
-  );
-
-  const pickupOrdersCount = useMemo(
-    () => orders.filter((order) => order.delivery === "Самовывоз").length,
     [orders]
   );
 
@@ -660,26 +684,23 @@ export default function AdminOrdersPage() {
     [todayOrders]
   );
 
-  const todayDeliveryOrders = useMemo(
-    () => todayOrders.filter((order) => order.delivery === "Доставка").length,
-    [todayOrders]
+  const processingCount = useMemo(
+    () =>
+      orders.filter((order) =>
+        ["Оплачен", "В обработке", "Частично готов", "В пути из-за рубежа", "Собран"].includes(
+          order.status
+        )
+      ).length,
+    [orders]
   );
 
-  const todayPickupOrders = useMemo(
-    () => todayOrders.filter((order) => order.delivery === "Самовывоз").length,
-    [todayOrders]
+  const deliveryOrdersCount = useMemo(
+    () => orders.filter((order) => order.status === "В доставке").length,
+    [orders]
   );
 
   const pendingAttemptsCount = useMemo(
     () => paymentAttempts.filter((attempt) => attempt.status === "pending").length,
-    [paymentAttempts]
-  );
-
-  const failedAttemptsCount = useMemo(
-    () =>
-      paymentAttempts.filter(
-        (attempt) => attempt.status === "failed" || attempt.status === "cancelled"
-      ).length,
     [paymentAttempts]
   );
 
@@ -710,241 +731,384 @@ export default function AdminOrdersPage() {
 
   return (
     <>
-      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <p className="text-sm text-gray-500">Админ-панель</p>
-          <h1 className="text-2xl font-semibold text-black">Заказы</h1>
-        </div>
-
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <div className="flex items-center gap-2 rounded-2xl bg-white px-4 py-3 shadow-sm">
-            <span className="text-gray-400">⌕</span>
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Поиск по заказам и оплатам"
-              className="w-full bg-transparent text-sm outline-none placeholder:text-gray-400 sm:w-80"
-            />
+      <div className="mb-5">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-sm text-gray-500">Seller panel</p>
+            <h1 className="text-[26px] font-semibold tracking-[-0.04em] text-black">
+              Заказы
+            </h1>
           </div>
 
           <button
             type="button"
             onClick={loadOrders}
             disabled={loading}
-            className="rounded-2xl bg-white px-4 py-3 text-sm font-medium text-black shadow-sm disabled:opacity-60"
+            className="rounded-2xl bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm disabled:opacity-60"
           >
-            {loading ? "Обновляем..." : "Обновить"}
+            {loading ? "..." : "Обновить"}
           </button>
         </div>
-      </div>
 
-      <div className="mb-6 grid grid-cols-2 gap-4 xl:grid-cols-4">
-        <div className="rounded-[28px] bg-white p-5 shadow-sm">
-          <p className="text-sm text-gray-500">Заказы за сегодня</p>
-          <p className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-black">
-            {todayOrders.length}
-          </p>
-        </div>
-
-        <div className="rounded-[28px] bg-white p-5 shadow-sm">
-          <p className="text-sm text-gray-500">Новые сегодня</p>
-          <p className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-black">
-            {todayNewOrders}
-          </p>
-        </div>
-
-        <div className="rounded-[28px] bg-white p-5 shadow-sm">
-          <p className="text-sm text-gray-500">Сегодня в доставку</p>
-          <p className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-black">
-            {todayDeliveryOrders}
-          </p>
-        </div>
-
-        <div className="rounded-[28px] bg-white p-5 shadow-sm">
-          <p className="text-sm text-gray-500">Сегодня самовывоз</p>
-          <p className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-black">
-            {todayPickupOrders}
-          </p>
-        </div>
-      </div>
-
-      <div className="mb-4 grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <div className="rounded-[28px] bg-white p-5 shadow-sm">
-          <p className="text-sm text-gray-500">Ожидают оплату</p>
-          <p className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-black">
-            {pendingAttemptsCount}
-          </p>
-        </div>
-
-        <div className="rounded-[28px] bg-white p-5 shadow-sm">
-          <p className="text-sm text-gray-500">Неуспешные оплаты</p>
-          <p className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-black">
-            {failedAttemptsCount}
-          </p>
-        </div>
-      </div>
-
-      <div className="mb-4 overflow-x-auto">
-        <div className="flex min-w-max gap-2">
-          {dateFilters.map((filter) => {
-            const isActive = selectedDateFilter === filter;
-            return (
-              <button
-                key={filter}
-                type="button"
-                onClick={() => setSelectedDateFilter(filter)}
-                className={`rounded-full px-4 py-2 text-sm transition ${
-                  isActive
-                    ? "bg-black text-white"
-                    : "bg-white text-black shadow-sm"
-                }`}
-              >
-                {filter} ({getDateFilterCount(filter)})
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="mb-6 overflow-x-auto">
-        <div className="flex min-w-max gap-2">
-          {quickFilters.map((filter) => {
-            const isActive = selectedFilter === filter;
-            return (
-              <button
-                key={filter}
-                type="button"
-                onClick={() => setSelectedFilter(filter)}
-                className={`rounded-full px-4 py-2 text-sm transition ${
-                  isActive
-                    ? "bg-black text-white"
-                    : "bg-white text-black shadow-sm"
-                }`}
-              >
-                {filter} ({getFilterCount(filter)})
-              </button>
-            );
-          })}
+        <div className="mt-4 flex items-center gap-2 rounded-[22px] bg-white px-4 py-3 shadow-sm">
+          <span className="text-gray-400">⌕</span>
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Поиск по заказам, клиенту или телефону"
+            className="w-full bg-transparent text-sm outline-none placeholder:text-gray-400"
+          />
         </div>
       </div>
 
       {message && (
-        <div className="mb-6 rounded-[24px] bg-white p-4 text-sm text-black shadow-sm">
+        <div className="mb-4 whitespace-pre-wrap rounded-[22px] bg-white p-4 text-sm text-black shadow-sm">
           {message}
         </div>
       )}
 
-      {copiedOrderId && (
-        <div className="mb-6 rounded-[24px] bg-white p-4 text-sm text-black shadow-sm">
-          Номер заказа {copiedOrderId} скопирован
-        </div>
-      )}
-
-      <section className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <div className="rounded-[28px] bg-white p-5 shadow-sm">
-          <p className="text-sm text-gray-500">Всего заказов</p>
-          <p className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-black">
-            {orders.length}
+      <section className="mb-5 grid grid-cols-2 gap-3">
+        <div className="rounded-[24px] bg-white p-4 shadow-sm">
+          <p className="text-xs text-gray-500">Сегодня</p>
+          <p className="mt-2 text-[22px] font-semibold tracking-[-0.04em]">
+            {todayOrders.length}
+          </p>
+          <p className="mt-1 text-[11px] text-gray-400">
+            {todayNewOrders} новых
           </p>
         </div>
 
-        <div className="rounded-[28px] bg-white p-5 shadow-sm">
-          <p className="text-sm text-gray-500">Новые заказы</p>
-          <p className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-black">
-            {newOrdersCount}
+        <div className="rounded-[24px] bg-white p-4 shadow-sm">
+          <p className="text-xs text-gray-500">В работе</p>
+          <p className="mt-2 text-[22px] font-semibold tracking-[-0.04em]">
+            {processingCount}
+          </p>
+          <p className="mt-1 text-[11px] text-gray-400">
+            нужно собрать
           </p>
         </div>
 
-        <div className="rounded-[28px] bg-white p-5 shadow-sm">
-          <p className="text-sm text-gray-500">Выручка</p>
-          <p className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-black">
+        <div className="rounded-[24px] bg-white p-4 shadow-sm">
+          <p className="text-xs text-gray-500">В доставке</p>
+          <p className="mt-2 text-[22px] font-semibold tracking-[-0.04em]">
+            {deliveryOrdersCount}
+          </p>
+          <p className="mt-1 text-[11px] text-gray-400">
+            отправлены
+          </p>
+        </div>
+
+        <div className="rounded-[24px] bg-white p-4 shadow-sm">
+          <p className="text-xs text-gray-500">Выручка</p>
+          <p className="mt-2 text-[22px] font-semibold tracking-[-0.04em]">
             {totalRevenue.toLocaleString("ru-RU")} ₽
           </p>
-        </div>
-
-        <div className="rounded-[28px] bg-white p-5 shadow-sm">
-          <p className="text-sm text-gray-500">Доставка / Самовывоз</p>
-          <p className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-black">
-            {deliveryOrdersCount} / {pickupOrdersCount}
+          <p className="mt-1 text-[11px] text-gray-400">
+            без отмен
           </p>
         </div>
       </section>
 
-      <section className="mb-6 rounded-[28px] bg-white p-5 shadow-sm">
-        <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h2 className="text-lg font-medium text-black">Попытки оплаты</h2>
-            <p className="text-sm text-gray-500">
-              Отдельно от настоящих заказов
-            </p>
-          </div>
-
-          <div className="overflow-x-auto">
-            <div className="flex min-w-max gap-2">
-              {attemptFilters.map((filter) => {
-                const isActive = selectedAttemptFilter === filter;
-                return (
-                  <button
-                    key={filter}
-                    type="button"
-                    onClick={() => setSelectedAttemptFilter(filter)}
-                    className={`rounded-full px-4 py-2 text-sm transition ${
-                      isActive
-                        ? "bg-black text-white"
-                        : "bg-[#F7F7F7] text-black"
-                    }`}
-                  >
-                    {filter} ({getAttemptFilterCount(filter)})
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+      <section className="mb-5">
+        <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
+          {dateFilters.map((filter) => (
+            <button
+              key={filter}
+              type="button"
+              onClick={() => setSelectedDateFilter(filter)}
+              className={`shrink-0 rounded-full px-4 py-2 text-sm ${
+                selectedDateFilter === filter
+                  ? "bg-white text-black shadow-sm ring-1 ring-black/10"
+                  : "bg-[#ECECEC] text-gray-600"
+              }`}
+            >
+              {filter} · {getDateFilterCount(filter)}
+            </button>
+          ))}
         </div>
 
-        {loading ? (
-          <div className="rounded-[24px] bg-[#F7F7F7] p-6 text-center text-sm text-gray-500">
-            Загрузка попыток оплаты...
-          </div>
-        ) : filteredAttempts.length === 0 ? (
-          <div className="rounded-[24px] bg-[#F7F7F7] p-6 text-center text-sm text-gray-500">
-            Нет попыток оплаты
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {filteredAttempts.map((attempt) => (
-              <div
-                key={attempt.id}
-                className="rounded-[24px] bg-[#F7F7F7] p-4"
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {quickFilters.map((filter) => (
+            <button
+              key={filter}
+              type="button"
+              onClick={() => setSelectedFilter(filter)}
+              className={`shrink-0 rounded-full px-4 py-2 text-sm ${
+                selectedFilter === filter
+                  ? "bg-white text-black shadow-sm ring-1 ring-black/10"
+                  : "bg-[#ECECEC] text-gray-600"
+              }`}
+            >
+              {filter} · {getFilterCount(filter)}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
+        <div className="space-y-3">
+          {loading ? (
+            <div className="rounded-[24px] bg-white p-6 text-center text-sm text-gray-500 shadow-sm">
+              Загружаем заказы...
+            </div>
+          ) : filteredOrders.length === 0 ? (
+            <div className="rounded-[24px] bg-white p-6 text-center text-sm text-gray-500 shadow-sm">
+              Заказы не найдены
+            </div>
+          ) : (
+            filteredOrders.map((order) => (
+              <article
+                key={order.id}
+                className={`rounded-[26px] bg-white p-4 shadow-sm transition ${
+                  selectedOrder?.id === order.id ? "ring-1 ring-black/10" : ""
+                }`}
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-sm font-medium text-black">{attempt.id}</p>
-
-                      <button
-                        type="button"
-                        onClick={() => copyOrderId(attempt.id)}
-                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-black"
-                        aria-label="Скопировать номер попытки оплаты"
-                      >
-                        <CopyIcon />
-                      </button>
-
-                      {hasTelegramLink(attempt) ? (
-                        <a
-                          href={getTelegramLink(attempt)}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#229ED9] text-white"
-                          aria-label="Написать клиенту в Telegram"
+                <button
+                  type="button"
+                  onClick={() => setSelectedOrderId(order.id)}
+                  className="w-full text-left"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="truncate text-[15px] font-semibold text-black">
+                          {order.id}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            copyOrderId(order.id);
+                          }}
+                          className="flex h-7 w-7 items-center justify-center rounded-full bg-[#F5F5F5] text-gray-600"
+                          aria-label="Скопировать номер"
                         >
-                          <TelegramIcon />
-                        </a>
-                      ) : null}
+                          <CopyIcon />
+                        </button>
+                      </div>
+                      <p className="mt-1 truncate text-xs text-gray-500">
+                        {copiedOrderId === order.id
+                          ? "Номер скопирован"
+                          : `${order.customer} • ${order.phone}`}
+                      </p>
+                    </div>
+
+                    <span
+                      className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium ${orderStatusClass(
+                        order.status
+                      )}`}
+                    >
+                      {order.status}
+                    </span>
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-3 gap-2">
+                    <div className="rounded-2xl bg-[#F7F7F7] p-2">
+                      <p className="text-[10px] text-gray-400">Товаров</p>
+                      <p className="mt-1 text-sm font-medium text-black">
+                        {order.items.reduce((sum, item) => sum + item.quantity, 0)}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl bg-[#F7F7F7] p-2">
+                      <p className="text-[10px] text-gray-400">Сумма</p>
+                      <p className="mt-1 text-sm font-medium text-black">
+                        {order.total.toLocaleString("ru-RU")} ₽
+                      </p>
+                    </div>
+                    <div className="rounded-2xl bg-[#F7F7F7] p-2">
+                      <p className="text-[10px] text-gray-400">Получение</p>
+                      <p className="mt-1 truncate text-sm font-medium text-black">
+                        {order.delivery}
+                      </p>
+                    </div>
+                  </div>
+                </button>
+
+                <div className="mt-4 grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => updateOrderStatus(order.id, "В обработке")}
+                    disabled={updatingOrderId === order.id}
+                    className="rounded-2xl bg-[#F5F5F5] px-2 py-2.5 text-xs font-medium text-gray-700 disabled:opacity-60"
+                  >
+                    Собрать
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => updateOrderStatus(order.id, "Собран")}
+                    disabled={updatingOrderId === order.id}
+                    className="rounded-2xl bg-[#F5F5F5] px-2 py-2.5 text-xs font-medium text-gray-700 disabled:opacity-60"
+                  >
+                    Отгрузить
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => updateOrderStatus(order.id, "В доставке")}
+                    disabled={updatingOrderId === order.id}
+                    className="rounded-2xl bg-[#F5F5F5] px-2 py-2.5 text-xs font-medium text-gray-700 disabled:opacity-60"
+                  >
+                    Отправить
+                  </button>
+                </div>
+
+                <select
+                  value={order.status}
+                  onChange={(event) =>
+                    updateOrderStatus(order.id, event.target.value as OrderStatus)
+                  }
+                  disabled={updatingOrderId === order.id}
+                  className="mt-3 w-full rounded-2xl border border-black/5 bg-[#FAFAFA] px-3 py-3 text-sm outline-none disabled:opacity-60"
+                >
+                  {orderStatusOptions.map((status) => (
+                    <option key={status}>{status}</option>
+                  ))}
+                </select>
+
+                {selectedOrder?.id === order.id && (
+                  <div className="mt-4 rounded-[22px] bg-[#FAFAFA] p-4">
+                    <p className="text-sm font-medium text-black">Информация</p>
+                    <div className="mt-3 space-y-2 text-sm text-gray-600">
+                      <p>
+                        <span className="text-gray-400">Дата:</span> {order.createdAt}
+                      </p>
+                      <p>
+                        <span className="text-gray-400">Оплата:</span> {order.payment}
+                      </p>
+                      <p>
+                        <span className="text-gray-400">Адрес:</span> {order.address || "—"}
+                      </p>
+                      {order.comment && (
+                        <p>
+                          <span className="text-gray-400">Комментарий:</span>{" "}
+                          {order.comment}
+                        </p>
+                      )}
+                      {order.promoCode && (
+                        <p>
+                          <span className="text-gray-400">Промокод:</span>{" "}
+                          {order.promoCode}
+                        </p>
+                      )}
+                    </div>
+
+                    {hasTelegramLink({
+                      telegramUsername: order.telegramUsername,
+                      telegramUserId: order.telegramUserId,
+                    }) && (
+                      <a
+                        href={getTelegramLink({
+                          telegramUsername: order.telegramUsername,
+                          telegramUserId: order.telegramUserId,
+                        })}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-3 inline-flex items-center gap-2 rounded-2xl bg-[#EAF6FF] px-3 py-2 text-sm font-medium text-[#229ED9]"
+                      >
+                        <TelegramIcon />
+                        Telegram
+                      </a>
+                    )}
+
+                    <div className="mt-4 space-y-2">
+                      {order.items.map((item) => (
+                        <div
+                          key={item.id}
+                          className="rounded-2xl bg-white p-3 text-sm"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="font-medium text-black">{item.name}</p>
+                              <p className="mt-1 text-xs text-gray-500">
+                                {item.size || "—"} · {item.color || "—"} ·{" "}
+                                {item.quantity} шт.
+                              </p>
+                            </div>
+                            <span className="shrink-0 text-sm font-medium text-black">
+                              {(item.price * item.quantity).toLocaleString("ru-RU")} ₽
+                            </span>
+                          </div>
+
+                          <div className="mt-3 grid grid-cols-[1fr_auto] gap-2">
+                            <select
+                              value={item.item_status || "Новый"}
+                              onChange={(event) =>
+                                updateItemStatus(
+                                  item.id,
+                                  event.target.value as OrderItemStatus
+                                )
+                              }
+                              disabled={updatingItemId === item.id}
+                              className="rounded-xl border border-black/5 bg-[#F7F7F7] px-3 py-2 text-xs outline-none"
+                            >
+                              {itemStatusOptions.map((status) => (
+                                <option key={status}>{status}</option>
+                              ))}
+                            </select>
+
+                            <span
+                              className={`rounded-xl px-3 py-2 text-xs ${itemStatusClass(
+                                item.item_status
+                              )}`}
+                            >
+                              {item.item_status || "Новый"}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </article>
+            ))
+          )}
+        </div>
+
+        <aside className="space-y-4">
+          <div className="rounded-[26px] bg-white p-4 shadow-sm">
+            <h2 className="text-base font-semibold text-black">Попытки оплаты</h2>
+            <p className="mt-1 text-sm text-gray-500">
+              Ожидающие и неуспешные платежи
+            </p>
+
+            <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+              {attemptFilters.map((filter) => (
+                <button
+                  key={filter}
+                  type="button"
+                  onClick={() => setSelectedAttemptFilter(filter)}
+                  className={`shrink-0 rounded-full px-4 py-2 text-sm ${
+                    selectedAttemptFilter === filter
+                      ? "bg-[#111827] text-white"
+                      : "bg-[#F5F5F5] text-gray-600"
+                  }`}
+                >
+                  {filter} · {getAttemptFilterCount(filter)}
+                </button>
+              ))}
+            </div>
+
+            <div className="mt-4 space-y-3">
+              {filteredAttempts.length === 0 ? (
+                <div className="rounded-[20px] bg-[#F7F7F7] p-4 text-center text-sm text-gray-500">
+                  Нет активных попыток
+                </div>
+              ) : (
+                filteredAttempts.slice(0, 6).map((attempt) => (
+                  <div key={attempt.id} className="rounded-[20px] bg-[#F7F7F7] p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-black">
+                          {attempt.customer}
+                        </p>
+                        <p className="mt-1 text-xs text-gray-500">
+                          {attempt.phone}
+                        </p>
+                      </div>
 
                       <span
-                        className={`rounded-full px-2.5 py-1 text-xs ${attemptStatusClass(
+                        className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] ${attemptStatusClass(
                           attempt.status
                         )}`}
                       >
@@ -952,348 +1116,56 @@ export default function AdminOrdersPage() {
                       </span>
                     </div>
 
-                    <p className="mt-2 text-sm text-black">
-                      {attempt.customer} • {attempt.phone}
-                    </p>
-
-                    <p className="mt-1 text-sm text-gray-500">
-                      {attempt.createdAt}
-                    </p>
-
-                    <p className="mt-1 text-sm text-gray-500">
-                      {attempt.delivery} • {attempt.address}
-                    </p>
-
-                    {attempt.tbankPaymentStatus ? (
-                      <p className="mt-1 text-xs text-gray-500">
-                        T-Bank: {attempt.tbankPaymentStatus}
-                      </p>
-                    ) : null}
-
-                    {attempt.comment ? (
-                      <p className="mt-2 text-sm text-gray-500">
-                        Комментарий: {attempt.comment}
-                      </p>
-                    ) : null}
-                  </div>
-
-                  <div className="text-right">
-                    <p className="text-sm font-semibold text-black">
-                      {attempt.total.toLocaleString("ru-RU")} ₽
-                    </p>
-                    {attempt.promoCode ? (
-                      <p className="mt-1 text-xs text-gray-500">
-                        Промокод: {attempt.promoCode}
-                      </p>
-                    ) : null}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section className="grid grid-cols-1 gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-        <div className="rounded-[28px] bg-white p-5 shadow-sm">
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-medium text-black">Список заказов</h2>
-              <p className="text-sm text-gray-500">Открой заказ и меняй статусы товаров</p>
-            </div>
-          </div>
-
-          {loading ? (
-            <div className="rounded-[24px] bg-[#F7F7F7] p-6 text-center text-sm text-gray-500">
-              Загрузка заказов...
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {filteredOrders.map((order) => (
-                <button
-                  key={order.id}
-                  type="button"
-                  onClick={() => setSelectedOrderId(order.id)}
-                  className={`w-full rounded-[24px] p-4 text-left transition ${
-                    selectedOrder?.id === order.id
-                      ? "bg-black text-white"
-                      : "bg-[#F7F7F7] text-black"
-                  }`}
-                >
-                  <div className="mb-3 flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="truncate text-sm font-medium">{order.id}</p>
-
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            copyOrderId(order.id);
-                          }}
-                          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-black"
-                          aria-label="Скопировать номер заказа"
-                        >
-                          <CopyIcon />
-                        </button>
-
-                        {hasTelegramLink(order) ? (
-                          <a
-                            href={getTelegramLink(order)}
-                            target="_blank"
-                            rel="noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#229ED9] text-white"
-                            aria-label="Написать клиенту в Telegram"
-                          >
-                            <TelegramIcon />
-                          </a>
-                        ) : null}
-                      </div>
-
-                      <p
-                        className={`mt-1 text-xs ${
-                          selectedOrder?.id === order.id
-                            ? "text-white/70"
-                            : "text-gray-500"
-                        }`}
-                      >
-                        {order.customer} • {order.phone}
-                      </p>
+                    <div className="mt-3 flex items-center justify-between text-sm">
+                      <span className="text-gray-500">{attempt.createdAt}</span>
+                      <span className="font-medium text-black">
+                        {attempt.total.toLocaleString("ru-RU")} ₽
+                      </span>
                     </div>
 
-                    <span
-                      className={`rounded-full px-2.5 py-1 text-xs ${
-                        selectedOrder?.id === order.id
-                          ? "bg-white text-black"
-                          : orderStatusClass(order.status)
-                      }`}
-                    >
-                      {order.status}
-                    </span>
-                  </div>
-
-                  <div
-                    className={`flex items-center justify-between text-sm ${
-                      selectedOrder?.id === order.id
-                        ? "text-white/80"
-                        : "text-gray-600"
-                    }`}
-                  >
-                    <span>{order.createdAt}</span>
-                    <span>{order.total.toLocaleString("ru-RU")} ₽</span>
-                  </div>
-                </button>
-              ))}
-
-              {filteredOrders.length === 0 && (
-                <div className="rounded-[24px] bg-[#F7F7F7] p-6 text-center text-sm text-gray-500">
-                  Нет заказов по выбранным фильтрам
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        <div className="rounded-[28px] bg-white p-5 shadow-sm">
-          {selectedOrder ? (
-            <>
-              <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Карточка заказа</p>
-
-                  <div className="mt-1 flex items-center gap-2">
-                    <h2 className="text-xl font-semibold text-black">
-                      {selectedOrder.id}
-                    </h2>
-
-                    <button
-                      type="button"
-                      onClick={() => copyOrderId(selectedOrder.id)}
-                      className="flex h-8 w-8 items-center justify-center rounded-full bg-[#F5F5F5] text-black"
-                      aria-label="Скопировать номер заказа"
-                    >
-                      <CopyIcon />
-                    </button>
-
-                    {hasTelegramLink(selectedOrder) ? (
+                    {hasTelegramLink({
+                      telegramUsername: attempt.telegramUsername,
+                      telegramUserId: attempt.telegramUserId,
+                    }) && (
                       <a
-                        href={getTelegramLink(selectedOrder)}
+                        href={getTelegramLink({
+                          telegramUsername: attempt.telegramUsername,
+                          telegramUserId: attempt.telegramUserId,
+                        })}
                         target="_blank"
                         rel="noreferrer"
-                        className="flex h-8 w-8 items-center justify-center rounded-full bg-[#229ED9] text-white"
-                        aria-label="Написать клиенту в Telegram"
+                        className="mt-3 inline-flex items-center gap-2 rounded-2xl bg-white px-3 py-2 text-xs font-medium text-[#229ED9]"
                       >
                         <TelegramIcon />
+                        Написать клиенту
                       </a>
-                    ) : null}
+                    )}
                   </div>
+                ))
+              )}
+            </div>
+          </div>
 
-                  <p className="mt-2 text-sm text-gray-500">
-                    {getOrderHint(selectedOrder.status)}
-                  </p>
-                </div>
-
-                <span
-                  className={`inline-flex rounded-full px-3 py-1.5 text-xs ${orderStatusClass(
-                    selectedOrder.status
-                  )}`}
-                >
-                  {selectedOrder.status}
+          <div className="rounded-[26px] bg-white p-4 shadow-sm">
+            <h2 className="text-base font-semibold text-black">Сводка</h2>
+            <div className="mt-3 space-y-2 text-sm text-gray-600">
+              <div className="flex items-center justify-between">
+                <span>Ожидают оплату</span>
+                <span className="font-medium text-black">{pendingAttemptsCount}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>Всего заказов</span>
+                <span className="font-medium text-black">{orders.length}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>Выручка без отмен</span>
+                <span className="font-medium text-black">
+                  {totalRevenue.toLocaleString("ru-RU")} ₽
                 </span>
               </div>
-
-              <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div className="rounded-[24px] bg-[#F7F7F7] p-4">
-                  <p className="text-xs uppercase tracking-[0.14em] text-gray-400">
-                    Клиент
-                  </p>
-                  <p className="mt-2 text-sm font-medium text-black">
-                    {selectedOrder.customer}
-                  </p>
-                  <p className="mt-1 text-sm text-gray-500">
-                    {selectedOrder.phone}
-                  </p>
-                  {selectedOrder.telegramUsername ? (
-                    <p className="mt-1 text-sm text-gray-500">
-                      @{selectedOrder.telegramUsername}
-                    </p>
-                  ) : null}
-                </div>
-
-                <div className="rounded-[24px] bg-[#F7F7F7] p-4">
-                  <p className="text-xs uppercase tracking-[0.14em] text-gray-400">
-                    Дата
-                  </p>
-                  <p className="mt-2 text-sm font-medium text-black">
-                    {selectedOrder.createdAt}
-                  </p>
-                </div>
-
-                <div className="rounded-[24px] bg-[#F7F7F7] p-4">
-                  <p className="text-xs uppercase tracking-[0.14em] text-gray-400">
-                    Получение
-                  </p>
-                  <p className="mt-2 text-sm font-medium text-black">
-                    {selectedOrder.delivery}
-                  </p>
-                  <p className="mt-1 text-sm text-gray-500">
-                    {selectedOrder.address}
-                  </p>
-                </div>
-
-                <div className="rounded-[24px] bg-[#F7F7F7] p-4">
-                  <p className="text-xs uppercase tracking-[0.14em] text-gray-400">
-                    Оплата
-                  </p>
-                  <p className="mt-2 text-sm font-medium text-black">
-                    {selectedOrder.payment}
-                  </p>
-                  <p className="mt-1 text-sm text-gray-500">
-                    Сумма: {selectedOrder.total.toLocaleString("ru-RU")} ₽
-                  </p>
-                </div>
-              </div>
-
-              <div className="mb-6 rounded-[24px] bg-[#F7F7F7] p-4">
-                <p className="text-xs uppercase tracking-[0.14em] text-gray-400">
-                  Комментарий
-                </p>
-                <p className="mt-2 text-sm text-gray-600">
-                  {selectedOrder.comment || "Комментарий отсутствует"}
-                </p>
-                {selectedOrder.promoCode ? (
-                  <p className="mt-3 text-sm text-gray-600">
-                    Промокод:{" "}
-                    <span className="font-medium text-black">
-                      {selectedOrder.promoCode}
-                    </span>
-                  </p>
-                ) : null}
-              </div>
-
-              <div className="rounded-[24px] bg-[#F7F7F7] p-4">
-                <div className="mb-4 flex items-center justify-between">
-                  <h3 className="text-sm font-medium text-black">Состав заказа</h3>
-                  <span className="text-sm text-gray-500">
-                    {selectedOrder.items.length} поз.
-                  </span>
-                </div>
-
-                <div className="space-y-3">
-                  {selectedOrder.items.map((item, index) => (
-                    <div
-                      key={`${selectedOrder.id}-${index}`}
-                      className="rounded-[20px] bg-white p-4"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <p className="text-sm font-medium text-black">
-                              {item.name}
-                            </p>
-
-                            <span
-                              className={`rounded-full px-2.5 py-1 text-[11px] ${itemStatusClass(
-                                item.item_status
-                              )}`}
-                            >
-                              {item.item_status || "Новый"}
-                            </span>
-                          </div>
-
-                          <p className="mt-1 text-xs text-gray-500">
-                            Размер: {item.size} • Цвет: {item.color}
-                          </p>
-                        </div>
-
-                        <div className="text-right">
-                          <p className="text-sm font-medium text-black">
-                            {(item.price * item.quantity).toLocaleString("ru-RU")} ₽
-                          </p>
-                          <p className="mt-1 text-xs text-gray-500">
-                            {item.quantity} шт. × {item.price.toLocaleString("ru-RU")} ₽
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="mt-4">
-                        <select
-                          value={item.item_status || "Новый"}
-                          onChange={(e) =>
-                            updateItemStatus(
-                              item.id,
-                              e.target.value as OrderItemStatus
-                            )
-                          }
-                          disabled={updatingItemId === item.id}
-                          className="w-full rounded-2xl border border-black/5 bg-[#F5F5F5] px-3 py-3 text-sm outline-none disabled:opacity-60"
-                        >
-                          {itemStatusOptions.map((status) => (
-                            <option key={status} value={status}>
-                              {status}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mt-4 flex items-center justify-between border-t border-black/5 pt-4">
-                  <span className="text-sm text-gray-500">Итого</span>
-                  <span className="text-lg font-semibold text-black">
-                    {selectedOrder.total.toLocaleString("ru-RU")} ₽
-                  </span>
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="rounded-[24px] bg-[#F7F7F7] p-8 text-center text-sm text-gray-500">
-              Выберите заказ слева
             </div>
-          )}
-        </div>
+          </div>
+        </aside>
       </section>
     </>
   );
