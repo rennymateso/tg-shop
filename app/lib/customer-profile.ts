@@ -10,6 +10,7 @@ export type CustomerProfile = {
   phone: string | null;
   created_at: string;
   updated_at: string;
+  last_visit_at: string | null;
 };
 
 export async function syncTelegramCustomer(phone?: string) {
