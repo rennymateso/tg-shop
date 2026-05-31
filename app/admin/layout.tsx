@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
+  ArrowLeft,
   Box,
   Home,
   LayoutGrid,
@@ -28,13 +29,33 @@ function getActiveTab(pathname: string) {
   return "/admin/menu";
 }
 
+function shouldShowSectionBack(pathname: string) {
+  if (pathname === "/admin") return false;
+
+  const segments = pathname.split("/").filter(Boolean);
+  if (segments.length <= 2) return true;
+
+  return pathname === "/admin/products/new" || pathname === "/admin/warehouses/new";
+}
+
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const activeTab = getActiveTab(pathname);
+  const showSectionBack = shouldShowSectionBack(pathname);
+
+  const goBack = () => {
+    if (window.history.length > 1) {
+      router.back();
+      return;
+    }
+
+    router.push("/admin");
+  };
 
   useEffect(() => {
     const viewport = document.querySelector('meta[name="viewport"]');
@@ -87,6 +108,23 @@ export default function AdminLayout({
           width: min(100%, 760px);
           margin: 0 auto;
           padding: 10px 10px 0;
+        }
+
+        .seller-section-back {
+          display: inline-flex;
+          height: 34px;
+          min-width: 34px;
+          align-items: center;
+          justify-content: center;
+          border: 1px solid rgba(15,23,42,.08);
+          border-radius: 12px;
+          background: rgba(255,255,255,.96);
+          color: #64748b;
+          box-shadow: 0 8px 20px rgba(15,23,42,.07);
+        }
+
+        .seller-section-back-wrap {
+          margin: 0 0 8px 2px;
         }
 
         .seller-shell h1 {
@@ -187,7 +225,21 @@ export default function AdminLayout({
       `}</style>
 
       <div className="seller-page">
-        <main className="seller-shell">{children}</main>
+        <main className="seller-shell">
+          {showSectionBack && (
+            <div className="seller-section-back-wrap">
+              <button
+                type="button"
+                onClick={goBack}
+                className="seller-section-back"
+                aria-label="Назад"
+              >
+                <ArrowLeft size={18} strokeWidth={2.2} />
+              </button>
+            </div>
+          )}
+          {children}
+        </main>
 
         <nav className="seller-bottom-nav" aria-label="Админ меню">
           <div className="seller-bottom-grid">

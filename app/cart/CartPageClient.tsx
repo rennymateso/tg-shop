@@ -157,7 +157,7 @@ function getAvailableQuantity(
     return Math.max(0, Number(product.stock[size]) || 0);
   }
 
-  return product.sizes?.includes(size) ? 1 : 0;
+  return 0;
 }
 
 function TrashIcon() {

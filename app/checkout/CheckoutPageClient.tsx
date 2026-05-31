@@ -223,7 +223,7 @@ function getAvailableQuantity(product: Product | undefined, size: string, color?
     return Math.max(0, Number(product.stock[size]) || 0);
   }
 
-  return product.sizes?.includes(size) ? 1 : 0;
+  return 0;
 }
 
 function getDiscountPercent(oldPrice: number, newPrice: number) {

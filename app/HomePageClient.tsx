@@ -31,6 +31,7 @@ type ProductRow = {
   badge: string | null;
   description: string | null;
   sizes: string[] | null;
+  stock?: Record<string, number> | null;
   colors: string[] | null;
   image: string | null;
   color_images: Record<string, string[]> | null;
@@ -53,6 +54,7 @@ export type HomeProduct = {
   colors: string[];
   sizes: string[];
   description?: string;
+  stock?: Record<string, number>;
 };
 
 type HomeColorProduct = HomeProduct & {
@@ -72,6 +74,17 @@ function getHomeColorImages(product: HomeProduct, color: string) {
   return product.images?.length
     ? product.images
     : [product.image || "/products/product-1.jpg"];
+}
+
+function getHomeStockTotal(stock: Record<string, number>) {
+  const entries = Object.entries(stock || {});
+  const colorEntries = entries.filter(([key]) => key.includes("::"));
+  const sourceEntries = colorEntries.length > 0 ? colorEntries : entries;
+
+  return sourceEntries.reduce(
+    (sum, [, value]) => sum + Math.max(0, Number(value) || 0),
+    0
+  );
 }
 
 function mapRowToHomeProduct(row: ProductRow): HomeProduct {
@@ -113,6 +126,7 @@ function mapRowToHomeProduct(row: ProductRow): HomeProduct {
     category: row.category,
     colors,
     sizes: Array.isArray(row.sizes) ? row.sizes : [],
+    stock: row.stock && typeof row.stock === "object" ? row.stock : {},
     description: row.description || "",
   };
 }
@@ -271,10 +285,11 @@ export default function HomePageClient({
 
       if (cancelled) return;
 
-      const nextProducts = ((productsData || []) as ProductRow[]).map(mapRowToHomeProduct);
-      if (nextProducts.length > 0) {
-        setProducts(nextProducts);
-      }
+      const nextProducts = ((productsData || []) as ProductRow[])
+        .map(mapRowToHomeProduct)
+        .filter((product) => getHomeStockTotal(product.stock || {}) > 0);
+
+      setProducts(nextProducts);
 
       if (brandsData?.length) {
         setBrands(brandsData as BrandRow[]);
@@ -285,8 +300,20 @@ export default function HomePageClient({
       // Keep the fast fallback catalog if Supabase is unavailable.
     });
 
+    const channel = supabase
+      .channel("storefront-products")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "products" },
+        () => {
+          loadCatalog().catch(() => {});
+        }
+      )
+      .subscribe();
+
     return () => {
       cancelled = true;
+      supabase.removeChannel(channel);
     };
   }, []);
 

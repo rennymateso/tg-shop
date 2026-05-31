@@ -231,9 +231,7 @@ export async function getStockErrors(
           ? 0
           : hasSizeStockKey
             ? Math.max(0, Number(product.stock?.[size]) || 0)
-            : product.sizes?.includes(size)
-              ? 1
-              : 0;
+            : 0;
 
       if (available <= 0) {
         errors.push(

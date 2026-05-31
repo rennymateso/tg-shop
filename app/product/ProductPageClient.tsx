@@ -141,7 +141,7 @@ function getAvailableQuantity(product: Product | null, size: string, color = "")
     return Math.max(0, Number(product.stock[size]) || 0);
   }
 
-  return product.sizes?.includes(size) ? 1 : 0;
+  return 0;
 }
 
 function getDefaultSize(product: Product | null, color = "") {
