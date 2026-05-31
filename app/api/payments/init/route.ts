@@ -5,6 +5,7 @@ import {
   calculatePromoDiscount,
   getDeliveryPrice,
   getDeliverySettings,
+  getStockErrors,
   normalizeCity,
 } from "../shared";
 
@@ -100,6 +101,19 @@ export async function POST(req: NextRequest) {
       const qty = item.quantity && item.quantity > 0 ? item.quantity : 1;
       return sum + item.price * qty;
     }, 0);
+
+    const stockErrors = await getStockErrors(supabase, items);
+
+    if (stockErrors.length > 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: stockErrors[0],
+          stockErrors,
+        },
+        { status: 409 }
+      );
+    }
 
     const deliveryCity = city || getCityFromAddress(address);
     const deliverySettings = await getDeliverySettings(supabase);

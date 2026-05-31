@@ -167,6 +167,58 @@ function getItemQuantity(item: AttemptItem) {
   return item.quantity && item.quantity > 0 ? item.quantity : 1;
 }
 
+export async function getStockErrors(
+  supabase: SupabaseClient,
+  items: AttemptItem[]
+) {
+  const grouped = new Map<string, Map<string, number>>();
+
+  for (const item of items) {
+    if (!item.id) continue;
+
+    const size = item.size?.trim() || "OS";
+    const bySize = grouped.get(item.id) || new Map<string, number>();
+    bySize.set(size, (bySize.get(size) || 0) + getItemQuantity(item));
+    grouped.set(item.id, bySize);
+  }
+
+  const errors: string[] = [];
+
+  for (const [productId, bySize] of grouped.entries()) {
+    const { data: product } = await supabase
+      .from("products")
+      .select("id, name, stock, sizes")
+      .eq("id", productId)
+      .maybeSingle<ProductStockRow & { name?: string }>();
+
+    if (!product) {
+      errors.push(`Товар ${productId} не найден`);
+      continue;
+    }
+
+    for (const [size, quantity] of bySize.entries()) {
+      const hasStockKey = Boolean(
+        product.stock && Object.prototype.hasOwnProperty.call(product.stock, size)
+      );
+      const available = hasStockKey
+        ? Math.max(0, Number(product.stock?.[size]) || 0)
+        : product.sizes?.includes(size)
+          ? 1
+          : 0;
+
+      if (available <= 0) {
+        errors.push(`${product.name || productId}, размер ${size}: нет в наличии`);
+      } else if (quantity > available) {
+        errors.push(
+          `${product.name || productId}, размер ${size}: доступно ${available} шт.`
+        );
+      }
+    }
+  }
+
+  return errors;
+}
+
 export async function decreaseProductStocks(
   supabase: SupabaseClient,
   items: AttemptItem[]
@@ -258,4 +310,61 @@ export async function sendCustomerPurchaseNotification(params: {
     }),
     cache: "no-store",
   });
+}
+
+export async function sendSellerPurchaseNotification(params: {
+  botToken: string | undefined;
+  orderId: string;
+  total: number;
+  delivery: string;
+  customer: string;
+  phone: string;
+  items: AttemptItem[];
+}) {
+  const chatIds = (process.env.TELEGRAM_ADMIN_CHAT_ID || "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+
+  if (!params.botToken || chatIds.length === 0) {
+    return;
+  }
+
+  const itemsText = params.items
+    .map((item) => {
+      const qty = getItemQuantity(item);
+      const size = item.size ? `, размер ${item.size}` : "";
+      const color = item.color ? `, цвет ${item.color}` : "";
+      return `• ${item.name}${size}${color} × ${qty}`;
+    })
+    .join("\n");
+
+  const text = [
+    "Новый оплаченный заказ",
+    "",
+    `Номер: ${params.orderId}`,
+    `Сумма: ${formatRub(params.total)} ₽`,
+    `Получение: ${params.delivery}`,
+    `Клиент: ${params.customer}`,
+    `Телефон: ${params.phone}`,
+    "",
+    itemsText,
+  ].join("\n");
+
+  await Promise.all(
+    chatIds.map((chatId) =>
+      fetch(`https://api.telegram.org/bot${params.botToken}/sendMessage`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text,
+          disable_web_page_preview: true,
+        }),
+        cache: "no-store",
+      })
+    )
+  );
 }

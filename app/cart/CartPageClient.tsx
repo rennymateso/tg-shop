@@ -45,6 +45,7 @@ type Product = {
   type: "top" | "bottom";
   category: ProductCategory;
   colors: string[];
+  stock: Record<string, number>;
   sizes: string[];
   description: string;
 };
@@ -61,6 +62,7 @@ type ProductRow = {
   description: string;
   article: string;
   sizes: string[] | null;
+  stock?: Record<string, number> | null;
   colors: string[] | null;
   image: string;
   color_images: Record<string, string[]> | null;
@@ -119,9 +121,20 @@ function mapRowToProduct(row: ProductRow): Product {
         : "top",
     category: row.category,
     colors: Array.isArray(row.colors) ? row.colors : [],
+    stock: row.stock && typeof row.stock === "object" ? row.stock : {},
     sizes: Array.isArray(row.sizes) ? row.sizes : [],
     description: row.description || "",
   };
+}
+
+function getAvailableQuantity(product: Product | undefined, size: string | undefined) {
+  if (!product || !size) return 0;
+
+  if (product.stock && Object.prototype.hasOwnProperty.call(product.stock, size)) {
+    return Math.max(0, Number(product.stock[size]) || 0);
+  }
+
+  return product.sizes?.includes(size) ? 1 : 0;
 }
 
 function TrashIcon() {
@@ -386,8 +399,14 @@ export default function CartPageClient() {
   };
 
   const updateQuantity = (index: number, nextQuantity: number) => {
-    const safeQuantity = Math.max(1, nextQuantity);
     const nextCart = [...cart];
+    const item = nextCart[index];
+    const product = item ? productsMap[item.id] : undefined;
+    const availableQuantity = getAvailableQuantity(product, item?.size);
+    const safeQuantity = Math.max(
+      1,
+      Math.min(nextQuantity, Math.max(availableQuantity, 1))
+    );
 
     nextCart[index] = {
       ...nextCart[index],
@@ -548,6 +567,8 @@ export default function CartPageClient() {
               (item.color ? product?.colorImages?.[item.color] : undefined) ||
               product?.image ||
               "/products/product-1.jpg";
+            const availableQuantity = getAvailableQuantity(product, item.size);
+            const isUnavailable = availableQuantity <= 0;
 
             return (
               <div
@@ -595,8 +616,12 @@ export default function CartPageClient() {
 
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {item.size && (
-                        <span className="rounded-full bg-[#F3F3F3] px-2 py-1 text-[10px] text-gray-600">
-                          Размер: {item.size}
+                        <span className={`rounded-full px-2 py-1 text-[10px] ${
+                          isUnavailable
+                            ? "bg-[#FEE2E2] text-[#B91C1C]"
+                            : "bg-[#F3F3F3] text-gray-600"
+                        }`}>
+                          Размер: {item.size}{isUnavailable ? " нет" : ""}
                         </span>
                       )}
 
@@ -643,6 +668,7 @@ export default function CartPageClient() {
                         <button
                           type="button"
                           onClick={() => updateQuantity(i, quantity + 1)}
+                          disabled={quantity >= availableQuantity}
                           className="flex h-7 w-7 items-center justify-center rounded-full text-[17px] leading-none text-black"
                           aria-label="Увеличить количество"
                         >

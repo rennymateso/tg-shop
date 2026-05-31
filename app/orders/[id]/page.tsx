@@ -209,10 +209,14 @@ export default function OrderDetailsPage() {
         .from("orders")
         .select("*")
         .eq("id", orderId)
-        .eq("customer_id", profile.id)
         .single();
 
-      if (orderError || !orderData) {
+      const loadedOrder = orderData as OrderRow | null;
+      const belongsToCustomer =
+        loadedOrder?.customer_id === profile.id ||
+        (Boolean(profile.phone) && loadedOrder?.phone === profile.phone);
+
+      if (orderError || !loadedOrder || !belongsToCustomer) {
         console.error("Ошибка загрузки заказа:", orderError?.message || "not found");
         setOrder(null);
         setOrderItems([]);
@@ -220,7 +224,7 @@ export default function OrderDetailsPage() {
         return;
       }
 
-      setOrder(orderData as OrderRow);
+      setOrder(loadedOrder);
 
       const { data: itemsData, error: itemsError } = await supabase
         .from("order_items")

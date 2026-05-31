@@ -13,6 +13,7 @@ type ProductRow = {
   description: string;
   article: string;
   sizes: string[] | null;
+  stock: Record<string, number> | null;
   colors: string[] | null;
   composition: string[] | null;
   image: string | null;
@@ -68,6 +69,7 @@ function mapRowToProduct(row: ProductRow): Product {
     category: row.category,
     colors: safeColors,
     sizes: Array.isArray(row.sizes) ? row.sizes : [],
+    stock: row.stock && typeof row.stock === "object" ? row.stock : {},
     composition: Array.isArray(row.composition) ? row.composition : [],
     description: row.description || "",
   };

@@ -59,6 +59,7 @@ type Product = {
   category: string;
   colors: string[];
   sizes: string[];
+  stock: Record<string, number>;
   description: string;
 };
 
@@ -74,6 +75,7 @@ type ProductRow = {
   description: string;
   article: string;
   sizes: string[] | null;
+  stock?: Record<string, number> | null;
   colors: string[] | null;
   image: string | null;
   color_images: Record<string, string[]> | null;
@@ -190,8 +192,19 @@ function mapRowToProduct(row: ProductRow): Product {
     category: row.category,
     colors: Array.isArray(row.colors) ? row.colors : [],
     sizes: Array.isArray(row.sizes) ? row.sizes : [],
+    stock: row.stock && typeof row.stock === "object" ? row.stock : {},
     description: row.description || "",
   };
+}
+
+function getAvailableQuantity(product: Product | undefined, size: string) {
+  if (!product || !size) return 0;
+
+  if (product.stock && Object.prototype.hasOwnProperty.call(product.stock, size)) {
+    return Math.max(0, Number(product.stock[size]) || 0);
+  }
+
+  return product.sizes?.includes(size) ? 1 : 0;
 }
 
 function getDiscountPercent(oldPrice: number, newPrice: number) {
@@ -960,7 +973,27 @@ export default function CheckoutPageClient() {
     items.length > 0 &&
     (deliveryMethod === "pickup" || isDeliveryAddressValid);
 
-  const validationMessage = getValidationMessage({
+  const stockErrors = useMemo(() => {
+    return items
+      .map((item) => {
+        const product = productsMap[item.id];
+        const available = getAvailableQuantity(product, item.size);
+        const quantity = item.quantity || 1;
+
+        if (!product) return "";
+        if (available <= 0) return `${item.name}, размер ${item.size}: нет в наличии`;
+        if (quantity > available) {
+          return `${item.name}, размер ${item.size}: доступно ${available} шт.`;
+        }
+
+        return "";
+      })
+      .filter(Boolean);
+  }, [items, productsMap]);
+
+  const isStockValid = stockErrors.length === 0;
+
+  const baseValidationMessage = getValidationMessage({
     name,
     isPhoneValid,
     itemsCount: items.length,
@@ -969,6 +1002,7 @@ export default function CheckoutPageClient() {
     street,
     house,
   });
+  const validationMessage = baseValidationMessage || stockErrors[0] || "";
 
   useEffect(() => {
     const loadCitySuggestions = async () => {
@@ -1234,8 +1268,11 @@ export default function CheckoutPageClient() {
       const updatedCustomer = await syncTelegramCustomer(phone);
       if (updatedCustomer) {
         setCustomerProfile(updatedCustomer);
+        return updatedCustomer;
       }
     }
+
+    return customerProfile;
   };
 
   const saveAddressIfNeeded = async () => {
@@ -1280,8 +1317,8 @@ export default function CheckoutPageClient() {
   };
 
   const handleCashOrder = async () => {
-    if (!isFormValid) {
-      alert("Заполните все обязательные данные");
+    if (!isFormValid || !isStockValid) {
+      alert(validationMessage || "Проверьте данные заказа");
       return;
     }
 
@@ -1299,10 +1336,10 @@ export default function CheckoutPageClient() {
       setPaymentError("");
       setPaymentCheckMessage("");
 
-      await persistCustomerPhone();
+      const syncedCustomer = await persistCustomerPhone();
 
       await createOrderInSupabase({
-        customerId: customerProfile?.id || null,
+        customerId: syncedCustomer?.id || customerProfile?.id || null,
         customer: name.trim(),
         phone,
         total: finalNewTotal,
@@ -1334,14 +1371,14 @@ export default function CheckoutPageClient() {
     setPaymentError("");
     setPaymentCheckMessage("");
 
-    if (!isFormValid) {
-      alert("Заполните все обязательные данные");
+    if (!isFormValid || !isStockValid) {
+      alert(validationMessage || "Проверьте данные заказа");
       return;
     }
 
     try {
       setIsPaying(true);
-      await persistCustomerPhone();
+      const syncedCustomer = await persistCustomerPhone();
       await saveAddressIfNeeded();
 
       const finalAddress =
@@ -1353,7 +1390,7 @@ export default function CheckoutPageClient() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          customerId: customerProfile?.id || null,
+          customerId: syncedCustomer?.id || customerProfile?.id || null,
           customer: name.trim(),
           phone,
           address: finalAddress,
@@ -1851,7 +1888,7 @@ export default function CheckoutPageClient() {
                 {paymentMethod === "card" ? (
                   <button
                     onClick={handleCardPayment}
-                    disabled={!isFormValid || isPaying}
+                    disabled={!isFormValid || !isStockValid || isPaying}
                     className="w-full rounded-2xl bg-[#16A34A] py-3.5 text-sm font-medium text-white disabled:opacity-60"
                   >
                     {isPaying ? "Переход..." : "Перейти к оплате"}
@@ -1859,7 +1896,7 @@ export default function CheckoutPageClient() {
                 ) : (
                   <button
                     onClick={handleCashOrder}
-                    disabled={!isFormValid || !isCashPaymentAvailable || isPaying}
+                    disabled={!isFormValid || !isStockValid || !isCashPaymentAvailable || isPaying}
                     className="w-full rounded-2xl bg-[#16A34A] py-3.5 text-sm font-medium text-white disabled:opacity-60"
                   >
                     {isPaying ? "Сохраняем..." : "Оформить заказ"}

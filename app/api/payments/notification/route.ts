@@ -5,6 +5,7 @@ import {
   buildOrderIdFromAttemptId,
   decreaseProductStocks,
   sendCustomerPurchaseNotification,
+  sendSellerPurchaseNotification,
   type PaymentAttemptRow,
 } from "../shared";
 
@@ -177,6 +178,20 @@ export async function POST(req: NextRequest) {
             });
           } catch (error) {
             console.error("Telegram purchase notification error:", error);
+          }
+
+          try {
+            await sendSellerPurchaseNotification({
+              botToken: telegramBotToken,
+              orderId: existingOrderId,
+              total: attempt.total,
+              delivery: attempt.delivery,
+              customer: attempt.customer,
+              phone: attempt.phone,
+              items: attempt.items || [],
+            });
+          } catch (error) {
+            console.error("Telegram seller notification error:", error);
           }
         }
       }

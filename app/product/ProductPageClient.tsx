@@ -20,6 +20,7 @@ export type Product = {
   category: "Футболки" | "Поло" | "Джинсы" | "Брюки" | "Костюмы";
   colors: string[];
   sizes: string[];
+  stock: Record<string, number>;
   composition: string[];
   description: string;
 };
@@ -114,11 +115,24 @@ function resolveProductColor(product: Product | null, value: string) {
   return matchedColor || product.defaultColor || product.colors?.[0] || "";
 }
 
+function getAvailableQuantity(product: Product | null, size: string) {
+  if (!product || !size) return 0;
+
+  if (product.stock && Object.prototype.hasOwnProperty.call(product.stock, size)) {
+    return Math.max(0, Number(product.stock[size]) || 0);
+  }
+
+  return product.sizes?.includes(size) ? 1 : 0;
+}
+
 function getDefaultSize(product: Product | null) {
   if (!product) return "S";
 
-  if (product.sizes?.includes("S")) return "S";
-  if (product.sizes?.length) return product.sizes[0];
+  const availableSize = product.sizes?.find(
+    (size) => getAvailableQuantity(product, size) > 0
+  );
+
+  if (availableSize) return availableSize;
 
   return product.type === "bottom" ? "30" : "S";
 }
@@ -241,6 +255,7 @@ export default function ProductPageClient({
   const [articleCopied, setArticleCopied] = useState(false);
   const [openInfoSection, setOpenInfoSection] = useState<"description" | "characteristics" | null>(null);
   const [showSizeTable, setShowSizeTable] = useState(false);
+  const [stockMessage, setStockMessage] = useState("");
 
   const touchStartXRef = useRef<number | null>(null);
   const addedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -410,6 +425,7 @@ export default function ProductPageClient({
   ];
 
   const sizes = product?.type === "bottom" ? bottomSizes : topSizes;
+  const selectedSizeAvailable = getAvailableQuantity(product, selectedSize) > 0;
 
   const article = product ? `ART-${product.id}` : "";
   const description = product?.description || "";
@@ -489,6 +505,13 @@ export default function ProductPageClient({
   const addToCart = () => {
     if (!product || !selectedSize || !selectedColor) return;
 
+    const availableQuantity = getAvailableQuantity(product, selectedSize);
+
+    if (availableQuantity <= 0) {
+      setStockMessage("Этого размера сейчас нет в наличии.");
+      return;
+    }
+
     const existingCart: CartItem[] = JSON.parse(
       localStorage.getItem("cart") || "[]"
     );
@@ -501,6 +524,11 @@ export default function ProductPageClient({
     );
 
     if (existingIndex >= 0) {
+      if (existingCart[existingIndex].quantity >= availableQuantity) {
+        setStockMessage(`В наличии только ${availableQuantity} шт. этого размера.`);
+        return;
+      }
+
       existingCart[existingIndex].quantity += 1;
     } else {
       existingCart.push({
@@ -518,6 +546,7 @@ export default function ProductPageClient({
 
     setCartProductCount(getCartProductCount(product.id));
     setJustAdded(true);
+    setStockMessage("");
     setSelectedSize(getDefaultSize(product));
 
     if (addedTimerRef.current) clearTimeout(addedTimerRef.current);
@@ -789,29 +818,45 @@ export default function ProductPageClient({
               </button>
             </div>
             <div className="grid grid-cols-5 gap-1.5">
-              {sizes.map((s) => (
-                <button
-                  key={s.label}
-                  onClick={() => setSelectedSize(s.label)}
-                  className={`rounded-xl border px-1.5 py-2 text-center transition-all duration-200 active:scale-95 ${
-                    selectedSize === s.label
-                      ? "border-black bg-black text-white"
-                      : "border-gray-200 bg-white text-black"
-                  }`}
-                >
-                  <div className="text-[11px] font-normal">{s.label}</div>
-                  <div
-                    className={`mt-0.5 text-[9px] ${
-                      selectedSize === s.label
-                        ? "text-white/70"
-                        : "text-gray-400"
+              {sizes.map((s) => {
+                const isAvailable = getAvailableQuantity(product, s.label) > 0;
+
+                return (
+                  <button
+                    key={s.label}
+                    disabled={!isAvailable}
+                    onClick={() => {
+                      if (!isAvailable) return;
+                      setSelectedSize(s.label);
+                      setStockMessage("");
+                    }}
+                    className={`rounded-xl border px-1.5 py-2 text-center transition-all duration-200 ${
+                      !isAvailable
+                        ? "cursor-not-allowed border-gray-100 bg-gray-100 text-gray-300"
+                        : selectedSize === s.label
+                        ? "border-black bg-black text-white active:scale-95"
+                        : "border-gray-200 bg-white text-black active:scale-95"
                     }`}
                   >
-                    {s.sub}
-                  </div>
-                </button>
-              ))}
+                    <div className="text-[11px] font-normal">{s.label}</div>
+                    <div
+                      className={`mt-0.5 text-[9px] ${
+                        !isAvailable
+                          ? "text-gray-300"
+                          : selectedSize === s.label
+                          ? "text-white/70"
+                          : "text-gray-400"
+                      }`}
+                    >
+                      {isAvailable ? s.sub : "нет"}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
+            {stockMessage ? (
+              <p className="mt-2 text-[12px] text-[#B45309]">{stockMessage}</p>
+            ) : null}
 
           </div>
 
@@ -975,13 +1020,18 @@ export default function ProductPageClient({
           <div className="mt-5">
             <button
               onClick={addToCart}
+              disabled={!selectedSizeAvailable}
               className={`w-full rounded-2xl py-3.5 text-sm font-normal transition-all duration-200 ${
-                justAdded
+                !selectedSizeAvailable
+                  ? "bg-gray-200 text-gray-400"
+                  : justAdded
                   ? "bg-[#16A34A] text-white"
                   : "bg-black text-white active:scale-[0.99]"
               }`}
             >
-              {justAdded
+              {!selectedSizeAvailable
+                ? "Нет в наличии"
+                : justAdded
                 ? "Добавлено"
                 : cartProductCount > 0
                 ? `Добавить в корзину · ${cartProductCount}`

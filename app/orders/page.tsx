@@ -223,7 +223,26 @@ export default function OrdersPage() {
         return;
       }
 
-      const safeOrders = (data || []) as OrderRow[];
+      let safeOrders = (data || []) as OrderRow[];
+
+      if (profile.phone) {
+        const { data: phoneOrders } = await supabase
+          .from("orders")
+          .select("*")
+          .eq("phone", profile.phone)
+          .order("created_at", { ascending: false });
+
+        const ordersById = new Map<string, OrderRow>();
+        [...safeOrders, ...((phoneOrders || []) as OrderRow[])].forEach((order) => {
+          ordersById.set(order.id, order);
+        });
+        safeOrders = Array.from(ordersById.values()).sort(
+          (a, b) =>
+            new Date(b.created_at || b.updated_at || 0).getTime() -
+            new Date(a.created_at || a.updated_at || 0).getTime()
+        );
+      }
+
       setOrders(safeOrders);
 
       if (safeOrders.length === 0) {
