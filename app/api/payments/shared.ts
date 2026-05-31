@@ -163,6 +163,13 @@ function formatRub(value: number) {
   return new Intl.NumberFormat("ru-RU").format(Math.max(0, Math.round(value)));
 }
 
+function escapeTelegramHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
 function getItemQuantity(item: AttemptItem) {
   return item.quantity && item.quantity > 0 ? item.quantity : 1;
 }
@@ -272,6 +279,8 @@ export async function sendCustomerPurchaseNotification(params: {
   orderId: string;
   total: number;
   delivery: string;
+  payment: string;
+  address: string;
 }) {
   if (!params.botToken || !params.customerId) {
     return;
@@ -287,15 +296,20 @@ export async function sendCustomerPurchaseNotification(params: {
     return;
   }
 
-  const hello = customer.first_name ? `${customer.first_name}, ` : "";
+  const name = customer.first_name?.trim() || "Покупатель";
   const text = [
-    `${hello}заказ оплачен и принят в работу.`,
+    `${name}, благодарим за выбор.`,
     "",
-    `Номер заказа: ${params.orderId}`,
-    `Сумма: ${formatRub(params.total)} ₽`,
-    `Получение: ${params.delivery}`,
+    `Ваш заказ № ${params.orderId} успешно`,
+    "оформлен и принят в работу.",
     "",
-    "Менеджер проверит заказ и свяжется с вами, если нужно уточнить детали.",
+    `Сумма: ${formatRub(params.total)} RUB  |  ${params.delivery}`,
+    "",
+    "Наш специалист проверит детали",
+    "и при необходимости свяжется с вами.",
+    "",
+    "Следить за статусом заказа можно",
+    "в профиле → «Мои заказы».",
   ].join("\n");
 
   await fetch(`https://api.telegram.org/bot${params.botToken}/sendMessage`, {
@@ -317,8 +331,10 @@ export async function sendSellerPurchaseNotification(params: {
   orderId: string;
   total: number;
   delivery: string;
+  payment: string;
   customer: string;
   phone: string;
+  address: string;
   items: AttemptItem[];
 }) {
   const chatIds = (process.env.TELEGRAM_ADMIN_CHAT_ID || "")
@@ -333,22 +349,30 @@ export async function sendSellerPurchaseNotification(params: {
   const itemsText = params.items
     .map((item) => {
       const qty = getItemQuantity(item);
-      const size = item.size ? `, размер ${item.size}` : "";
-      const color = item.color ? `, цвет ${item.color}` : "";
-      return `• ${item.name}${size}${color} × ${qty}`;
+      const name = escapeTelegramHtml(item.name);
+      const size = item.size ? ` / ${escapeTelegramHtml(item.size)}` : "";
+      const color = item.color ? ` / ${escapeTelegramHtml(item.color)}` : "";
+      return `${name}${size}${color} / ${qty} шт.`;
     })
-    .join("\n");
+    .join("\n") || "Товары уточняются";
 
   const text = [
-    "Новый оплаченный заказ",
+    "<b>Есть новый заказ</b>",
     "",
-    `Номер: ${params.orderId}`,
-    `Сумма: ${formatRub(params.total)} ₽`,
-    `Получение: ${params.delivery}`,
-    `Клиент: ${params.customer}`,
-    `Телефон: ${params.phone}`,
-    "",
+    `Продажи идут — вы получили заказ ${escapeTelegramHtml(params.orderId)}. Вот что в нём:`,
+    "·",
     itemsText,
+    "",
+    `Общая сумма заказа — ${formatRub(params.total)} RUB - ${params.payment}`,
+    "",
+    `Покупатель: ${escapeTelegramHtml(params.customer)}`,
+    `Телефон: ${escapeTelegramHtml(params.phone)}`,
+    "",
+    `Способ получения: ${escapeTelegramHtml(params.delivery)}`,
+    "",
+    `Адрес покупателя: ${escapeTelegramHtml(params.address || "не указан")}`,
+    "",
+    "Команда Montreaux",
   ].join("\n");
 
   await Promise.all(
@@ -361,6 +385,7 @@ export async function sendSellerPurchaseNotification(params: {
         body: JSON.stringify({
           chat_id: chatId,
           text,
+          parse_mode: "HTML",
           disable_web_page_preview: true,
         }),
         cache: "no-store",
@@ -469,6 +494,8 @@ export async function finalizeConfirmedPayment(params: {
       orderId: existingOrderId,
       total: params.attempt.total,
       delivery: params.attempt.delivery,
+      payment: "Оплачен картой",
+      address: params.attempt.address,
     });
   } catch (error) {
     console.error("Telegram customer notification error:", error);
@@ -480,6 +507,8 @@ export async function finalizeConfirmedPayment(params: {
       orderId: existingOrderId,
       total: params.attempt.total,
       delivery: params.attempt.delivery,
+      payment: "Оплачен картой",
+      address: params.attempt.address,
       customer: params.attempt.customer,
       phone: params.attempt.phone,
       items: params.attempt.items || [],

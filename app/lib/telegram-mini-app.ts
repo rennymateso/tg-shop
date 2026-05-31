@@ -14,6 +14,8 @@ type TelegramWebApp = {
   ready: () => void;
   expand: () => void;
   initData: string;
+  openLink?: (url: string) => void;
+  openTelegramLink?: (url: string) => void;
   initDataUnsafe?: {
     user?: TelegramMiniAppUser;
   };

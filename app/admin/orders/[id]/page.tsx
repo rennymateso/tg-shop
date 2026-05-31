@@ -489,7 +489,16 @@ export default function AdminOrderDetailsPage() {
           </div>
           <div>
             <p className="text-[12px] text-slate-500">Покупатель</p>
-            <p className="mt-0.5 text-[14px] text-black">{order.customer || "Не указан"}</p>
+            {order.customer_id ? (
+              <Link
+                href={`/admin/customers/${order.customer_id}`}
+                className="mt-0.5 inline-flex text-[14px] font-semibold text-[#0969ff]"
+              >
+                {order.customer || "Не указан"}
+              </Link>
+            ) : (
+              <p className="mt-0.5 text-[14px] text-black">{order.customer || "Не указан"}</p>
+            )}
           </div>
           <div>
             <p className="text-[12px] text-slate-500">Телефон</p>

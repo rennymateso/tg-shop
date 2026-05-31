@@ -105,6 +105,8 @@ type MenuCard = {
   icon: React.ReactNode;
 };
 
+const telegramChannelUrl = "https://t.me/montreauxshop";
+
 export default function ProfilePage() {
   const router = useRouter();
   const [customer, setCustomer] = useState<CustomerProfile | null>(null);
@@ -208,6 +210,22 @@ export default function ProfilePage() {
     } finally {
       setIsRequestingPhone(false);
     }
+  };
+
+  const openTelegramChannel = () => {
+    const webApp = getTelegramWebApp();
+
+    if (webApp?.openTelegramLink) {
+      webApp.openTelegramLink(telegramChannelUrl);
+      return;
+    }
+
+    if (webApp?.openLink) {
+      webApp.openLink(telegramChannelUrl);
+      return;
+    }
+
+    window.location.href = telegramChannelUrl;
   };
 
   return (
@@ -386,7 +404,7 @@ export default function ProfilePage() {
             </button>
 
             <button
-              onClick={() => router.push("/channel")}
+              onClick={openTelegramChannel}
               className="flex w-full items-center gap-3 rounded-[15px] bg-[linear-gradient(135deg,#2EA8F7_0%,#177FE7_100%)] px-4 py-3.5 text-left text-white shadow-[0_14px_34px_rgba(34,158,217,0.24)]"
             >
               <div className="flex h-[32px] w-[32px] shrink-0 items-center justify-center rounded-full bg-white/90 text-[#229ED9]">
