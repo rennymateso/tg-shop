@@ -106,6 +106,7 @@ type MenuCard = {
 };
 
 const telegramChannelUrl = "https://t.me/montreauxshop";
+const telegramSupportUrl = "https://t.me/mntsupport_bot";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -226,6 +227,22 @@ export default function ProfilePage() {
     }
 
     window.location.href = telegramChannelUrl;
+  };
+
+  const openTelegramSupport = () => {
+    const webApp = getTelegramWebApp();
+
+    if (webApp?.openTelegramLink) {
+      webApp.openTelegramLink(telegramSupportUrl);
+      return;
+    }
+
+    if (webApp?.openLink) {
+      webApp.openLink(telegramSupportUrl);
+      return;
+    }
+
+    window.location.href = telegramSupportUrl;
   };
 
   return (
@@ -384,7 +401,7 @@ export default function ProfilePage() {
             ))}
 
             <button
-              onClick={() => router.push("/support")}
+              onClick={openTelegramSupport}
               className="mt-4 flex w-full items-center gap-3 rounded-[15px] bg-[linear-gradient(135deg,#111827_0%,#020617_100%)] px-4 py-3.5 text-left text-white shadow-[0_12px_28px_rgba(2,6,23,0.20)]"
             >
               <div className="shrink-0 text-white">
