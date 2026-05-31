@@ -149,6 +149,28 @@ function generateArticleNumber() {
   return Math.floor(1000000 + Math.random() * 9000000).toString();
 }
 
+function getStockKey(color: string, size: string) {
+  return color ? `${color}::${size}` : size;
+}
+
+function hasColorSpecificStock(stock: Record<string, number>) {
+  return Object.keys(stock || {}).some((key) => key.includes("::"));
+}
+
+function getStockValue(stock: Record<string, number>, color: string, size: string) {
+  const colorKey = getStockKey(color, size);
+
+  if (Object.prototype.hasOwnProperty.call(stock, colorKey)) {
+    return Math.max(0, Number(stock[colorKey]) || 0);
+  }
+
+  if (color && hasColorSpecificStock(stock)) {
+    return 0;
+  }
+
+  return Math.max(0, Number(stock[size]) || 0);
+}
+
 function mapRowToProduct(row: ProductRow): AdminProduct {
   const gender = normalizeGender(row.gender);
 
@@ -279,8 +301,12 @@ export default function AdminEditProductPage() {
 
   const totalStock = useMemo(() => {
     if (!product) return 0;
-    return product.sizes.reduce(
-      (sum, size) => sum + Math.max(0, Number(product.stock[size]) || 0),
+    const entries = Object.entries(product.stock || {});
+    const colorEntries = entries.filter(([key]) => key.includes("::"));
+    const sourceEntries = colorEntries.length > 0 ? colorEntries : entries;
+
+    return sourceEntries.reduce(
+      (sum, [, value]) => sum + Math.max(0, Number(value) || 0),
       0
     );
   }, [product]);
@@ -288,7 +314,10 @@ export default function AdminEditProductPage() {
   const availableSizes = useMemo(() => {
     if (!product) return [];
     return product.sizes.filter(
-      (size) => Math.max(0, Number(product.stock[size]) || 0) > 0
+      (size) =>
+        product.colors.some((color) => getStockValue(product.stock, color, size) > 0) ||
+        (!hasColorSpecificStock(product.stock) &&
+          Math.max(0, Number(product.stock[size]) || 0) > 0)
     );
   }, [product]);
 
@@ -323,12 +352,13 @@ export default function AdminEditProductPage() {
   const updateSizeStock = (size: string, value: string) => {
     if (!product) return;
     const quantity = Math.max(0, Number(value.replace(/\D/g, "")) || 0);
+    const stockKey = getStockKey(activeColor, size);
 
     setProduct({
       ...product,
       stock: {
         ...product.stock,
-        [size]: quantity,
+        [stockKey]: quantity,
       },
     });
   };
@@ -870,7 +900,7 @@ export default function AdminEditProductPage() {
                 >
                   <span className="text-[12px] font-medium">{size}</span>
                   <input
-                    value={product.stock[size] ?? 0}
+                    value={getStockValue(product.stock, activeColor, size)}
                     onChange={(event) => updateSizeStock(size, event.target.value)}
                     inputMode="numeric"
                     className="h-8 w-14 rounded-[10px] bg-white text-center text-[13px] font-medium outline-none"

@@ -90,11 +90,19 @@ function getStockKey(color: string, size: string) {
   return color ? `${color}::${size}` : size;
 }
 
+function hasColorSpecificStock(stock: Record<string, number>) {
+  return Object.keys(stock || {}).some((key) => key.includes("::"));
+}
+
 function getStockValue(stock: Record<string, number>, color: string, size: string) {
   const colorKey = getStockKey(color, size);
 
   if (Object.prototype.hasOwnProperty.call(stock, colorKey)) {
     return Math.max(0, Number(stock[colorKey]) || 0);
+  }
+
+  if (color && hasColorSpecificStock(stock)) {
+    return 0;
   }
 
   return Math.max(0, Number(stock[size]) || 0);

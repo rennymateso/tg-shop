@@ -178,9 +178,9 @@ function getStockKey(color: string | undefined, size: string) {
   return color ? `${color}::${size}` : size;
 }
 
-function hasColorStock(product: ProductStockRow, color: string | undefined) {
-  if (!product.stock || !color) return false;
-  return Object.keys(product.stock).some((key) => key.startsWith(`${color}::`));
+function hasColorSpecificStock(product: ProductStockRow) {
+  if (!product.stock) return false;
+  return Object.keys(product.stock).some((key) => key.includes("::"));
 }
 
 export async function getStockErrors(
@@ -227,7 +227,7 @@ export async function getStockErrors(
       );
       const available = hasStockKey
         ? Math.max(0, Number(product.stock?.[stockKey]) || 0)
-        : color && hasColorStock(product, color)
+        : color && hasColorSpecificStock(product)
           ? 0
           : hasSizeStockKey
             ? Math.max(0, Number(product.stock?.[size]) || 0)

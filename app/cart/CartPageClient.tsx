@@ -131,9 +131,9 @@ function getStockKey(color: string | undefined, size: string) {
   return color ? `${color}::${size}` : size;
 }
 
-function hasColorStock(product: Product | undefined, color: string | undefined) {
-  if (!product?.stock || !color) return false;
-  return Object.keys(product.stock).some((key) => key.startsWith(`${color}::`));
+function hasColorSpecificStock(product: Product | undefined) {
+  if (!product?.stock) return false;
+  return Object.keys(product.stock).some((key) => key.includes("::"));
 }
 
 function getAvailableQuantity(
@@ -149,7 +149,7 @@ function getAvailableQuantity(
     return Math.max(0, Number(product.stock[colorKey]) || 0);
   }
 
-  if (color && hasColorStock(product, color)) {
+  if (color && hasColorSpecificStock(product)) {
     return 0;
   }
 
