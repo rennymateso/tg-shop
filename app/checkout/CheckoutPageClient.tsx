@@ -1458,6 +1458,25 @@ export default function CheckoutPageClient() {
         textarea,
         select {
           font-size: 16px;
+          color: #111827 !important;
+          opacity: 1 !important;
+          -webkit-text-fill-color: #111827 !important;
+          caret-color: #111827;
+        }
+
+        .checkout-onest input::placeholder,
+        .checkout-onest textarea::placeholder {
+          color: #9CA3AF !important;
+          opacity: 1 !important;
+          -webkit-text-fill-color: #9CA3AF !important;
+        }
+
+        .checkout-onest input:disabled,
+        .checkout-onest textarea:disabled,
+        .checkout-onest select:disabled {
+          color: #6B7280 !important;
+          opacity: 1 !important;
+          -webkit-text-fill-color: #6B7280 !important;
         }
 
         .checkout-fixed-page {
