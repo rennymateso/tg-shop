@@ -76,10 +76,28 @@ function formatPrice(value: number) {
 }
 
 function getStockTotal(stock: Record<string, number>) {
-  return Object.values(stock || {}).reduce(
+  const entries = Object.entries(stock || {});
+  const colorEntries = entries.filter(([key]) => key.includes("::"));
+  const sourceEntries = colorEntries.length > 0 ? colorEntries : entries;
+
+  return sourceEntries.reduce(
     (sum, value) => sum + Math.max(0, Number(value) || 0),
     0
   );
+}
+
+function getStockKey(color: string, size: string) {
+  return color ? `${color}::${size}` : size;
+}
+
+function getStockValue(stock: Record<string, number>, color: string, size: string) {
+  const colorKey = getStockKey(color, size);
+
+  if (Object.prototype.hasOwnProperty.call(stock, colorKey)) {
+    return Math.max(0, Number(stock[colorKey]) || 0);
+  }
+
+  return Math.max(0, Number(stock[size]) || 0);
 }
 
 function getBadgeClass(badge: BadgeType) {
@@ -122,6 +140,7 @@ export default function AdminProductsPage() {
   const [message, setMessage] = useState("");
   const [badgeProductId, setBadgeProductId] = useState<string | null>(null);
   const [stockProductId, setStockProductId] = useState<string | null>(null);
+  const [selectedStockColor, setSelectedStockColor] = useState("");
   const [priceProductId, setPriceProductId] = useState<string | null>(null);
   const [priceDraft, setPriceDraft] = useState({ price: "", oldPrice: "" });
   const stockSaveTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
@@ -211,6 +230,15 @@ export default function AdminProductsPage() {
     [priceProductId, products]
   );
 
+  useEffect(() => {
+    if (!stockProduct) {
+      setSelectedStockColor("");
+      return;
+    }
+
+    setSelectedStockColor((current) => current || stockProduct.colors[0] || "");
+  }, [stockProduct]);
+
   const handleDelete = async (id: string) => {
     const confirmed = window.confirm("Удалить товар?");
     if (!confirmed) return;
@@ -269,8 +297,9 @@ export default function AdminProductsPage() {
     }
   };
 
-  const updateStockValue = (id: string, size: string, rawValue: string) => {
+  const updateStockValue = (id: string, color: string, size: string, rawValue: string) => {
     const quantity = Math.max(0, Number(rawValue.replace(/\D/g, "")) || 0);
+    const stockKey = getStockKey(color, size);
     let nextStock: Record<string, number> | null = null;
 
     setProducts((current) =>
@@ -279,7 +308,7 @@ export default function AdminProductsPage() {
 
         nextStock = {
           ...item.stock,
-          [size]: quantity,
+          [stockKey]: quantity,
         };
 
         return {
@@ -290,7 +319,7 @@ export default function AdminProductsPage() {
       })
     );
 
-    const timerKey = `${id}:${size}`;
+    const timerKey = `${id}:${stockKey}`;
     if (stockSaveTimers.current[timerKey]) {
       clearTimeout(stockSaveTimers.current[timerKey]);
     }
@@ -298,9 +327,13 @@ export default function AdminProductsPage() {
     stockSaveTimers.current[timerKey] = setTimeout(async () => {
       if (!nextStock) return;
 
-      const nextSizes = Object.entries(nextStock)
-        .filter(([, value]) => Math.max(0, Number(value) || 0) > 0)
-        .map(([stockSize]) => stockSize);
+      const nextSizes = Array.from(
+        new Set(
+          Object.entries(nextStock)
+            .filter(([, value]) => Math.max(0, Number(value) || 0) > 0)
+            .map(([stockSize]) => stockSize.split("::").pop() || stockSize)
+        )
+      );
 
       const { error } = await supabase
         .from("products")
@@ -663,12 +696,18 @@ export default function AdminProductsPage() {
               {stockProduct.colors.length > 0 ? (
                 <div className="mb-3 flex gap-1.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {stockProduct.colors.map((color) => (
-                    <span
+                    <button
                       key={color}
-                      className="shrink-0 rounded-[10px] bg-[#F4F6FA] px-2.5 py-1.5 text-[11px] font-medium text-[#697386]"
+                      type="button"
+                      onClick={() => setSelectedStockColor(color)}
+                      className={`shrink-0 rounded-[10px] px-2.5 py-1.5 text-[11px] font-medium ${
+                        selectedStockColor === color
+                          ? "bg-[#101114] text-white"
+                          : "bg-[#F4F6FA] text-[#697386]"
+                      }`}
                     >
                       {color}
-                    </span>
+                    </button>
                   ))}
                 </div>
               ) : null}
@@ -678,7 +717,13 @@ export default function AdminProductsPage() {
                   stockProduct.sizes.length > 0
                     ? stockProduct.sizes
                     : Object.keys(stockProduct.stock).length > 0
-                      ? Object.keys(stockProduct.stock)
+                      ? Array.from(
+                          new Set(
+                            Object.keys(stockProduct.stock).map(
+                              (stockSize) => stockSize.split("::").pop() || stockSize
+                            )
+                          )
+                        )
                       : ["OS"]
                 ).map((size) => (
                   <label
@@ -689,9 +734,14 @@ export default function AdminProductsPage() {
                       {size}
                     </span>
                     <input
-                      value={stockProduct.stock[size] ?? 0}
+                      value={getStockValue(stockProduct.stock, selectedStockColor, size)}
                       onChange={(event) =>
-                        updateStockValue(stockProduct.id, size, event.target.value)
+                        updateStockValue(
+                          stockProduct.id,
+                          selectedStockColor,
+                          size,
+                          event.target.value
+                        )
                       }
                       inputMode="numeric"
                       className="h-8 w-14 rounded-[10px] bg-white text-center text-[13px] font-medium outline-none"

@@ -115,8 +115,27 @@ function resolveProductColor(product: Product | null, value: string) {
   return matchedColor || product.defaultColor || product.colors?.[0] || "";
 }
 
-function getAvailableQuantity(product: Product | null, size: string) {
+function getStockKey(color: string, size: string) {
+  return color ? `${color}::${size}` : size;
+}
+
+function hasColorStock(product: Product | null, color: string) {
+  if (!product?.stock || !color) return false;
+  return Object.keys(product.stock).some((key) => key.startsWith(`${color}::`));
+}
+
+function getAvailableQuantity(product: Product | null, size: string, color = "") {
   if (!product || !size) return 0;
+
+  const colorKey = getStockKey(color, size);
+
+  if (color && Object.prototype.hasOwnProperty.call(product.stock, colorKey)) {
+    return Math.max(0, Number(product.stock[colorKey]) || 0);
+  }
+
+  if (color && hasColorStock(product, color)) {
+    return 0;
+  }
 
   if (product.stock && Object.prototype.hasOwnProperty.call(product.stock, size)) {
     return Math.max(0, Number(product.stock[size]) || 0);
@@ -125,11 +144,11 @@ function getAvailableQuantity(product: Product | null, size: string) {
   return product.sizes?.includes(size) ? 1 : 0;
 }
 
-function getDefaultSize(product: Product | null) {
+function getDefaultSize(product: Product | null, color = "") {
   if (!product) return "S";
 
   const availableSize = product.sizes?.find(
-    (size) => getAvailableQuantity(product, size) > 0
+    (size) => getAvailableQuantity(product, size, color) > 0
   );
 
   if (availableSize) return availableSize;
@@ -313,10 +332,18 @@ export default function ProductPageClient({
   useEffect(() => {
     if (!product) return;
 
-    setSelectedSize(getDefaultSize(product));
+    setSelectedSize(getDefaultSize(product, selectedColor));
     setSelectedColor(product.defaultColor || product.colors?.[0] || "");
     setCartProductCount(getCartProductCount(product.id));
   }, [product]);
+
+  useEffect(() => {
+    if (!product || !selectedColor) return;
+
+    if (getAvailableQuantity(product, selectedSize, selectedColor) <= 0) {
+      setSelectedSize(getDefaultSize(product, selectedColor));
+    }
+  }, [product, selectedColor, selectedSize]);
 
   useEffect(() => {
     const syncCartCount = () => {
@@ -425,7 +452,8 @@ export default function ProductPageClient({
   ];
 
   const sizes = product?.type === "bottom" ? bottomSizes : topSizes;
-  const selectedSizeAvailable = getAvailableQuantity(product, selectedSize) > 0;
+  const selectedSizeAvailable =
+    getAvailableQuantity(product, selectedSize, selectedColor) > 0;
 
   const article = product ? `ART-${product.id}` : "";
   const description = product?.description || "";
@@ -505,7 +533,7 @@ export default function ProductPageClient({
   const addToCart = () => {
     if (!product || !selectedSize || !selectedColor) return;
 
-    const availableQuantity = getAvailableQuantity(product, selectedSize);
+    const availableQuantity = getAvailableQuantity(product, selectedSize, selectedColor);
 
     if (availableQuantity <= 0) {
       setStockMessage("Этого размера сейчас нет в наличии.");
@@ -547,7 +575,7 @@ export default function ProductPageClient({
     setCartProductCount(getCartProductCount(product.id));
     setJustAdded(true);
     setStockMessage("");
-    setSelectedSize(getDefaultSize(product));
+    setSelectedSize(getDefaultSize(product, selectedColor));
 
     if (addedTimerRef.current) clearTimeout(addedTimerRef.current);
 
@@ -819,7 +847,7 @@ export default function ProductPageClient({
             </div>
             <div className="grid grid-cols-5 gap-1.5">
               {sizes.map((s) => {
-                const isAvailable = getAvailableQuantity(product, s.label) > 0;
+                const isAvailable = getAvailableQuantity(product, s.label, selectedColor) > 0;
 
                 return (
                   <button

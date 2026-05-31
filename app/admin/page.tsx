@@ -84,6 +84,7 @@ export default function AdminPage() {
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [orderItems, setOrderItems] = useState<OrderItemRow[]>([]);
   const [products, setProducts] = useState<ProductRow[]>([]);
+  const [miniAppVisits, setMiniAppVisits] = useState(0);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [selectedDayIndex, setSelectedDayIndex] = useState(13);
@@ -171,14 +172,31 @@ export default function AdminPage() {
     setLoading(false);
   };
 
+  const loadVisitStats = async () => {
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const { count, error } = await supabase
+      .from("app_events")
+      .select("id", { count: "exact", head: true })
+      .eq("type", "mini_app_visit")
+      .gte("created_at", startOfDay.toISOString());
+
+    if (!error) {
+      setMiniAppVisits(count || 0);
+    }
+  };
+
   useEffect(() => {
     loadDashboard();
+    loadVisitStats();
 
     const channel = supabase
       .channel("admin-home")
       .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, loadDashboard)
       .on("postgres_changes", { event: "*", schema: "public", table: "order_items" }, loadDashboard)
       .on("postgres_changes", { event: "*", schema: "public", table: "products" }, loadDashboard)
+      .on("postgres_changes", { event: "*", schema: "public", table: "app_events" }, loadVisitStats)
       .subscribe();
 
     return () => {
@@ -584,6 +602,10 @@ export default function AdminPage() {
           <Link href="/admin/statistics" className="rounded-[18px] bg-[#f4f6fb] p-3">
             <p className="text-[12px] text-slate-500">Продано штук</p>
             <p className="mt-1 text-[20px] font-semibold text-black">{stats.soldItems}</p>
+          </Link>
+          <Link href="/admin/statistics" className="rounded-[18px] bg-[#f4f6fb] p-3">
+            <p className="text-[12px] text-slate-500">Заходы в mini app</p>
+            <p className="mt-1 text-[20px] font-semibold text-black">{miniAppVisits}</p>
           </Link>
         </div>
       </section>

@@ -127,8 +127,31 @@ function mapRowToProduct(row: ProductRow): Product {
   };
 }
 
-function getAvailableQuantity(product: Product | undefined, size: string | undefined) {
+function getStockKey(color: string | undefined, size: string) {
+  return color ? `${color}::${size}` : size;
+}
+
+function hasColorStock(product: Product | undefined, color: string | undefined) {
+  if (!product?.stock || !color) return false;
+  return Object.keys(product.stock).some((key) => key.startsWith(`${color}::`));
+}
+
+function getAvailableQuantity(
+  product: Product | undefined,
+  size: string | undefined,
+  color?: string
+) {
   if (!product || !size) return 0;
+
+  const colorKey = getStockKey(color, size);
+
+  if (color && Object.prototype.hasOwnProperty.call(product.stock, colorKey)) {
+    return Math.max(0, Number(product.stock[colorKey]) || 0);
+  }
+
+  if (color && hasColorStock(product, color)) {
+    return 0;
+  }
 
   if (product.stock && Object.prototype.hasOwnProperty.call(product.stock, size)) {
     return Math.max(0, Number(product.stock[size]) || 0);
@@ -402,7 +425,7 @@ export default function CartPageClient() {
     const nextCart = [...cart];
     const item = nextCart[index];
     const product = item ? productsMap[item.id] : undefined;
-    const availableQuantity = getAvailableQuantity(product, item?.size);
+    const availableQuantity = getAvailableQuantity(product, item?.size, item?.color);
     const safeQuantity = Math.max(
       1,
       Math.min(nextQuantity, Math.max(availableQuantity, 1))
@@ -567,7 +590,7 @@ export default function CartPageClient() {
               (item.color ? product?.colorImages?.[item.color] : undefined) ||
               product?.image ||
               "/products/product-1.jpg";
-            const availableQuantity = getAvailableQuantity(product, item.size);
+            const availableQuantity = getAvailableQuantity(product, item.size, item.color);
             const isUnavailable = availableQuantity <= 0;
 
             return (

@@ -174,6 +174,15 @@ function getItemQuantity(item: AttemptItem) {
   return item.quantity && item.quantity > 0 ? item.quantity : 1;
 }
 
+function getStockKey(color: string | undefined, size: string) {
+  return color ? `${color}::${size}` : size;
+}
+
+function hasColorStock(product: ProductStockRow, color: string | undefined) {
+  if (!product.stock || !color) return false;
+  return Object.keys(product.stock).some((key) => key.startsWith(`${color}::`));
+}
+
 export async function getStockErrors(
   supabase: SupabaseClient,
   items: AttemptItem[]
@@ -184,9 +193,11 @@ export async function getStockErrors(
     if (!item.id) continue;
 
     const size = item.size?.trim() || "OS";
-    const bySize = grouped.get(item.id) || new Map<string, number>();
-    bySize.set(size, (bySize.get(size) || 0) + getItemQuantity(item));
-    grouped.set(item.id, bySize);
+    const color = item.color?.trim() || "";
+    const stockKey = getStockKey(color, size);
+    const byStockKey = grouped.get(item.id) || new Map<string, number>();
+    byStockKey.set(stockKey, (byStockKey.get(stockKey) || 0) + getItemQuantity(item));
+    grouped.set(item.id, byStockKey);
   }
 
   const errors: string[] = [];
@@ -203,21 +214,34 @@ export async function getStockErrors(
       continue;
     }
 
-    for (const [size, quantity] of bySize.entries()) {
+    for (const [stockKey, quantity] of bySize.entries()) {
+      const [color, sizeFromKey] = stockKey.includes("::")
+        ? stockKey.split("::")
+        : ["", stockKey];
+      const size = sizeFromKey || "OS";
       const hasStockKey = Boolean(
+        product.stock && Object.prototype.hasOwnProperty.call(product.stock, stockKey)
+      );
+      const hasSizeStockKey = Boolean(
         product.stock && Object.prototype.hasOwnProperty.call(product.stock, size)
       );
       const available = hasStockKey
-        ? Math.max(0, Number(product.stock?.[size]) || 0)
-        : product.sizes?.includes(size)
-          ? 1
-          : 0;
+        ? Math.max(0, Number(product.stock?.[stockKey]) || 0)
+        : color && hasColorStock(product, color)
+          ? 0
+          : hasSizeStockKey
+            ? Math.max(0, Number(product.stock?.[size]) || 0)
+            : product.sizes?.includes(size)
+              ? 1
+              : 0;
 
       if (available <= 0) {
-        errors.push(`${product.name || productId}, размер ${size}: нет в наличии`);
+        errors.push(
+          `${product.name || productId}, размер ${size}${color ? `, цвет ${color}` : ""}: нет в наличии`
+        );
       } else if (quantity > available) {
         errors.push(
-          `${product.name || productId}, размер ${size}: доступно ${available} шт.`
+          `${product.name || productId}, размер ${size}${color ? `, цвет ${color}` : ""}: доступно ${available} шт.`
         );
       }
     }
@@ -236,9 +260,11 @@ export async function decreaseProductStocks(
     if (!item.id) continue;
 
     const size = item.size?.trim() || "OS";
-    const bySize = grouped.get(item.id) || new Map<string, number>();
-    bySize.set(size, (bySize.get(size) || 0) + getItemQuantity(item));
-    grouped.set(item.id, bySize);
+    const color = item.color?.trim() || "";
+    const stockKey = getStockKey(color, size);
+    const byStockKey = grouped.get(item.id) || new Map<string, number>();
+    byStockKey.set(stockKey, (byStockKey.get(stockKey) || 0) + getItemQuantity(item));
+    grouped.set(item.id, byStockKey);
   }
 
   for (const [productId, bySize] of grouped.entries()) {
@@ -252,14 +278,25 @@ export async function decreaseProductStocks(
 
     const nextStock = { ...(product.stock || {}) };
 
-    for (const [size, quantity] of bySize.entries()) {
-      const current = Math.max(0, Number(nextStock[size]) || 0);
-      nextStock[size] = Math.max(0, current - quantity);
+    for (const [stockKey, quantity] of bySize.entries()) {
+      const [, sizeFromKey] = stockKey.includes("::")
+        ? stockKey.split("::")
+        : ["", stockKey];
+      const size = sizeFromKey || "OS";
+      const targetKey = Object.prototype.hasOwnProperty.call(nextStock, stockKey)
+        ? stockKey
+        : size;
+      const current = Math.max(0, Number(nextStock[targetKey]) || 0);
+      nextStock[targetKey] = Math.max(0, current - quantity);
     }
 
-    const nextSizes = Object.entries(nextStock)
-      .filter(([, value]) => Math.max(0, Number(value) || 0) > 0)
-      .map(([size]) => size);
+    const nextSizes = Array.from(
+      new Set(
+        Object.entries(nextStock)
+          .filter(([, value]) => Math.max(0, Number(value) || 0) > 0)
+          .map(([size]) => size.split("::").pop() || size)
+      )
+    );
 
     await supabase
       .from("products")

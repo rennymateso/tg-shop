@@ -242,6 +242,15 @@ export default function HomePageClient({
     const tg = getTelegramWebApp();
     tg?.ready();
     tg?.expand();
+
+    const visitKey = "montreaux_mini_app_visit_sent";
+    if (!sessionStorage.getItem(visitKey)) {
+      sessionStorage.setItem(visitKey, "1");
+      fetch("/api/analytics/visit", {
+        method: "POST",
+        cache: "no-store",
+      }).catch(() => {});
+    }
   }, []);
 
   useEffect(() => {

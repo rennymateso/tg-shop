@@ -197,8 +197,27 @@ function mapRowToProduct(row: ProductRow): Product {
   };
 }
 
-function getAvailableQuantity(product: Product | undefined, size: string) {
+function getStockKey(color: string | undefined, size: string) {
+  return color ? `${color}::${size}` : size;
+}
+
+function hasColorStock(product: Product | undefined, color: string | undefined) {
+  if (!product?.stock || !color) return false;
+  return Object.keys(product.stock).some((key) => key.startsWith(`${color}::`));
+}
+
+function getAvailableQuantity(product: Product | undefined, size: string, color?: string) {
   if (!product || !size) return 0;
+
+  const colorKey = getStockKey(color, size);
+
+  if (color && Object.prototype.hasOwnProperty.call(product.stock, colorKey)) {
+    return Math.max(0, Number(product.stock[colorKey]) || 0);
+  }
+
+  if (color && hasColorStock(product, color)) {
+    return 0;
+  }
 
   if (product.stock && Object.prototype.hasOwnProperty.call(product.stock, size)) {
     return Math.max(0, Number(product.stock[size]) || 0);
@@ -969,7 +988,7 @@ export default function CheckoutPageClient() {
     return items
       .map((item) => {
         const product = productsMap[item.id];
-        const available = getAvailableQuantity(product, item.size);
+        const available = getAvailableQuantity(product, item.size, item.color);
         const quantity = item.quantity || 1;
 
         if (!product) return "";
