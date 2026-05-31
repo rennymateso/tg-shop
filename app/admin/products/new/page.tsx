@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowLeft, Check, ChevronLeft, ChevronRight, RotateCcw, X } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { uploadProductImage } from "../../../lib/upload-product-image";
 
@@ -59,6 +61,8 @@ const badgeOptions: BadgeType[] = [
   "Из-за рубежа",
 ];
 
+const statusOptions: ProductStatus[] = ["Активен", "Скрыт"];
+
 const compositionOptions = [
   "Хлопок",
   "Вискоза",
@@ -71,8 +75,6 @@ const compositionOptions = [
   "Акрил",
   "Нейлон",
 ] as const;
-
-const statusOptions: ProductStatus[] = ["Активен", "Скрыт"];
 
 const sizeOptions = [
   "S",
@@ -121,6 +123,7 @@ function createProductId() {
 export default function AdminNewProductPage() {
   const router = useRouter();
 
+  const [draftProductId, setDraftProductId] = useState(createProductId);
   const [brands, setBrands] = useState<BrandRow[]>([]);
   const [brandsLoading, setBrandsLoading] = useState(true);
 
@@ -176,27 +179,15 @@ export default function AdminNewProductPage() {
 
   useEffect(() => {
     const options =
-      gender === "Мужская одежда"
-        ? mensCategoryOptions
-        : womensCategoryOptions;
+      gender === "Мужская одежда" ? mensCategoryOptions : womensCategoryOptions;
 
     if (!options.includes(category)) {
       setCategory(options[0]);
     }
   }, [gender, category]);
 
-  const discountPercent = useMemo(() => {
-    const p = Number(price);
-    const o = Number(oldPrice);
-    if (!p || !o || o <= p) return 0;
-    return Math.round(((o - p) / o) * 100);
-  }, [price, oldPrice]);
-
   const categoryOptions = useMemo(
-    () =>
-      gender === "Мужская одежда"
-        ? mensCategoryOptions
-        : womensCategoryOptions,
+    () => (gender === "Мужская одежда" ? mensCategoryOptions : womensCategoryOptions),
     [gender]
   );
 
@@ -224,16 +215,8 @@ export default function AdminNewProductPage() {
       (color) => colorImages[color]?.length
     );
 
-    if (firstColorWithImages) {
-      return colorImages[firstColorWithImages][0];
-    }
-
-    return "";
+    return firstColorWithImages ? colorImages[firstColorWithImages][0] : "";
   }, [activeColor, colorImages, selectedColors]);
-
-  const totalImagesCount = useMemo(() => {
-    return Object.values(colorImages).reduce((sum, arr) => sum + arr.length, 0);
-  }, [colorImages]);
 
   const toggleSize = (value: string) => {
     setSelectedSizes((prev) => {
@@ -260,11 +243,7 @@ export default function AdminNewProductPage() {
 
   const updateSizeStock = (size: string, value: string) => {
     const quantity = Math.max(0, Number(value.replace(/\D/g, "")) || 0);
-
-    setStockBySize((prev) => ({
-      ...prev,
-      [size]: quantity,
-    }));
+    setStockBySize((prev) => ({ ...prev, [size]: quantity }));
   };
 
   const toggleColor = (value: string) => {
@@ -274,8 +253,18 @@ export default function AdminNewProductPage() {
         ? prev.filter((item) => item !== value)
         : [...prev, value];
 
-      if (!exists && !activeColor) setActiveColor(value);
-      if (exists && activeColor === value) setActiveColor(next[0] || "");
+      if (!exists) {
+        setActiveColor(value);
+      } else if (activeColor === value) {
+        setActiveColor(next[0] || "");
+      }
+
+      setColorImages((current) => {
+        if (!exists) return current;
+        const updated = { ...current };
+        delete updated[value];
+        return updated;
+      });
 
       return next;
     });
@@ -283,18 +272,12 @@ export default function AdminNewProductPage() {
 
   const toggleComposition = (value: string) => {
     setSelectedComposition((prev) =>
-      prev.includes(value)
-        ? prev.filter((item) => item !== value)
-        : [...prev, value]
+      prev.includes(value) ? prev.filter((item) => item !== value) : [...prev, value]
     );
   };
 
-  const fillArticle = () => {
-    setArticle(makeArticle());
-  };
-
   const handleColorImagesUpload = async (color: string, files: FileList | null) => {
-    if (!files || files.length === 0) return;
+    if (!color || !files || files.length === 0) return;
 
     const current = colorImages[color] || [];
     const freeSlots = 6 - current.length;
@@ -308,13 +291,11 @@ export default function AdminNewProductPage() {
       setIsUploadingImages(true);
       setMessage("");
 
-      const tempProductId = article.trim() || makeArticle() || createProductId();
-
       const pickedFiles = Array.from(files).slice(0, freeSlots);
       const uploadedUrls: string[] = [];
 
       for (const file of pickedFiles) {
-        const publicUrl = await uploadProductImage(file, tempProductId, color);
+        const publicUrl = await uploadProductImage(file, draftProductId, color);
         uploadedUrls.push(publicUrl);
       }
 
@@ -323,14 +304,14 @@ export default function AdminNewProductPage() {
         [color]: [...(prev[color] || []), ...uploadedUrls],
       }));
 
-      setActiveColor(color);
-
       if (files.length > freeSlots) {
         setMessage(`Для цвета ${color} добавили только первые 6 фото`);
       }
     } catch (error) {
       setMessage(
-        error instanceof Error ? `Ошибка загрузки фото: ${error.message}` : "Ошибка загрузки фото"
+        error instanceof Error
+          ? `Ошибка загрузки фото: ${error.message}`
+          : "Ошибка загрузки фото"
       );
     } finally {
       setIsUploadingImages(false);
@@ -340,7 +321,7 @@ export default function AdminNewProductPage() {
   const removeColorImage = (color: string, index: number) => {
     setColorImages((prev) => ({
       ...prev,
-      [color]: (prev[color] || []).filter((_, i) => i !== index),
+      [color]: (prev[color] || []).filter((_, itemIndex) => itemIndex !== index),
     }));
   };
 
@@ -371,6 +352,10 @@ export default function AdminNewProductPage() {
       [arr[index + 1], arr[index]] = [arr[index], arr[index + 1]];
       return { ...prev, [color]: arr };
     });
+  };
+
+  const fillArticle = () => {
+    setArticle(makeArticle());
   };
 
   const handleSave = async () => {
@@ -410,7 +395,7 @@ export default function AdminNewProductPage() {
     }
 
     if (totalStock <= 0 || availableSizes.length === 0) {
-      setMessage("Укажите количество хотя бы для одного размера. Товар без остатков не попадёт в магазин.");
+      setMessage("Укажите количество хотя бы для одного размера");
       return;
     }
 
@@ -419,7 +404,7 @@ export default function AdminNewProductPage() {
     );
 
     if (!hasImages) {
-      setMessage("Добавьте хотя бы одно фото хотя бы для одного цвета");
+      setMessage("Добавьте хотя бы одно фото");
       return;
     }
 
@@ -427,14 +412,14 @@ export default function AdminNewProductPage() {
       setIsSaving(true);
       setMessage("");
 
+      const finalArticle = article || makeArticle();
       const now = new Date().toISOString();
-      const finalArticle = article.trim() || makeArticle();
-      const finalId = createProductId();
+      const productId = draftProductId;
 
       const { error } = await supabase.from("products").insert({
-        id: finalId,
+        id: productId,
         name: name.trim(),
-        brand: brand.trim(),
+        brand,
         gender,
         category,
         country: country.trim(),
@@ -460,17 +445,16 @@ export default function AdminNewProductPage() {
         return;
       }
 
-      router.push("/admin/products");
+      router.push(`/admin/products/${productId}`);
       router.refresh();
     } catch (error) {
-      setMessage(
-        error instanceof Error ? error.message : "Не удалось сохранить товар"
-      );
+      setMessage(error instanceof Error ? error.message : "Не удалось сохранить товар");
       setIsSaving(false);
     }
   };
 
   const handleClear = () => {
+    setDraftProductId(createProductId());
     setName("");
     setBrand(brands[0]?.name || "");
     setGender("Мужская одежда");
@@ -488,547 +472,425 @@ export default function AdminNewProductPage() {
     setSelectedComposition([]);
     setActiveColor("");
     setColorImages({});
-    setMessage("Форма очищена.");
+    setMessage("");
   };
 
+  const inputClass =
+    "mt-1.5 h-10 w-full rounded-[13px] bg-[#F4F6FA] px-3 text-[14px] outline-none";
+  const labelClass = "text-[11px] font-medium text-[#697386]";
+  const cardClass = "rounded-[22px] bg-white p-4 shadow-sm";
+
   return (
-    <>
-      <div className="mb-6">
-        <div>
-          <p className="text-sm text-gray-500">Админ-панель</p>
-          <h1 className="text-2xl font-semibold text-black">Добавить товар</h1>
-        </div>
-      </div>
-
-      {message && (
-        <div className="mb-6 rounded-[24px] bg-white p-4 text-sm text-black shadow-sm">
-          {message}
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_280px]">
-        <section className="space-y-6">
-          <div className="rounded-[28px] bg-white p-5 shadow-sm">
-            <div className="mb-4 flex flex-col gap-3 sm:flex-row">
-              <button className="rounded-2xl bg-white px-5 py-3 text-sm font-medium text-gray-700 shadow-sm">
-                Сохранить как черновик
-              </button>
-
-              <button
-                onClick={handleClear}
-                className="rounded-2xl bg-red-50 px-5 py-3 text-sm font-medium text-red-600"
-              >
-                Очистить
-              </button>
-            </div>
-
-            <h2 className="text-lg font-medium text-black">Основная информация</h2>
-
-            <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="md:col-span-2">
-                <label className="mb-2 block text-sm text-gray-500">Название товара</label>
-                <input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Например: Поло Premium"
-                  className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm text-gray-500">Бренд</label>
-                <select
-                  value={brand}
-                  onChange={(e) => setBrand(e.target.value)}
-                  disabled={brandsLoading || brands.length === 0}
-                  className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none disabled:opacity-60"
-                >
-                  {brands.length === 0 ? (
-                    <option value="">
-                      {brandsLoading ? "Загрузка брендов..." : "Нет брендов"}
-                    </option>
-                  ) : (
-                    brands.map((item) => (
-                      <option key={item.id} value={item.name}>
-                        {item.name}
-                      </option>
-                    ))
-                  )}
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm text-gray-500">Раздел</label>
-                <select
-                  value={gender}
-                  onChange={(e) => setGender(e.target.value as ProductGender)}
-                  className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-                >
-                  {genderOptions.map((item) => (
-                    <option key={item}>{item}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm text-gray-500">Категория</label>
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value as ProductCategory)}
-                  className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-                >
-                  {categoryOptions.map((item) => (
-                    <option key={item}>{item}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm text-gray-500">Страна изготовления</label>
-                <input
-                  value={country}
-                  onChange={(e) => setCountry(e.target.value)}
-                  placeholder="Например: Турция"
-                  className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm text-gray-500">Цена</label>
-                <input
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                  placeholder="3500"
-                  className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm text-gray-500">Старая цена</label>
-                <input
-                  value={oldPrice}
-                  onChange={(e) => setOldPrice(e.target.value)}
-                  placeholder="4500"
-                  className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm text-gray-500">Бейдж</label>
-                <select
-                  value={badge}
-                  onChange={(e) => setBadge(e.target.value as BadgeType)}
-                  className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-                >
-                  {badgeOptions.map((item) => (
-                    <option key={item}>{item}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm text-gray-500">Статус</label>
-                <select
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value as ProductStatus)}
-                  className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-                >
-                  {statusOptions.map((item) => (
-                    <option key={item}>{item}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm text-gray-500">Артикул / короткий код</label>
-                <div className="flex gap-2">
-                  <input
-                    value={article}
-                    onChange={(e) => setArticle(e.target.value.replace(/\D/g, "").slice(0, 7))}
-                    placeholder="1234567"
-                    className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={fillArticle}
-                    className="shrink-0 rounded-2xl bg-black px-4 text-sm text-white"
-                  >
-                    Сгенерировать
-                  </button>
-                </div>
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="mb-2 block text-sm text-gray-500">Описание</label>
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Введите подробное описание товара"
-                  rows={5}
-                  className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-[28px] bg-white p-5 shadow-sm">
-            <h2 className="text-lg font-medium text-black">Размеры и количество</h2>
-            <p className="mt-1 text-sm text-gray-500">
-              Товар появится в магазине только если у размера указано количество больше 0.
+    <main className="mx-auto max-w-[480px] pb-28 text-[#101114]">
+      <header className="sticky top-0 z-20 -mx-2 mb-3 bg-[#F3F4F8]/95 px-2 py-2 backdrop-blur">
+        <div className="flex items-center justify-between gap-2 rounded-[20px] bg-white px-3 py-3 shadow-sm">
+          <Link
+            href="/admin/products"
+            className="flex h-9 w-9 items-center justify-center rounded-[12px] bg-[#F4F6FA] text-[#7F8997]"
+            aria-label="Назад"
+          >
+            <ArrowLeft size={18} />
+          </Link>
+          <div className="min-w-0 flex-1 text-center">
+            <h1 className="truncate text-[18px] font-semibold">Добавить товар</h1>
+            <p className="mt-0.5 truncate text-[11px] text-[#8A94A3]">
+              Новый товар
             </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleClear}
+            className="flex h-9 w-9 items-center justify-center rounded-[12px] bg-[#F4F6FA] text-[#7F8997]"
+            aria-label="Очистить"
+          >
+            <RotateCcw size={17} />
+          </button>
+        </div>
+      </header>
 
-            <div className="mt-4 flex flex-wrap gap-2">
-              {sizeOptions.map((size) => {
-                const active = selectedSizes.includes(size);
-                return (
-                  <button
-                    key={size}
-                    type="button"
-                    onClick={() => toggleSize(size)}
-                    className={`rounded-2xl px-4 py-2 text-sm transition ${
-                      active ? "bg-black text-white" : "bg-[#F5F5F5] text-gray-700"
-                    }`}
-                  >
-                    {size}
-                  </button>
-                );
-              })}
+      <div className="space-y-3">
+        {message ? (
+          <div className="rounded-[16px] bg-white px-3 py-2 text-[12px] text-[#101114] shadow-sm">
+            {message}
+          </div>
+        ) : null}
+
+        <section className={cardClass}>
+          <div className="flex gap-3">
+            <div className="h-[86px] w-[86px] shrink-0 overflow-hidden rounded-[18px] bg-[#F4F6FA]">
+              {previewImage ? (
+                <img
+                  src={previewImage}
+                  alt={name || "Товар"}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-center text-[11px] text-[#8A94A3]">
+                  Фото
+                </div>
+              )}
             </div>
 
-            {selectedSizes.length > 0 && (
-              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {selectedSizes.map((size) => (
-                  <div
-                    key={size}
-                    className="flex items-center justify-between gap-3 rounded-2xl bg-[#F5F5F5] p-3"
-                  >
-                    <div>
-                      <p className="text-sm font-medium text-black">Размер {size}</p>
-                      <p className="text-xs text-gray-500">Остаток, шт.</p>
-                    </div>
+            <div className="min-w-0 flex-1">
+              <label className={labelClass}>Название</label>
+              <input
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                className={inputClass}
+                placeholder="Название товара"
+              />
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <label>
+                  <span className={labelClass}>Цена</span>
+                  <input
+                    value={price}
+                    onChange={(event) =>
+                      setPrice(event.target.value.replace(/\D/g, ""))
+                    }
+                    inputMode="numeric"
+                    className={inputClass}
+                    placeholder="0"
+                  />
+                </label>
+                <label>
+                  <span className={labelClass}>Старая</span>
+                  <input
+                    value={oldPrice}
+                    onChange={(event) =>
+                      setOldPrice(event.target.value.replace(/\D/g, ""))
+                    }
+                    inputMode="numeric"
+                    className={inputClass}
+                    placeholder="0"
+                  />
+                </label>
+              </div>
+            </div>
+          </div>
+        </section>
 
-                    <input
-                      value={stockBySize[size] ?? 0}
-                      onChange={(e) => updateSizeStock(size, e.target.value)}
-                      inputMode="numeric"
-                      className="w-[88px] rounded-xl bg-white p-2.5 text-center text-sm outline-none"
-                    />
-                  </div>
+        <section className={cardClass}>
+          <h2 className="text-[16px] font-semibold">Основное</h2>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <label>
+              <span className={labelClass}>Бренд</span>
+              <select
+                value={brand}
+                onChange={(event) => setBrand(event.target.value)}
+                disabled={brandsLoading || brands.length === 0}
+                className={inputClass}
+              >
+                {brands.length === 0 ? (
+                  <option value="">
+                    {brandsLoading ? "Загрузка..." : "Нет брендов"}
+                  </option>
+                ) : (
+                  brands.map((item) => (
+                    <option key={item.id} value={item.name}>
+                      {item.name}
+                    </option>
+                  ))
+                )}
+              </select>
+            </label>
+
+            <label>
+              <span className={labelClass}>Статус</span>
+              <select
+                value={status}
+                onChange={(event) => setStatus(event.target.value as ProductStatus)}
+                className={inputClass}
+              >
+                {statusOptions.map((item) => (
+                  <option key={item}>{item}</option>
                 ))}
+              </select>
+            </label>
+
+            <label>
+              <span className={labelClass}>Раздел</span>
+              <select
+                value={gender}
+                onChange={(event) => setGender(event.target.value as ProductGender)}
+                className={inputClass}
+              >
+                {genderOptions.map((item) => (
+                  <option key={item}>{item}</option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              <span className={labelClass}>Категория</span>
+              <select
+                value={category}
+                onChange={(event) => setCategory(event.target.value as ProductCategory)}
+                className={inputClass}
+              >
+                {categoryOptions.map((item) => (
+                  <option key={item}>{item}</option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              <span className={labelClass}>Страна</span>
+              <input
+                value={country}
+                onChange={(event) => setCountry(event.target.value)}
+                className={inputClass}
+                placeholder="Турция"
+              />
+            </label>
+
+            <label>
+              <span className={labelClass}>Артикул</span>
+              <div className="mt-1.5 flex gap-1.5">
+                <input
+                  value={article}
+                  onChange={(event) =>
+                    setArticle(event.target.value.replace(/\D/g, "").slice(0, 7))
+                  }
+                  inputMode="numeric"
+                  className="h-10 min-w-0 flex-1 rounded-[13px] bg-[#F4F6FA] px-3 text-[14px] outline-none"
+                  placeholder="1234567"
+                />
+                <button
+                  type="button"
+                  onClick={fillArticle}
+                  className="h-10 rounded-[13px] bg-[#101114] px-2.5 text-[11px] font-medium text-white"
+                >
+                  Авто
+                </button>
               </div>
-            )}
-
-            <div className="mt-4 rounded-2xl bg-[#F7F7F7] p-3 text-sm text-gray-600">
-              Общий остаток: <span className="font-medium text-black">{totalStock} шт.</span>
-            </div>
+            </label>
           </div>
 
-          <div className="rounded-[28px] bg-white p-5 shadow-sm">
-            <h2 className="text-lg font-medium text-black">Состав</h2>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {compositionOptions.map((item) => {
-                const active = selectedComposition.includes(item);
-                return (
-                  <button
-                    key={item}
-                    type="button"
-                    onClick={() => toggleComposition(item)}
-                    className={`rounded-2xl px-4 py-2 text-sm transition ${
-                      active ? "bg-black text-white" : "bg-[#F5F5F5] text-gray-700"
+          <label className="mt-2 block">
+            <span className={labelClass}>Бейдж</span>
+            <select
+              value={badge}
+              onChange={(event) => setBadge(event.target.value as BadgeType)}
+              className={inputClass}
+            >
+              {badgeOptions.map((item) => (
+                <option key={item}>{item}</option>
+              ))}
+            </select>
+          </label>
+
+          <label className="mt-2 block">
+            <span className={labelClass}>Описание</span>
+            <textarea
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              rows={4}
+              className="mt-1.5 w-full resize-none rounded-[13px] bg-[#F4F6FA] px-3 py-2 text-[14px] outline-none"
+              placeholder="Описание товара"
+            />
+          </label>
+        </section>
+
+        <section className={cardClass}>
+          <div className="flex items-center justify-between">
+            <h2 className="text-[16px] font-semibold">Размеры</h2>
+            <span className="rounded-[10px] bg-[#F4F6FA] px-2 py-1 text-[11px] text-[#697386]">
+              {totalStock} шт
+            </span>
+          </div>
+
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {sizeOptions.map((size) => {
+              const active = selectedSizes.includes(size);
+              return (
+                <button
+                  key={size}
+                  type="button"
+                  onClick={() => toggleSize(size)}
+                  className={`h-8 min-w-10 rounded-[11px] px-2 text-[12px] font-medium ${
+                    active ? "bg-[#101114] text-white" : "bg-[#F4F6FA] text-[#697386]"
+                  }`}
+                >
+                  {size}
+                </button>
+              );
+            })}
+          </div>
+
+          {selectedSizes.length > 0 ? (
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {selectedSizes.map((size) => (
+                <label
+                  key={size}
+                  className="flex h-10 items-center justify-between rounded-[13px] bg-[#F4F6FA] px-3"
+                >
+                  <span className="text-[12px] font-medium">{size}</span>
+                  <input
+                    value={stockBySize[size] ?? 0}
+                    onChange={(event) => updateSizeStock(size, event.target.value)}
+                    inputMode="numeric"
+                    className="h-8 w-14 rounded-[10px] bg-white text-center text-[13px] font-medium outline-none"
+                  />
+                </label>
+              ))}
+            </div>
+          ) : null}
+        </section>
+
+        <section className={cardClass}>
+          <h2 className="text-[16px] font-semibold">Состав</h2>
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {compositionOptions.map((item) => {
+              const active = selectedComposition.includes(item);
+              return (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => toggleComposition(item)}
+                  className={`h-8 rounded-[11px] px-2.5 text-[12px] font-medium ${
+                    active ? "bg-[#101114] text-white" : "bg-[#F4F6FA] text-[#697386]"
+                  }`}
+                >
+                  {item}
+                </button>
+              );
+            })}
+          </div>
+        </section>
+
+        <section className={cardClass}>
+          <h2 className="text-[16px] font-semibold">Цвета и фото</h2>
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {colorOptions.map((color) => {
+              const active = selectedColors.includes(color);
+              return (
+                <button
+                  key={color}
+                  type="button"
+                  onClick={() => toggleColor(color)}
+                  className={`flex h-8 items-center gap-1.5 rounded-[11px] px-2 text-[12px] font-medium ${
+                    active ? "bg-[#101114] text-white" : "bg-[#F4F6FA] text-[#697386]"
+                  }`}
+                >
+                  <span
+                    className={`h-3.5 w-3.5 rounded-full ${
+                      color === "Белый" ? "border border-[#CBD5E1]" : ""
                     }`}
-                  >
-                    {item}
-                  </button>
-                );
-              })}
-            </div>
+                    style={{ backgroundColor: colorSwatches[color] || "#E5E7EB" }}
+                  />
+                  {color}
+                </button>
+              );
+            })}
           </div>
 
-          <div className="rounded-[28px] bg-white p-5 shadow-sm">
-            <h2 className="text-lg font-medium text-black">Цвета</h2>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {colorOptions.map((color) => {
-                const active = selectedColors.includes(color);
-                return (
-                  <button
-                    key={color}
-                    type="button"
-                    onClick={() => toggleColor(color)}
-                    className={`flex items-center gap-2 rounded-2xl px-4 py-2 text-sm transition ${
-                      active ? "bg-black text-white" : "bg-[#F5F5F5] text-gray-700"
-                    }`}
-                  >
-                    <span
-                      className={`block h-4 w-4 rounded-full ${
-                        color === "Белый" ? "border border-gray-300" : ""
-                      }`}
-                      style={{ backgroundColor: colorSwatches[color] || "#E5E7EB" }}
-                    />
-                    {color}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="rounded-[28px] bg-white p-5 shadow-sm">
-            <div className="mb-4 flex flex-col gap-3">
-              <div>
-                <h2 className="text-lg font-medium text-black">Фото по цвету</h2>
-                <p className="mt-1 text-sm text-gray-500">
-                  Выбери цвет и загрузи до 6 фото именно для него.
-                </p>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
+          {selectedColors.length > 0 ? (
+            <>
+              <div className="mt-3 flex gap-1.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {selectedColors.map((color) => (
                   <button
                     key={color}
                     type="button"
                     onClick={() => setActiveColor(color)}
-                    className={`flex items-center gap-2 rounded-2xl px-4 py-2 text-sm ${
+                    className={`shrink-0 rounded-[11px] px-3 py-2 text-[12px] font-medium ${
                       activeColor === color
-                        ? "bg-black text-white"
-                        : "bg-[#F5F5F5] text-gray-700"
+                        ? "bg-[#101114] text-white"
+                        : "bg-[#F4F6FA] text-[#697386]"
                     }`}
                   >
-                    <span
-                      className={`block h-4 w-4 rounded-full ${
-                        color === "Белый" ? "border border-gray-300" : ""
-                      }`}
-                      style={{ backgroundColor: colorSwatches[color] || "#E5E7EB" }}
-                    />
                     {color}
                   </button>
                 ))}
               </div>
-            </div>
 
-            {!activeColor ? (
-              <div className="rounded-2xl bg-[#F7F7F7] p-5 text-sm text-gray-500">
-                Выбери цвет выше, чтобы загружать фото именно для него.
-              </div>
-            ) : (
-              <>
-                <div className="mb-4 flex items-center justify-between">
-                  <p className="text-sm font-medium text-black">Цвет: {activeColor}</p>
-                  <span className="text-sm text-gray-500">
-                    {activeImages.length}/6 фото
-                  </span>
-                </div>
+              {activeColor ? (
+                <div className="mt-2">
+                  <label className="block rounded-[14px] bg-[#F4F6FA] px-3 py-3 text-center text-[12px] font-medium text-[#101114]">
+                    {isUploadingImages ? "Загружаем..." : `Загрузить фото: ${activeColor}`}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={(event) =>
+                        handleColorImagesUpload(activeColor, event.target.files)
+                      }
+                      className="hidden"
+                    />
+                  </label>
 
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={(e) => handleColorImagesUpload(activeColor, e.target.files)}
-                  className="block w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none file:mr-4 file:rounded-xl file:border-0 file:bg-black file:px-4 file:py-2 file:text-sm file:text-white"
-                />
-
-                {isUploadingImages && (
-                  <p className="mt-3 text-sm text-gray-500">Загружаем фото...</p>
-                )}
-
-                {activeImages.length > 0 && (
-                  <div className="mt-4 space-y-3">
-                    <div className="overflow-hidden rounded-2xl bg-[#F7F7F7] p-2">
-                      <div className="relative">
-                        <img
-                          src={activeImages[0]}
-                          alt={`${activeColor} главное`}
-                          className="h-[180px] w-full rounded-xl object-cover"
-                        />
-                        <span className="absolute left-2 top-2 rounded-full bg-black px-2 py-1 text-[10px] text-white">
-                          Главное
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => removeColorImage(activeColor, 0)}
-                          className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-white text-sm text-black shadow"
+                  {activeImages.length > 0 ? (
+                    <div className="mt-3 grid grid-cols-3 gap-2">
+                      {activeImages.map((url, index) => (
+                        <div
+                          key={`${url}-${index}`}
+                          className="overflow-hidden rounded-[14px] bg-[#F4F6FA]"
                         >
-                          ✕
-                        </button>
-                      </div>
-                    </div>
-
-                    {activeImages.length > 1 && (
-                      <div className="grid grid-cols-2 gap-2">
-                        {activeImages.slice(1).map((img, idx) => {
-                          const realIndex = idx + 1;
-
-                          return (
-                            <div
-                              key={`${activeColor}-${img}-${realIndex}`}
-                              className="overflow-hidden rounded-2xl bg-[#F7F7F7] p-2"
+                          <img
+                            src={url}
+                            alt={`${activeColor} ${index + 1}`}
+                            className="h-[96px] w-full object-cover"
+                          />
+                          <div className="grid grid-cols-4 gap-px bg-[#E8ECF2]">
+                            <button
+                              type="button"
+                              onClick={() => moveImageLeft(activeColor, index)}
+                              className="flex h-7 items-center justify-center bg-white text-[#697386]"
+                              aria-label="Влево"
                             >
-                              <div className="relative">
-                                <img
-                                  src={img}
-                                  alt={`${activeColor} ${realIndex + 1}`}
-                                  className="h-[96px] w-full rounded-xl object-cover"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => removeColorImage(activeColor, realIndex)}
-                                  className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-white text-[10px] text-black shadow"
-                                >
-                                  ✕
-                                </button>
-                              </div>
-
-                              <div className="mt-2 grid grid-cols-3 gap-1">
-                                <button
-                                  type="button"
-                                  onClick={() => makeMainImage(activeColor, realIndex)}
-                                  className="rounded-lg bg-black px-2 py-1.5 text-[10px] text-white"
-                                >
-                                  Главная
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={() => moveImageLeft(activeColor, realIndex)}
-                                  className="rounded-lg bg-white px-2 py-1.5 text-[10px] text-black"
-                                >
-                                  ←
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={() => moveImageRight(activeColor, realIndex)}
-                                  className="rounded-lg bg-white px-2 py-1.5 text-[10px] text-black"
-                                >
-                                  →
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-
-          <div className="rounded-[28px] bg-white p-5 shadow-sm">
-            <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-              <button
-                onClick={handleClear}
-                className="rounded-2xl bg-red-50 px-5 py-3 text-sm font-medium text-red-600"
-              >
-                Очистить
-              </button>
-
-              <button
-                onClick={handleSave}
-                disabled={isSaving || isUploadingImages || brandsLoading}
-                className="rounded-2xl bg-black px-5 py-3 text-sm font-medium text-white disabled:opacity-60"
-              >
-                {isSaving ? "Сохраняем..." : "Сохранить товар"}
-              </button>
-            </div>
-          </div>
-        </section>
-
-        <aside className="space-y-6">
-          <div className="rounded-[24px] bg-white p-4 shadow-sm">
-            <h2 className="text-base font-medium text-black">Предпросмотр</h2>
-
-            <div className="mt-3 overflow-hidden rounded-[18px] border border-black/5 bg-[#FAFAFA]">
-              <div className="mx-auto aspect-[3/4] max-w-[180px] bg-[#ECECEC]">
-                {previewImage ? (
-                  <img
-                    src={previewImage}
-                    alt="Предпросмотр товара"
-                    className="h-full w-full object-cover"
-                  />
-                ) : null}
-              </div>
-
-              <div className="p-3">
-                <p className="text-[10px] uppercase tracking-[0.14em] text-gray-400">
-                  {brand || "Бренд"}
-                </p>
-
-                <h3 className="mt-2 text-[15px] font-medium text-black">
-                  {name || "Название товара"}
-                </h3>
-
-                <div className="mt-2 flex items-start justify-between gap-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    {oldPrice && (
-                      <span className="text-xs text-gray-400 line-through">
-                        {oldPrice} ₽
-                      </span>
-                    )}
-
-                    <span className="text-[16px] font-semibold text-[#16A34A]">
-                      {price || "0"} ₽
-                    </span>
-
-                    {discountPercent > 0 && (
-                      <span className="rounded-full bg-[#E8F7EE] px-2 py-0.5 text-[10px] text-[#16A34A]">
-                        -{discountPercent}%
-                      </span>
-                    )}
-                  </div>
-
-                  {badge !== "Без бейджа" && (
-                    <span
-                      className={`rounded-full px-2 py-1 text-[10px] ${
-                        badge === "Из-за рубежа"
-                          ? "bg-black text-white"
-                          : "bg-[#F5F5F5] text-gray-700"
-                      }`}
-                    >
-                      {badge}
-                    </span>
+                              <ChevronLeft size={14} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => moveImageRight(activeColor, index)}
+                              className="flex h-7 items-center justify-center bg-white text-[#697386]"
+                              aria-label="Вправо"
+                            >
+                              <ChevronRight size={14} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => makeMainImage(activeColor, index)}
+                              className="flex h-7 items-center justify-center bg-white text-[#15803D]"
+                              aria-label="Главное"
+                            >
+                              <Check size={14} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => removeColorImage(activeColor, index)}
+                              className="flex h-7 items-center justify-center bg-white text-[#E11D48]"
+                              aria-label="Удалить фото"
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-[12px] text-[#8A94A3]">
+                      Для выбранного цвета пока нет фото.
+                    </p>
                   )}
                 </div>
-
-                {selectedComposition.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {selectedComposition.map((item) => (
-                      <span
-                        key={item}
-                        className="rounded-full bg-[#F5F5F5] px-2 py-1 text-[10px] text-gray-700"
-                      >
-                        {item}
-                      </span>
-                    ))}
-                  </div>
-                )}
-
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <span
-                    className={`rounded-full px-2 py-1 text-[10px] ${
-                      status === "Активен"
-                        ? "bg-emerald-100 text-emerald-700"
-                        : "bg-gray-100 text-gray-500"
-                    }`}
-                  >
-                    {status}
-                  </span>
-                </div>
-
-                <div className="mt-3 space-y-1.5 text-xs text-gray-600">
-                  <p>Артикул: {article || "1234567"}</p>
-                  <p>Раздел: {gender}</p>
-                  <p>Страна: {country || "Не указана"}</p>
-                  <p>Размеров с остатком: {availableSizes.length}</p>
-                  <p>Остаток: {totalStock} шт.</p>
-                  <p>Размеров выбрано: {selectedSizes.length}</p>
-                  <p>Цветов: {selectedColors.length}</p>
-                  <p>Состав: {selectedComposition.length}</p>
-                  <p>Фото: {totalImagesCount}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </aside>
+              ) : null}
+            </>
+          ) : null}
+        </section>
       </div>
-    </>
+
+      <div className="fixed inset-x-0 bottom-[70px] z-[90] px-3">
+        <div className="mx-auto flex max-w-[480px] gap-2 rounded-[20px] bg-white p-2 shadow-[0_-10px_30px_rgba(15,23,42,.12)]">
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={isSaving || brandsLoading || isUploadingImages}
+            className="h-11 flex-1 rounded-[15px] bg-[#101114] text-[14px] font-medium text-white disabled:opacity-60"
+          >
+            {isSaving ? "Сохраняем..." : "Создать товар"}
+          </button>
+        </div>
+      </div>
+    </main>
   );
 }

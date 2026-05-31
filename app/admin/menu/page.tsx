@@ -2,92 +2,57 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import {
+  BadgePercent,
+  BarChart3,
+  Boxes,
+  ChevronRight,
+  ClipboardList,
+  Grid3X3,
+  Image,
+  LogOut,
+  Package,
+  Plus,
+  Search,
+  Settings,
+  Tags,
+  Warehouse,
+} from "lucide-react";
 
-const menuSections = [
+const quickItems = [
+  { href: "/admin/products/new", label: "Добавить товар", icon: Plus },
+  { href: "/admin/orders", label: "Заказы", icon: ClipboardList },
+  { href: "/admin/products", label: "Товары", icon: Package },
+  { href: "/admin/statistics", label: "Аналитика", icon: BarChart3 },
+  { href: "/admin/stocks", label: "Остатки", icon: Boxes },
+  { href: "/admin/badges", label: "Бейджи", icon: Tags },
+] as const;
+
+const sections = [
   {
-    title: "Товары",
+    title: "Продажи и товары",
     items: [
-      {
-        href: "/admin/products/new",
-        title: "Добавить товар",
-        subtitle: "Создание карточки, фото, размеры, остатки",
-        icon: "+",
-      },
-      {
-        href: "/admin/products",
-        title: "Каталог товаров",
-        subtitle: "Редактирование, цены, статусы",
-        icon: "◫",
-      },
-      {
-        href: "/admin/stocks",
-        title: "Остатки",
-        subtitle: "Контроль количества по размерам",
-        icon: "≣",
-      },
-      {
-        href: "/admin/warehouses",
-        title: "Склады",
-        subtitle: "Места хранения и наличие",
-        icon: "▤",
-      },
-    ],
-  },
-  {
-    title: "Продажи",
-    items: [
-      {
-        href: "/admin/orders",
-        title: "Заказы",
-        subtitle: "Сборка, доставка, статусы",
-        icon: "◎",
-      },
-      {
-        href: "/admin/statistics",
-        title: "Статистика",
-        subtitle: "Выручка, заказы, активность Mini App",
-        icon: "◔",
-      },
-      {
-        href: "/admin/promocodes",
-        title: "Промокоды",
-        subtitle: "Скидки и акции",
-        icon: "%",
-      },
+      { href: "/admin/orders", title: "Заказы", icon: ClipboardList },
+      { href: "/admin/products", title: "Каталог товаров", icon: Package },
+      { href: "/admin/products/new", title: "Создать товар", icon: Plus },
+      { href: "/admin/stocks", title: "Остатки", icon: Boxes },
     ],
   },
   {
     title: "Витрина",
     items: [
-      {
-        href: "/admin/banners",
-        title: "Баннеры",
-        subtitle: "Главная страница и акции",
-        icon: "▭",
-      },
-      {
-        href: "/admin/brands",
-        title: "Бренды",
-        subtitle: "Список брендов магазина",
-        icon: "◆",
-      },
-      {
-        href: "/admin/badges",
-        title: "Бейджи",
-        subtitle: "В наличии, новинка, скидка",
-        icon: "🏷",
-      },
+      { href: "/admin/banners", title: "Баннеры", icon: Image },
+      { href: "/admin/brands", title: "Бренды", icon: BadgePercent },
+      { href: "/admin/badges", title: "Бейджи", icon: Tags },
+      { href: "/admin/promocodes", title: "Промокоды", icon: BadgePercent },
     ],
   },
   {
-    title: "Система",
+    title: "Управление",
     items: [
-      {
-        href: "/admin/settings",
-        title: "Настройки",
-        subtitle: "Основные параметры магазина",
-        icon: "⚙",
-      },
+      { href: "/admin/statistics", title: "Финансы и статистика", icon: BarChart3 },
+      { href: "/admin/warehouses", title: "Склады", icon: Warehouse },
+      { href: "/admin/settings", title: "Настройки", icon: Settings },
     ],
   },
 ] as const;
@@ -96,76 +61,91 @@ export default function AdminMenuPage() {
   const router = useRouter();
 
   const handleLogout = async () => {
-    await fetch("/api/admin-logout", {
-      method: "POST",
-    });
-
+    await fetch("/api/admin-logout", { method: "POST" });
     router.push("/admin/login");
     router.refresh();
   };
 
   return (
     <>
-      <div className="mb-5">
-        <div className="rounded-[28px] bg-white p-5 shadow-sm">
-          <p className="text-sm text-gray-500">Seller panel</p>
-          <h1 className="mt-1 text-[24px] font-semibold tracking-[-0.04em] text-black">
-            Меню
-          </h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Все инструменты управления магазином
-          </p>
-        </div>
-      </div>
-
-      <div className="space-y-5">
-        {menuSections.map((section) => (
-          <section key={section.title} className="rounded-[28px] bg-white p-5 shadow-sm">
-            <h2 className="text-lg font-semibold tracking-[-0.03em] text-black">
-              {section.title}
-            </h2>
-
-            <div className="mt-4 space-y-2">
-              {section.items.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="flex items-center gap-3 rounded-[22px] bg-[#F7F7F7] p-4 transition active:scale-[0.99]"
-                >
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-base text-black shadow-sm">
-                    {item.icon}
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-black">
-                      {item.title}
-                    </p>
-                    <p className="mt-1 line-clamp-2 text-xs leading-4 text-gray-500">
-                      {item.subtitle}
-                    </p>
-                  </div>
-
-                  <span className="shrink-0 text-gray-300">›</span>
-                </Link>
-              ))}
+      <header className="mb-2 rounded-[22px] bg-white p-3 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-[16px] bg-black text-[11px] font-semibold text-white">
+            M
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <h1 className="truncate text-[19px] font-semibold text-black">
+                MONTREAUX
+              </h1>
             </div>
-          </section>
-        ))}
-
-        <section className="rounded-[28px] bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-semibold tracking-[-0.03em] text-black">
-            Аккаунт
-          </h2>
-
+            <p className="mt-0.5 truncate text-[12px] text-slate-400">Админ-панель магазина</p>
+          </div>
           <button
             type="button"
             onClick={handleLogout}
-            className="mt-4 w-full rounded-[22px] bg-red-50 p-4 text-left text-sm font-semibold text-red-600"
+            className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#f4f6fb] text-slate-500"
+            aria-label="Выйти"
           >
-            Выйти из админ-панели
+            <LogOut size={19} />
           </button>
+        </div>
+
+        <div className="mt-3 flex items-center gap-2 rounded-[16px] bg-[#f4f6fb] px-3 py-2.5">
+          <Search size={19} className="shrink-0 text-slate-400" />
+          <span className="text-[13px] text-slate-400">Искать в админке</span>
+          <Grid3X3 size={19} className="ml-auto shrink-0 text-slate-400" />
+        </div>
+      </header>
+
+      <section className="mb-2 rounded-[22px] bg-white p-3 shadow-sm">
+        <div className="grid grid-cols-3 gap-x-3 gap-y-4">
+          {quickItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Link key={item.href} href={item.href} className="text-center">
+                <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-[18px] bg-[#f4f6fb] text-black">
+                  <Icon size={22} />
+                </span>
+                <span className="mt-1.5 block text-[12px] font-medium leading-4 text-black">
+                  {item.label}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+      </section>
+
+      {sections.map((section) => (
+        <section key={section.title} className="mb-2 rounded-[22px] bg-white p-3 shadow-sm">
+          <h2 className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+            {section.title}
+          </h2>
+
+          <div>
+            {section.items.map((item, index) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex items-center gap-3 py-2.5 ${
+                    index > 0 ? "border-t border-slate-100" : ""
+                  }`}
+                >
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#f4f6fb] text-slate-400">
+                    <Icon size={18} />
+                  </span>
+                  <span className="min-w-0 flex-1 text-[14px] font-medium text-black">
+                    {item.title}
+                  </span>
+                  <ChevronRight size={18} className="shrink-0 text-slate-300" />
+                </Link>
+              );
+            })}
+          </div>
         </section>
-      </div>
+      ))}
     </>
   );
 }

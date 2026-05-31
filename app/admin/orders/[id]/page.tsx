@@ -3,6 +3,12 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import {
+  ArrowLeft,
+  Copy,
+  MoreHorizontal,
+  PackageOpen,
+} from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 
 type OrderStatus =
@@ -43,6 +49,13 @@ type OrderItemRow = {
   price: number;
 };
 
+type ProductRow = {
+  id: string;
+  image: string | null;
+  color_images: Record<string, string[]> | null;
+  badge: string | null;
+};
+
 const statusOptions: OrderStatus[] = [
   "Новый",
   "Оплачен",
@@ -55,49 +68,69 @@ const statusOptions: OrderStatus[] = [
   "Отменен",
 ];
 
-function getStatusClasses(status: OrderStatus) {
-  switch (status) {
-    case "Новый":
-      return "bg-[#F3F4F6] text-gray-700";
-    case "Оплачен":
-      return "bg-[#E8F7EE] text-[#15803D]";
-    case "В обработке":
-      return "bg-[#FEF3C7] text-[#B45309]";
-    case "Частично готов":
-      return "bg-[#FFF7ED] text-[#C2410C]";
-    case "В пути из-за рубежа":
-      return "bg-[#E0E7FF] text-[#4338CA]";
-    case "Собран":
-      return "bg-[#DBEAFE] text-[#1D4ED8]";
-    case "В доставке":
-      return "bg-[#EDE9FE] text-[#6D28D9]";
-    case "Доставлен":
-      return "bg-[#DCFCE7] text-[#166534]";
-    case "Отменен":
-      return "bg-[#FEE2E2] text-[#B91C1C]";
-    default:
-      return "bg-[#F3F4F6] text-gray-700";
-  }
-}
-
-function formatDate(value?: string) {
-  if (!value) return "Дата не указана";
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) return "Дата не указана";
-
-  return new Intl.DateTimeFormat("ru-RU", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
-}
-
 function formatPrice(value: number) {
   return Number(value || 0).toLocaleString("ru-RU");
+}
+
+function compactOrderId(id: string) {
+  return id.replace("ORD-", "");
+}
+
+function formatDate(value?: string, options?: Intl.DateTimeFormatOptions) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  return date.toLocaleDateString("ru-RU", options || { day: "numeric", month: "long" });
+}
+
+function formatDateTime(value?: string) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  return date.toLocaleString("ru-RU", {
+    day: "numeric",
+    month: "long",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function addDays(value: string | undefined, days: number) {
+  const date = value ? new Date(value) : new Date();
+  if (Number.isNaN(date.getTime())) return "";
+
+  date.setDate(date.getDate() + days);
+  return date.toISOString();
+}
+
+function getStatusPill(status: OrderStatus) {
+  if (["Собран", "Частично готов", "В пути из-за рубежа"].includes(status)) {
+    return { label: "Готов к отгрузке", className: "bg-[#d9fbf8] text-[#00a8a0]", dot: true };
+  }
+  if (status === "В доставке") {
+    return { label: "Доставляется", className: "bg-[#f1edff] text-[#6d5bd0]", dot: false };
+  }
+  if (status === "Доставлен") {
+    return { label: "Доставлен", className: "bg-[#dcfce7] text-[#15803d]", dot: false };
+  }
+  if (status === "Отменен") {
+    return { label: "Отменён", className: "bg-[#f4f6fb] text-slate-500", dot: false };
+  }
+
+  return { label: "Ожидает сборки", className: "bg-[#f4f6fb] text-slate-600", dot: false };
+}
+
+function getFirstProductImage(product?: ProductRow, color?: string | null) {
+  if (!product) return "";
+  const colorImages = color ? product.color_images?.[color] || [] : [];
+  return colorImages[0] || product.image || "";
+}
+
+function getCity(address: string) {
+  if (!address) return "Казань";
+  return address.split(",")[0]?.trim() || "Казань";
 }
 
 export default function AdminOrderDetailsPage() {
@@ -107,23 +140,10 @@ export default function AdminOrderDetailsPage() {
 
   const [order, setOrder] = useState<OrderRow | null>(null);
   const [items, setItems] = useState<OrderItemRow[]>([]);
+  const [productsMap, setProductsMap] = useState<Record<string, ProductRow>>({});
   const [loading, setLoading] = useState(true);
   const [savingStatus, setSavingStatus] = useState(false);
   const [message, setMessage] = useState("");
-
-  useEffect(() => {
-    const viewport = document.querySelector('meta[name="viewport"]');
-    const previousContent = viewport?.getAttribute("content") || "";
-
-    viewport?.setAttribute(
-      "content",
-      "width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover"
-    );
-
-    return () => {
-      if (viewport) viewport.setAttribute("content", previousContent);
-    };
-  }, []);
 
   const loadOrder = async () => {
     if (!id) {
@@ -134,15 +154,12 @@ export default function AdminOrderDetailsPage() {
     setLoading(true);
     setMessage("");
 
-    const { data, error } = await supabase
-      .from("orders")
-      .select("*")
-      .eq("id", id)
-      .single();
+    const { data, error } = await supabase.from("orders").select("*").eq("id", id).single();
 
     if (error || !data) {
       setOrder(null);
       setItems([]);
+      setProductsMap({});
       setMessage(error?.message || "Заказ не найден");
       setLoading(false);
       return;
@@ -153,11 +170,30 @@ export default function AdminOrderDetailsPage() {
       .select("*")
       .eq("order_id", id);
 
+    const safeItems = itemsError ? [] : ((itemsData || []) as OrderItemRow[]);
+    setItems(safeItems);
+
     if (itemsError) {
       setMessage(`Ошибка загрузки товаров заказа: ${itemsError.message}`);
-      setItems([]);
+    }
+
+    const productIds = Array.from(
+      new Set(safeItems.map((item) => item.product_id).filter(Boolean) as string[])
+    );
+
+    if (productIds.length > 0) {
+      const { data: productsData } = await supabase
+        .from("products")
+        .select("id,image,color_images,badge")
+        .in("id", productIds);
+
+      const nextProductsMap: Record<string, ProductRow> = {};
+      ((productsData || []) as ProductRow[]).forEach((product) => {
+        nextProductsMap[product.id] = product;
+      });
+      setProductsMap(nextProductsMap);
     } else {
-      setItems((itemsData || []) as OrderItemRow[]);
+      setProductsMap({});
     }
 
     setOrder(data as OrderRow);
@@ -166,6 +202,17 @@ export default function AdminOrderDetailsPage() {
 
   useEffect(() => {
     loadOrder();
+
+    const channel = supabase
+      .channel(`admin-order-${id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, loadOrder)
+      .on("postgres_changes", { event: "*", schema: "public", table: "order_items" }, loadOrder)
+      .on("postgres_changes", { event: "*", schema: "public", table: "products" }, loadOrder)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [id]);
 
   const itemsCount = useMemo(() => {
@@ -179,47 +226,42 @@ export default function AdminOrderDetailsPage() {
     );
   }, [items]);
 
+  const hasForeignItems = useMemo(() => {
+    return items.some((item) => {
+      const badge = item.product_id ? productsMap[item.product_id]?.badge : "";
+      return badge?.trim().toLowerCase() === "из-за рубежа";
+    });
+  }, [items, productsMap]);
+
   const updateStatus = async (status: OrderStatus) => {
     if (!order) return;
 
-    try {
-      setSavingStatus(true);
-      setMessage("");
+    setSavingStatus(true);
+    setMessage("");
 
-      const now = new Date().toISOString();
+    const now = new Date().toISOString();
+    const { error } = await supabase
+      .from("orders")
+      .update({ status, updated_at: now })
+      .eq("id", order.id);
 
-      const { error } = await supabase
-        .from("orders")
-        .update({
-          status,
-          updated_at: now,
-        })
-        .eq("id", order.id);
-
-      if (error) {
-        setMessage(`Ошибка обновления статуса: ${error.message}`);
-        setSavingStatus(false);
-        return;
-      }
-
-      setOrder({
-        ...order,
-        status,
-        updated_at: now,
-      });
-
+    if (error) {
+      setMessage(`Ошибка обновления статуса: ${error.message}`);
       setSavingStatus(false);
-    } catch (error) {
-      setMessage(
-        error instanceof Error ? error.message : "Не удалось обновить статус"
-      );
-      setSavingStatus(false);
+      return;
     }
+
+    setOrder({ ...order, status, updated_at: now });
+    setSavingStatus(false);
+  };
+
+  const copyOrderId = async () => {
+    await navigator.clipboard?.writeText(order?.id || "");
   };
 
   if (loading) {
     return (
-      <div className="rounded-[24px] bg-white p-6 text-sm text-gray-500 shadow-sm">
+      <div className="rounded-[20px] bg-white p-6 text-[13px] text-slate-500 shadow-sm">
         Загрузка заказа...
       </div>
     );
@@ -227,264 +269,202 @@ export default function AdminOrderDetailsPage() {
 
   if (!order) {
     return (
-      <div className="rounded-[24px] bg-white p-6 text-sm text-gray-500 shadow-sm">
+      <div className="rounded-[20px] bg-white p-6 text-[13px] text-slate-500 shadow-sm">
         Заказ не найден
       </div>
     );
   }
 
+  const statusPill = getStatusPill(order.status);
+  const deliveryDeadline = addDays(order.created_at, 1);
+  const promisedDeliveryFrom = addDays(order.created_at, hasForeignItems ? 7 : 1);
+  const promisedDeliveryTo = addDays(order.created_at, hasForeignItems ? 14 : 3);
+
   return (
     <>
       <style>{`
-        input,
-        textarea,
-        select {
-          font-size: 16px;
+        .order-details-title {
+          font-size: 17px !important;
+          line-height: 1.05 !important;
+          font-weight: 650 !important;
+          letter-spacing: 0 !important;
         }
       `}</style>
 
-      <div className="mb-5">
-        <div className="rounded-[28px] bg-white p-5 shadow-sm">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-sm text-gray-500">Заказ</p>
-              <h1 className="mt-1 truncate text-[22px] font-semibold tracking-[-0.04em] text-black">
-                {order.id}
-              </h1>
-              <p className="mt-1 text-xs text-gray-400">
-                Создан: {formatDate(order.created_at)}
-              </p>
-            </div>
-
-            <span
-              className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium ${getStatusClasses(
-                order.status
-              )}`}
-            >
-              {order.status}
-            </span>
+      <header className="sticky top-0 z-30 -mx-2 mb-2 border-b border-slate-100 bg-white px-2 py-2">
+        <div className="grid grid-cols-[36px_1fr_36px] items-center gap-2">
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="flex h-9 w-9 items-center justify-center text-slate-400"
+            aria-label="Назад"
+          >
+            <ArrowLeft size={24} />
+          </button>
+          <div className="min-w-0 text-center">
+            <h1 className="order-details-title text-black">Детали отправления</h1>
+            <p className="mt-0.5 truncate text-[12px] text-slate-400">{order.id}</p>
           </div>
-
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            <div className="rounded-2xl bg-[#F7F7F7] p-3">
-              <p className="text-[11px] text-gray-400">Сумма</p>
-              <p className="mt-1 text-lg font-semibold text-black">
-                {formatPrice(order.total)} ₽
-              </p>
-            </div>
-
-            <div className="rounded-2xl bg-[#F7F7F7] p-3">
-              <p className="text-[11px] text-gray-400">Товаров</p>
-              <p className="mt-1 text-lg font-semibold text-black">
-                {itemsCount}
-              </p>
-            </div>
-          </div>
+          <button
+            type="button"
+            className="flex h-9 w-9 items-center justify-center text-slate-400"
+            aria-label="Действия"
+          >
+            <MoreHorizontal size={22} />
+          </button>
         </div>
-      </div>
+      </header>
 
       {message && (
-        <div className="mb-4 rounded-[22px] bg-white p-4 text-sm text-black shadow-sm">
+        <div className="mb-3 rounded-[16px] bg-white p-3 text-[12px] text-red-600 shadow-sm">
           {message}
         </div>
       )}
 
-      <section className="mb-4 rounded-[28px] bg-white p-5 shadow-sm">
-        <h2 className="text-lg font-semibold tracking-[-0.03em] text-black">
-          Управление заказом
-        </h2>
-
-        <div className="mt-4 grid grid-cols-3 gap-2">
-          <button
-            type="button"
-            onClick={() => updateStatus("В обработке")}
-            disabled={savingStatus}
-            className="rounded-2xl bg-[#F7F7F7] px-3 py-3 text-xs font-medium text-gray-700 disabled:opacity-60"
-          >
-            Собрать
-          </button>
-
-          <button
-            type="button"
-            onClick={() => updateStatus("Собран")}
-            disabled={savingStatus}
-            className="rounded-2xl bg-[#F7F7F7] px-3 py-3 text-xs font-medium text-gray-700 disabled:opacity-60"
-          >
-            Собран
-          </button>
-
-          <button
-            type="button"
-            onClick={() => updateStatus("В доставке")}
-            disabled={savingStatus}
-            className="rounded-2xl bg-[#F7F7F7] px-3 py-3 text-xs font-medium text-gray-700 disabled:opacity-60"
-          >
-            Отправить
-          </button>
-        </div>
-
-        <div className="mt-3 grid grid-cols-[1fr_auto] gap-2">
-          <select
-            value={order.status}
-            onChange={(e) => updateStatus(e.target.value as OrderStatus)}
-            disabled={savingStatus}
-            className="w-full rounded-2xl border border-black/5 bg-[#F7F7F7] px-3 py-3 text-sm outline-none disabled:opacity-60"
-          >
-            {statusOptions.map((status) => (
-              <option key={status}>{status}</option>
-            ))}
-          </select>
-
-          <button
-            type="button"
-            onClick={() => updateStatus("Доставлен")}
-            disabled={savingStatus}
-            className="rounded-2xl bg-[#E8F7EE] px-4 py-3 text-sm font-medium text-[#15803D] disabled:opacity-60"
-          >
-            Доставлен
-          </button>
+      <section className="mb-2 px-1">
+        <div className="mb-2 flex flex-wrap items-center gap-1.5">
+          <span className={`rounded-lg px-2.5 py-1 text-[12px] font-semibold ${statusPill.className}`}>
+            {statusPill.dot && <span className="mr-1.5">•</span>}
+            {statusPill.label}
+          </span>
+          <span className="rounded-lg bg-white px-2.5 py-1 text-[12px] font-semibold text-slate-500">
+            {formatDate(order.created_at)}
+          </span>
         </div>
       </section>
 
-      <section className="mb-4 rounded-[28px] bg-white p-5 shadow-sm">
-        <h2 className="text-lg font-semibold tracking-[-0.03em] text-black">
-          Клиент
-        </h2>
-
-        <div className="mt-4 space-y-3">
-          <div className="rounded-2xl bg-[#F7F7F7] p-4">
-            <p className="text-xs text-gray-400">Имя</p>
-            <p className="mt-1 text-sm font-medium text-black">
-              {order.customer || "Не указано"}
-            </p>
+      <section className="mb-2 bg-white px-3 py-3 shadow-sm">
+        <div className="space-y-2 text-[13px]">
+          <div className="grid grid-cols-[1fr_auto] gap-3">
+            <span className="text-black">Принят в обработку</span>
+            <span className="text-right text-black">{formatDateTime(order.created_at)}</span>
           </div>
-
-          <div className="rounded-2xl bg-[#F7F7F7] p-4">
-            <p className="text-xs text-gray-400">Телефон</p>
-            <p className="mt-1 text-sm font-medium text-black">
-              {order.phone || "Не указан"}
-            </p>
+          <div className="grid grid-cols-[1fr_auto] gap-3">
+            <span className="text-black">Обещанная дата доставки</span>
+            <span className="text-right text-black">
+              {formatDate(promisedDeliveryFrom)} - {formatDate(promisedDeliveryTo)}
+            </span>
           </div>
+        </div>
 
-          <div className="rounded-2xl bg-[#F7F7F7] p-4">
-            <p className="text-xs text-gray-400">Адрес</p>
-            <p className="mt-1 text-sm font-medium leading-5 text-black">
-              {order.address || "Адрес не указан"}
-            </p>
+        <div className="mt-3 border-t border-slate-100 pt-3">
+          <div className="grid grid-cols-[72px_1fr] gap-y-2 text-[13px]">
+            <span className="text-slate-500">Склад</span>
+            <span className="text-black">{getCity(order.address)}</span>
+            <span className="text-slate-500">Служба</span>
+            <span className="text-black">{order.delivery || "Самовывоз"}</span>
+            <span className="text-slate-500">Метод</span>
+            <span className="text-black">{order.delivery || "Самовывоз"}, {getCity(order.address)}</span>
           </div>
-
-          {order.comment && (
-            <div className="rounded-2xl bg-[#FFF7ED] p-4">
-              <p className="text-xs text-orange-500">Комментарий клиента</p>
-              <p className="mt-1 text-sm font-medium leading-5 text-black">
-                {order.comment}
-              </p>
-            </div>
-          )}
         </div>
       </section>
 
-      <section className="mb-4 rounded-[28px] bg-white p-5 shadow-sm">
-        <h2 className="text-lg font-semibold tracking-[-0.03em] text-black">
-          Получение и оплата
-        </h2>
-
-        <div className="mt-4 grid grid-cols-1 gap-3">
-          <div className="rounded-2xl bg-[#F7F7F7] p-4">
-            <p className="text-xs text-gray-400">Способ получения</p>
-            <p className="mt-1 text-sm font-medium text-black">
-              {order.delivery || "Не указан"}
-            </p>
-          </div>
-
-          <div className="rounded-2xl bg-[#F7F7F7] p-4">
-            <p className="text-xs text-gray-400">Оплата</p>
-            <p className="mt-1 text-sm font-medium text-black">
-              {order.payment || "Не указана"}
-            </p>
-          </div>
-
-          {order.promo_code && (
-            <div className="rounded-2xl bg-[#F7F7F7] p-4">
-              <p className="text-xs text-gray-400">Промокод</p>
-              <p className="mt-1 text-sm font-medium text-black">
-                {order.promo_code}
-              </p>
-            </div>
-          )}
-        </div>
-      </section>
-
-      <section className="mb-5 rounded-[28px] bg-white p-5 shadow-sm">
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-semibold tracking-[-0.03em] text-black">
-              Состав заказа
-            </h2>
-            <p className="text-sm text-gray-500">
-              {items.length} позиций, {itemsCount} шт.
-            </p>
-          </div>
-
-          <p className="text-sm font-semibold text-black">
-            {formatPrice(itemsTotal)} ₽
+      <section className="mb-2 bg-white px-3 py-3 shadow-sm">
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={copyOrderId}
+            className="flex min-w-0 items-center gap-2 text-left"
+          >
+            <Copy size={21} className="shrink-0 text-[#0969ff]" />
+            <span className="truncate text-[15px] font-semibold text-[#0969ff]">
+              {order.id}
+            </span>
+          </button>
+          <p className="shrink-0 text-[16px] font-semibold text-black">
+            {formatPrice(order.total)} ₽
           </p>
         </div>
 
-        {items.length === 0 ? (
-          <div className="rounded-[24px] bg-[#F7F7F7] p-6 text-center text-sm text-gray-500">
-            Товары заказа не найдены
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {items.map((item, index) => (
-              <div
-                key={`${item.order_id}-${item.product_id}-${index}`}
-                className="rounded-[22px] bg-[#F7F7F7] p-4"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-black">
-                      {item.name}
-                    </p>
-                    <p className="mt-1 text-xs text-gray-500">
-                      Размер: {item.size || "—"} • Цвет: {item.color || "—"}
-                    </p>
-                  </div>
+        <div className="border-t border-slate-100 pt-3">
+          {items.length === 0 ? (
+            <div className="rounded-[18px] bg-[#f4f6fb] p-6 text-center text-[13px] text-slate-500">
+              Товары заказа не найдены
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {items.map((item, index) => {
+                const image = getFirstProductImage(
+                  item.product_id ? productsMap[item.product_id] : undefined,
+                  item.color
+                );
 
-                  <p className="shrink-0 text-sm font-semibold text-black">
-                    {formatPrice(item.price)} ₽
-                  </p>
-                </div>
-
-                <div className="mt-3 flex items-center justify-between rounded-2xl bg-white p-3 text-sm">
-                  <span className="text-gray-500">Количество</span>
-                  <span className="font-medium text-black">
-                    {item.quantity} шт.
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+                return (
+                  <Link
+                    key={`${item.order_id}-${item.product_id}-${index}`}
+                    href={item.product_id ? `/admin/products/${item.product_id}` : "#"}
+                    className="grid grid-cols-[46px_1fr_auto] gap-2"
+                  >
+                    <div className="flex h-[46px] w-[46px] items-center justify-center overflow-hidden rounded-xl bg-[#f4f6fb]">
+                      {image ? (
+                        <img src={image} alt={item.name} className="h-full w-full object-cover" />
+                      ) : (
+                        <PackageOpen size={22} className="text-slate-300" />
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[13px] leading-tight text-black">
+                        {compactOrderId(item.product_id || order.id)}
+                      </p>
+                      <p className="mt-0.5 line-clamp-2 text-[14px] font-medium leading-tight text-black">
+                        {item.name}
+                      </p>
+                      <p className="mt-1 text-[12px] text-slate-500">
+                        {[item.size, item.color].filter(Boolean).join(" x ") || "Параметры не указаны"}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[13px] font-semibold text-slate-500">
+                        {item.quantity} шт
+                      </p>
+                      <p className="mt-0.5 text-[13px] font-semibold text-black">
+                        {formatPrice(item.price * item.quantity)} ₽
+                      </p>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </section>
 
-      <div className="grid grid-cols-2 gap-3 pb-3">
-        <Link
-          href="/admin/orders"
-          className="rounded-2xl bg-white px-4 py-3 text-center text-sm font-medium text-gray-700 shadow-sm"
-        >
-          Назад
-        </Link>
+      <section className="mb-2 bg-white px-3 py-3 shadow-sm">
+        <h2 className="text-[16px] font-semibold text-black">О покупателе</h2>
+        <div className="mt-3 space-y-3">
+          <div>
+            <p className="text-[12px] text-slate-500">Тип покупателя</p>
+            <p className="mt-0.5 text-[14px] text-black">Физическое лицо</p>
+          </div>
+          <div>
+            <p className="text-[12px] text-slate-500">Покупатель</p>
+            <p className="mt-0.5 text-[14px] text-black">{order.customer || "Не указан"}</p>
+          </div>
+          <div>
+            <p className="text-[12px] text-slate-500">Телефон</p>
+            <p className="mt-0.5 text-[14px] text-black">{order.phone || "Не указан"}</p>
+          </div>
+          <div>
+            <p className="text-[12px] text-slate-500">Кластер доставки</p>
+            <p className="mt-0.5 text-[14px] text-black">{getCity(order.address)}</p>
+          </div>
+        </div>
 
-        <button
-          type="button"
-          onClick={() => router.refresh()}
-          className="rounded-2xl bg-[#111] px-4 py-3 text-sm font-medium text-white"
+      </section>
+
+      <section className="mb-20 rounded-[18px] bg-white p-3 shadow-sm">
+        <p className="mb-2 text-[13px] font-medium text-slate-500">Статус заказа</p>
+        <select
+          value={order.status}
+          onChange={(event) => updateStatus(event.target.value as OrderStatus)}
+          disabled={savingStatus}
+          className="w-full rounded-xl border border-slate-100 bg-[#f4f6fb] px-3 py-2.5 text-[14px] text-black outline-none disabled:opacity-60"
         >
-          Обновить
-        </button>
-      </div>
+          {statusOptions.map((status) => (
+            <option key={status}>{status}</option>
+          ))}
+        </select>
+      </section>
     </>
   );
 }

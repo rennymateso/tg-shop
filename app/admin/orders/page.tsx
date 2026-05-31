@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { Check, PackageOpen, Search, SlidersHorizontal, ScanLine, Truck } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 
 type OrderStatus =
@@ -42,112 +43,131 @@ type OrderItemRow = {
   price: number;
 };
 
-type OrderFilter = "Все" | "Новые" | "В работе" | "Доставка" | "Завершенные";
+type ProductRow = {
+  id: string;
+  image: string | null;
+  color_images: Record<string, string[]> | null;
+};
 
-const statusOptions: OrderStatus[] = [
-  "Новый",
-  "Оплачен",
-  "В обработке",
-  "Частично готов",
-  "В пути из-за рубежа",
-  "Собран",
-  "В доставке",
-  "Доставлен",
-  "Отменен",
-];
+type OrderFilter =
+  | "Все"
+  | "Ожидают сборки"
+  | "Готовы к отгрузке"
+  | "Отгружены"
+  | "Доставляются"
+  | "Спорные"
+  | "Завершенные";
 
 const filterOptions: OrderFilter[] = [
   "Все",
-  "Новые",
-  "В работе",
-  "Доставка",
+  "Ожидают сборки",
+  "Готовы к отгрузке",
+  "Отгружены",
+  "Доставляются",
+  "Спорные",
   "Завершенные",
 ];
-
-function getStatusClasses(status: OrderStatus) {
-  switch (status) {
-    case "Новый":
-      return "bg-[#F3F4F6] text-gray-700";
-    case "Оплачен":
-      return "bg-[#E8F7EE] text-[#15803D]";
-    case "В обработке":
-      return "bg-[#FEF3C7] text-[#B45309]";
-    case "Частично готов":
-      return "bg-[#FFF7ED] text-[#C2410C]";
-    case "В пути из-за рубежа":
-      return "bg-[#E0E7FF] text-[#4338CA]";
-    case "Собран":
-      return "bg-[#DBEAFE] text-[#1D4ED8]";
-    case "В доставке":
-      return "bg-[#EDE9FE] text-[#6D28D9]";
-    case "Доставлен":
-      return "bg-[#DCFCE7] text-[#166534]";
-    case "Отменен":
-      return "bg-[#FEE2E2] text-[#B91C1C]";
-    default:
-      return "bg-[#F3F4F6] text-gray-700";
-  }
-}
-
-function formatDate(value?: string) {
-  if (!value) return "Дата не указана";
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Дата не указана";
-
-  return new Intl.DateTimeFormat("ru-RU", {
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
-}
 
 function formatPrice(value: number) {
   return Number(value || 0).toLocaleString("ru-RU");
 }
 
+function formatDateLabel(value?: string) {
+  if (!value) return "БЕЗ ДАТЫ";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "БЕЗ ДАТЫ";
+
+  return date
+    .toLocaleDateString("ru-RU", { day: "numeric", month: "long" })
+    .toUpperCase();
+}
+
+function formatShortDate(value?: string) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  return date.toLocaleDateString("ru-RU", { day: "numeric", month: "long" });
+}
+
+function getDateKey(value?: string) {
+  if (!value) return "unknown";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "unknown";
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function getFilterMatch(order: OrderRow, filter: OrderFilter) {
   if (filter === "Все") return true;
-  if (filter === "Новые") return order.status === "Новый";
-  if (filter === "В работе") {
-    return [
-      "Оплачен",
-      "В обработке",
-      "Частично готов",
-      "В пути из-за рубежа",
-      "Собран",
-    ].includes(order.status);
+  if (filter === "Ожидают сборки") {
+    return ["Новый", "Оплачен", "В обработке"].includes(order.status);
   }
-  if (filter === "Доставка") return order.status === "В доставке";
-  if (filter === "Завершенные") {
-    return ["Доставлен", "Отменен"].includes(order.status);
+  if (filter === "Готовы к отгрузке") {
+    return ["Собран", "Частично готов", "В пути из-за рубежа"].includes(order.status);
   }
+  if (filter === "Отгружены") return order.status === "В доставке";
+  if (filter === "Доставляются") return order.status === "В доставке";
+  if (filter === "Спорные") return order.status === "Отменен";
+  if (filter === "Завершенные") return ["Доставлен", "Отменен"].includes(order.status);
 
   return true;
+}
+
+function getStatusPill(status: OrderStatus) {
+  if (["Собран", "Частично готов", "В пути из-за рубежа"].includes(status)) {
+    return {
+      label: "Готов к отгрузке",
+      className: "bg-[#d9fbf8] text-[#00a8a0]",
+      dot: true,
+    };
+  }
+  if (status === "В доставке") {
+    return {
+      label: "Доставляется",
+      className: "bg-[#f1edff] text-[#6d5bd0]",
+      dot: false,
+    };
+  }
+  if (status === "Доставлен") {
+    return {
+      label: "Доставлен",
+      className: "bg-[#dcfce7] text-[#15803d]",
+      dot: false,
+    };
+  }
+  if (status === "Отменен") {
+    return {
+      label: "Отменён",
+      className: "bg-[#f4f6fb] text-slate-500",
+      dot: false,
+    };
+  }
+
+  return {
+    label: "Ожидает сборки",
+    className: "bg-[#f4f6fb] text-slate-600",
+    dot: false,
+  };
+}
+
+function getFirstProductImage(product?: ProductRow, color?: string | null) {
+  if (!product) return "";
+  const colorImages = color ? product.color_images?.[color] || [] : [];
+  return colorImages[0] || product.image || "";
 }
 
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [itemsMap, setItemsMap] = useState<Record<string, OrderItemRow[]>>({});
+  const [productsMap, setProductsMap] = useState<Record<string, ProductRow>>({});
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<OrderFilter>("Все");
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
-
-  useEffect(() => {
-    const viewport = document.querySelector('meta[name="viewport"]');
-    const previousContent = viewport?.getAttribute("content") || "";
-
-    viewport?.setAttribute(
-      "content",
-      "width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover"
-    );
-
-    return () => {
-      if (viewport) viewport.setAttribute("content", previousContent);
-    };
-  }, []);
 
   const loadOrders = async () => {
     setLoading(true);
@@ -162,6 +182,7 @@ export default function AdminOrdersPage() {
       setMessage(`Ошибка загрузки заказов: ${error.message}`);
       setOrders([]);
       setItemsMap({});
+      setProductsMap({});
       setLoading(false);
       return;
     }
@@ -171,12 +192,12 @@ export default function AdminOrdersPage() {
 
     if (safeOrders.length === 0) {
       setItemsMap({});
+      setProductsMap({});
       setLoading(false);
       return;
     }
 
     const orderIds = safeOrders.map((order) => order.id);
-
     const { data: itemsData, error: itemsError } = await supabase
       .from("order_items")
       .select("*")
@@ -185,18 +206,38 @@ export default function AdminOrdersPage() {
     if (itemsError) {
       setMessage(`Ошибка загрузки товаров заказов: ${itemsError.message}`);
       setItemsMap({});
+      setProductsMap({});
       setLoading(false);
       return;
     }
 
-    const nextMap: Record<string, OrderItemRow[]> = {};
-
-    ((itemsData || []) as OrderItemRow[]).forEach((item) => {
-      if (!nextMap[item.order_id]) nextMap[item.order_id] = [];
-      nextMap[item.order_id].push(item);
+    const items = (itemsData || []) as OrderItemRow[];
+    const nextItemsMap: Record<string, OrderItemRow[]> = {};
+    items.forEach((item) => {
+      if (!nextItemsMap[item.order_id]) nextItemsMap[item.order_id] = [];
+      nextItemsMap[item.order_id].push(item);
     });
+    setItemsMap(nextItemsMap);
 
-    setItemsMap(nextMap);
+    const productIds = Array.from(
+      new Set(items.map((item) => item.product_id).filter(Boolean) as string[])
+    );
+
+    if (productIds.length > 0) {
+      const { data: productsData } = await supabase
+        .from("products")
+        .select("id,image,color_images")
+        .in("id", productIds);
+
+      const nextProductsMap: Record<string, ProductRow> = {};
+      ((productsData || []) as ProductRow[]).forEach((product) => {
+        nextProductsMap[product.id] = product;
+      });
+      setProductsMap(nextProductsMap);
+    } else {
+      setProductsMap({});
+    }
+
     setLoading(false);
   };
 
@@ -205,20 +246,9 @@ export default function AdminOrdersPage() {
 
     const channel = supabase
       .channel("admin-orders-realtime")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "orders" },
-        async () => {
-          await loadOrders();
-        }
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "order_items" },
-        async () => {
-          await loadOrders();
-        }
-      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, loadOrders)
+      .on("postgres_changes", { event: "*", schema: "public", table: "order_items" }, loadOrders)
+      .on("postgres_changes", { event: "*", schema: "public", table: "products" }, loadOrders)
       .subscribe();
 
     return () => {
@@ -226,321 +256,268 @@ export default function AdminOrdersPage() {
     };
   }, []);
 
-  const stats = useMemo(() => {
-    const newOrders = orders.filter((order) => order.status === "Новый").length;
-    const inWork = orders.filter((order) =>
-      [
-        "Оплачен",
-        "В обработке",
-        "Частично готов",
-        "В пути из-за рубежа",
-        "Собран",
-      ].includes(order.status)
-    ).length;
-    const delivery = orders.filter((order) => order.status === "В доставке").length;
-    const done = orders.filter((order) =>
-      ["Доставлен", "Отменен"].includes(order.status)
-    ).length;
-
-    return { newOrders, inWork, delivery, done };
+  const counts = useMemo(() => {
+    return filterOptions.reduce<Record<OrderFilter, number>>((acc, item) => {
+      acc[item] = orders.filter((order) => getFilterMatch(order, item)).length;
+      return acc;
+    }, {} as Record<OrderFilter, number>);
   }, [orders]);
 
   const filteredOrders = useMemo(() => {
     const q = search.trim().toLowerCase();
 
     return orders.filter((order) => {
+      const items = itemsMap[order.id] || [];
       const matchFilter = getFilterMatch(order, filter);
       const matchSearch =
         !q ||
         order.id.toLowerCase().includes(q) ||
         String(order.customer || "").toLowerCase().includes(q) ||
         String(order.phone || "").toLowerCase().includes(q) ||
-        String(order.address || "").toLowerCase().includes(q);
+        String(order.address || "").toLowerCase().includes(q) ||
+        items.some((item) => item.name.toLowerCase().includes(q));
 
       return matchFilter && matchSearch;
     });
-  }, [orders, search, filter]);
+  }, [orders, itemsMap, search, filter]);
 
-  const getItemsCount = (orderId: string) => {
-    const items = itemsMap[orderId] || [];
-    return items.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
-  };
-
-  const updateStatus = async (orderId: string, status: OrderStatus) => {
-    const { error } = await supabase
-      .from("orders")
-      .update({
-        status,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", orderId);
-
-    if (error) {
-      setMessage(`Ошибка обновления статуса: ${error.message}`);
-      return;
-    }
-
-    await loadOrders();
-  };
+  const groupedOrders = useMemo(() => {
+    const groups: Array<{ key: string; label: string; orders: OrderRow[] }> = [];
+    filteredOrders.forEach((order) => {
+      const key = getDateKey(order.created_at);
+      const existing = groups.find((group) => group.key === key);
+      if (existing) {
+        existing.orders.push(order);
+      } else {
+        groups.push({
+          key,
+          label: formatDateLabel(order.created_at),
+          orders: [order],
+        });
+      }
+    });
+    return groups;
+  }, [filteredOrders]);
 
   return (
     <>
-      <style>{`
-        input,
-        select {
-          font-size: 16px;
-        }
-      `}</style>
+      <header className="mb-2 bg-[#f3f4f8] pt-2">
+        <div className="mb-3 flex items-center justify-between pl-10 pr-1">
+          <h1 className="orders-title text-black">Заказы</h1>
+          <button
+            type="button"
+            onClick={loadOrders}
+            className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-400 text-white"
+            aria-label="Обновить заказы"
+          >
+            <Check size={19} strokeWidth={3} />
+          </button>
+        </div>
 
-      <div className="mb-5">
-        <div className="rounded-[28px] bg-white p-5 shadow-sm">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-sm text-gray-500">Seller panel</p>
-              <h1 className="mt-1 text-[24px] font-semibold tracking-[-0.04em] text-black">
-                Заказы
-              </h1>
-              <p className="mt-1 text-sm text-gray-500">
-                Управление сборкой, доставкой и статусами
-              </p>
-            </div>
-
+        <div className="rounded-[20px] bg-white px-3 py-3 shadow-sm">
+          <div className="mb-2 grid grid-cols-[1fr_auto_auto] items-center gap-2">
+            <label className="flex h-10 min-w-0 items-center gap-2 rounded-[14px] bg-[#f0f2f7] px-3">
+              <Search size={19} className="shrink-0 text-slate-400" />
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Номер заказа"
+                className="min-w-0 flex-1 bg-transparent text-[14px] text-black outline-none placeholder:text-slate-400"
+              />
+            </label>
             <button
               type="button"
-              onClick={loadOrders}
-              className="shrink-0 rounded-2xl bg-[#F5F5F5] px-4 py-2.5 text-sm font-medium text-gray-700"
+              className="flex h-10 w-9 items-center justify-center text-slate-400"
+              aria-label="Сканер"
             >
-              Обновить
+              <ScanLine size={21} />
+            </button>
+            <button
+              type="button"
+              className="flex h-10 w-9 items-center justify-center text-slate-400"
+              aria-label="Фильтры"
+            >
+              <SlidersHorizontal size={21} />
             </button>
           </div>
 
-          <div className="mt-4 flex items-center gap-2 rounded-2xl bg-[#F5F5F5] px-4 py-3">
-            <span className="text-gray-400">⌕</span>
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Поиск заказа, клиента, телефона"
-              className="w-full bg-transparent text-[16px] outline-none placeholder:text-gray-400"
-            />
+          <div className="orders-filter-scroll flex gap-2 overflow-x-auto pb-0.5">
+            {filterOptions.map((item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={() => setFilter(item)}
+                className={`shrink-0 rounded-xl px-2.5 py-1.5 text-[12px] font-medium ${
+                  filter === item
+                    ? "bg-[#24262d] text-white"
+                    : "bg-[#f7f8fb] text-black"
+                }`}
+              >
+                {item}
+                {item !== "Все" && counts[item] > 0 ? (
+                  <span
+                    className={`ml-2 ${
+                      filter === item ? "text-white/65" : "text-slate-500"
+                    }`}
+                  >
+                    {counts[item]}
+                  </span>
+                ) : null}
+              </button>
+            ))}
           </div>
         </div>
-      </div>
+      </header>
 
       {message && (
-        <div className="mb-4 rounded-[22px] bg-white p-4 text-sm text-black shadow-sm">
+        <div className="mb-2 rounded-[16px] bg-white p-3 text-[12px] text-red-600 shadow-sm">
           {message}
         </div>
       )}
 
-      <section className="mb-4 grid grid-cols-2 gap-3">
-        <button
-          type="button"
-          onClick={() => setFilter("Новые")}
-          className="rounded-[24px] bg-white p-4 text-left shadow-sm"
+      <style>{`
+        .orders-filter-scroll {
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        }
+
+        .orders-filter-scroll::-webkit-scrollbar {
+          display: none;
+        }
+
+        .orders-title {
+          font-size: 25px !important;
+          line-height: 1 !important;
+          font-weight: 650 !important;
+          letter-spacing: 0 !important;
+        }
+      `}</style>
+
+      {filter === "Ожидают сборки" && (
+        <Link
+          href="/admin/stocks"
+          className="mb-2 inline-flex rounded-xl bg-[#d9fbf8] px-3 py-1.5 text-[12px] font-semibold text-[#00a8a0]"
         >
-          <p className="text-xs text-gray-500">Новые</p>
-          <p className="mt-2 text-[22px] font-semibold tracking-[-0.04em]">
-            {stats.newOrders}
-          </p>
-        </button>
+          Проверьте остатки по товарам ›
+        </Link>
+      )}
 
-        <button
-          type="button"
-          onClick={() => setFilter("В работе")}
-          className="rounded-[24px] bg-white p-4 text-left shadow-sm"
-        >
-          <p className="text-xs text-gray-500">В работе</p>
-          <p className="mt-2 text-[22px] font-semibold tracking-[-0.04em]">
-            {stats.inWork}
-          </p>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setFilter("Доставка")}
-          className="rounded-[24px] bg-white p-4 text-left shadow-sm"
-        >
-          <p className="text-xs text-gray-500">Доставка</p>
-          <p className="mt-2 text-[22px] font-semibold tracking-[-0.04em]">
-            {stats.delivery}
-          </p>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setFilter("Завершенные")}
-          className="rounded-[24px] bg-white p-4 text-left shadow-sm"
-        >
-          <p className="text-xs text-gray-500">Завершенные</p>
-          <p className="mt-2 text-[22px] font-semibold tracking-[-0.04em]">
-            {stats.done}
-          </p>
-        </button>
-      </section>
-
-      <section className="mb-4 flex gap-2 overflow-x-auto pb-1">
-        {filterOptions.map((item) => (
-          <button
-            key={item}
-            type="button"
-            onClick={() => setFilter(item)}
-            className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium ${
-              filter === item
-                ? "bg-[#111] text-white"
-                : "bg-white text-gray-600 shadow-sm"
-            }`}
-          >
-            {item}
-          </button>
-        ))}
-      </section>
-
-      <section className="rounded-[28px] bg-white p-4 shadow-sm">
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-semibold tracking-[-0.03em] text-black">
-              Список заказов
-            </h2>
-            <p className="text-sm text-gray-500">
-              {filteredOrders.length} из {orders.length} заказов
-            </p>
+      {loading ? (
+        <section className="rounded-[20px] bg-white p-7 text-center shadow-sm">
+          <p className="text-[13px] text-slate-500">Загружаем заказы...</p>
+        </section>
+      ) : filteredOrders.length === 0 ? (
+        <section className="rounded-[22px] bg-white px-5 py-12 text-center shadow-sm">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-[20px] bg-[#f4f6fb] text-[#0969ff]">
+            <PackageOpen size={34} />
           </div>
-        </div>
+          <h2 className="mt-4 text-[18px] font-semibold text-black">Нет заказов</h2>
+          <p className="mt-1 text-[14px] text-slate-500">Попробуйте выбрать другие фильтры</p>
+        </section>
+      ) : (
+        <div className="space-y-3 pb-20">
+          {groupedOrders.map((group) => (
+            <section key={group.key}>
+              <h2 className="mb-1.5 px-1 text-[14px] font-semibold text-slate-500">
+                {group.label}
+              </h2>
 
-        {loading ? (
-          <div className="rounded-[24px] bg-[#F7F7F7] p-8 text-center text-sm text-gray-500">
-            Загрузка заказов...
-          </div>
-        ) : filteredOrders.length === 0 ? (
-          <div className="rounded-[24px] bg-[#F7F7F7] p-8 text-center text-sm text-gray-500">
-            Заказы не найдены
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {filteredOrders.map((order) => {
-              const itemsCount = getItemsCount(order.id);
+              <div className="space-y-2">
+                {group.orders.map((order) => {
+                  const items = itemsMap[order.id] || [];
+                  const firstItem = items[0];
+                  const itemsCount = items.reduce(
+                    (sum, item) => sum + (Number(item.quantity) || 0),
+                    0
+                  );
+                  const productImage = getFirstProductImage(
+                    firstItem?.product_id ? productsMap[firstItem.product_id] : undefined,
+                    firstItem?.color
+                  );
+                  const statusPill = getStatusPill(order.status);
 
-              return (
-                <div
-                  key={order.id}
-                  className="rounded-[24px] bg-[#F7F7F7] p-4"
-                >
-                  <div className="mb-3 flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-black">
-                        {order.id}
-                      </p>
-                      <p className="mt-1 truncate text-xs text-gray-500">
-                        {formatDate(order.created_at)}
-                      </p>
-                    </div>
-
-                    <span
-                      className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium ${getStatusClasses(
-                        order.status
-                      )}`}
-                    >
-                      {order.status}
-                    </span>
-                  </div>
-
-                  <div className="mb-3 grid grid-cols-2 gap-2 text-xs">
-                    <div className="rounded-2xl bg-white p-3">
-                      <p className="text-gray-400">Клиент</p>
-                      <p className="mt-1 truncate font-medium text-black">
-                        {order.customer || "Не указан"}
-                      </p>
-                    </div>
-
-                    <div className="rounded-2xl bg-white p-3">
-                      <p className="text-gray-400">Телефон</p>
-                      <p className="mt-1 truncate font-medium text-black">
-                        {order.phone || "Не указан"}
-                      </p>
-                    </div>
-
-                    <div className="rounded-2xl bg-white p-3">
-                      <p className="text-gray-400">Товаров</p>
-                      <p className="mt-1 font-medium text-black">{itemsCount}</p>
-                    </div>
-
-                    <div className="rounded-2xl bg-white p-3">
-                      <p className="text-gray-400">Сумма</p>
-                      <p className="mt-1 font-medium text-black">
-                        {formatPrice(order.total)} ₽
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="mb-3 rounded-2xl bg-white p-3">
-                    <p className="text-xs text-gray-400">Адрес / получение</p>
-                    <p className="mt-1 line-clamp-2 text-xs font-medium leading-5 text-black">
-                      {order.delivery || "Получение не указано"}
-                      {order.address ? ` • ${order.address}` : ""}
-                    </p>
-                  </div>
-
-                  {order.comment && (
-                    <div className="mb-3 rounded-2xl bg-[#FFF7ED] p-3">
-                      <p className="text-xs text-orange-500">Комментарий</p>
-                      <p className="mt-1 line-clamp-2 text-xs font-medium leading-5 text-black">
-                        {order.comment}
-                      </p>
-                    </div>
-                  )}
-
-                  <div className="mb-3 grid grid-cols-3 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => updateStatus(order.id, "В обработке")}
-                      className="rounded-2xl bg-white px-3 py-2.5 text-xs font-medium text-gray-700"
-                    >
-                      Собрать
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => updateStatus(order.id, "Собран")}
-                      className="rounded-2xl bg-white px-3 py-2.5 text-xs font-medium text-gray-700"
-                    >
-                      Собран
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => updateStatus(order.id, "В доставке")}
-                      className="rounded-2xl bg-white px-3 py-2.5 text-xs font-medium text-gray-700"
-                    >
-                      Отправить
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-[1fr_auto] gap-2">
-                    <select
-                      value={order.status}
-                      onChange={(e) =>
-                        updateStatus(order.id, e.target.value as OrderStatus)
-                      }
-                      className="w-full rounded-2xl border border-black/5 bg-white px-3 py-2.5 text-sm outline-none"
-                    >
-                      {statusOptions.map((status) => (
-                        <option key={status}>{status}</option>
-                      ))}
-                    </select>
-
+                  return (
                     <Link
+                      key={order.id}
                       href={`/admin/orders/${order.id}`}
-                      className="rounded-2xl bg-[#111] px-4 py-2.5 text-sm font-medium text-white"
+                      className="block rounded-[20px] bg-white p-2.5 shadow-sm"
                     >
-                      Открыть
+                      <div className="mb-2 flex flex-wrap items-center gap-1.5">
+                        <span
+                          className={`rounded-lg px-2 py-1 text-[11px] font-semibold ${statusPill.className}`}
+                        >
+                          {statusPill.dot && <span className="mr-1.5">•</span>}
+                          {statusPill.label}
+                        </span>
+                        {formatShortDate(order.created_at) && (
+                          <span className="rounded-lg bg-[#f4f6fb] px-2 py-1 text-[11px] font-semibold text-slate-500">
+                            {formatShortDate(order.created_at)}
+                          </span>
+                        )}
+                        {order.promo_code && (
+                          <span className="rounded-lg bg-[#e8fff0] px-2 py-1 text-[11px] font-semibold text-emerald-600">
+                            Промо
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-[68px_1fr_auto] gap-2 rounded-[16px] bg-[#f4f6fb] p-2">
+                        <div className="flex h-[68px] w-[68px] items-center justify-center overflow-hidden rounded-[14px] bg-white">
+                          {productImage ? (
+                            <img
+                              src={productImage}
+                              alt={firstItem?.name || "Товар"}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <PackageOpen size={28} className="text-slate-300" />
+                          )}
+                        </div>
+                        <div className="min-w-0 py-0.5">
+                          <p className="line-clamp-2 text-[14px] font-medium leading-[1.18] text-black">
+                            {firstItem?.name || "Товар не указан"}
+                          </p>
+                          <p className="mt-1 truncate text-[12px] text-slate-500">
+                            {order.id.replace("ORD-", "")}
+                          </p>
+                          {(firstItem?.size || firstItem?.color) && (
+                            <p className="mt-0.5 truncate text-[11px] text-slate-400">
+                              {[firstItem?.size, firstItem?.color].filter(Boolean).join(" · ")}
+                            </p>
+                          )}
+                        </div>
+                        <span className="h-fit rounded-xl bg-white px-2 py-1 text-[12px] font-semibold text-slate-500">
+                          {itemsCount || 1} шт
+                        </span>
+                      </div>
+
+                      <div className="mt-2 grid grid-cols-2 gap-3 text-[13px] text-slate-500">
+                        <div className="min-w-0">
+                          <p className="truncate">{order.address?.split(",")[0] || "Казань"}</p>
+                          <p className="mt-0.5 truncate">{order.id.replace("ORD-", "")}</p>
+                        </div>
+                        <div className="min-w-0 text-right">
+                          <p className="truncate">{order.delivery || "Получение"}</p>
+                          <p className="mt-0.5 truncate">{formatPrice(order.total)} ₽</p>
+                        </div>
+                      </div>
                     </Link>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </section>
+                  );
+                })}
+              </div>
+            </section>
+          ))}
+        </div>
+      )}
+
+      <button
+        type="button"
+        onClick={() => setFilter("Готовы к отгрузке")}
+        className="fixed bottom-[68px] left-1/2 z-[70] flex h-9 -translate-x-1/2 items-center gap-1.5 rounded-full bg-[#0969ff] px-4 text-[11px] font-semibold text-white shadow-lg"
+      >
+        <Truck size={15} />
+        Перейти к отгрузкам
+      </button>
     </>
   );
 }

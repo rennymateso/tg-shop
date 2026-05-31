@@ -5,6 +5,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import BottomNav from "./components/BottomNav";
 import AppSplash from "./components/AppSplash";
 import { getTelegramWebApp } from "./lib/telegram-mini-app";
+import { supabase } from "./lib/supabase";
 
 const departments = ["Мужчинам", "Женщинам"] as const;
 const mensCategories = ["Все", "Футболки", "Поло", "Джинсы", "Брюки", "Костюмы"] as const;
@@ -12,6 +13,7 @@ const womensCategories = ["Все", "Платья", "Футболки", "Руб�
 const sortOptions = ["По популярности", "Сначала дешевле", "Сначала дороже", "Скидки", "Новинки"] as const;
 const availabilityOptions = ["Все товары", "В наличии", "Из-за рубежа"] as const;
 const banners = [{ image: "/banner.jpg", alt: "Весна Лето 2026", link: "/" }] as const;
+const SPLASH_DURATION_MS = 3900;
 
 type Department = (typeof departments)[number];
 type MensCategory = (typeof mensCategories)[number];
@@ -19,6 +21,20 @@ type WomensCategory = (typeof womensCategories)[number];
 type SortOption = (typeof sortOptions)[number];
 type BrandRow = { id: string; name: string; created_at: string };
 type BadgeRow = { id: string; name: string; created_at: string };
+type ProductRow = {
+  id: string;
+  name: string;
+  brand: string;
+  category: string;
+  price: number;
+  old_price: number | null;
+  badge: string | null;
+  description: string | null;
+  sizes: string[] | null;
+  colors: string[] | null;
+  image: string | null;
+  color_images: Record<string, string[]> | null;
+};
 
 export type HomeProduct = {
   id: string;
@@ -56,6 +72,49 @@ function getHomeColorImages(product: HomeProduct, color: string) {
   return product.images?.length
     ? product.images
     : [product.image || "/products/product-1.jpg"];
+}
+
+function mapRowToHomeProduct(row: ProductRow): HomeProduct {
+  const galleryByColor: Record<string, string[]> = {};
+  const colorImages: Record<string, string> = {};
+
+  if (row.color_images && typeof row.color_images === "object") {
+    Object.entries(row.color_images).forEach(([color, images]) => {
+      const safeImages = Array.isArray(images)
+        ? images.filter((image) => image.trim().length > 0)
+        : [];
+
+      if (safeImages.length > 0) {
+        galleryByColor[color] = safeImages;
+        colorImages[color] = safeImages[0];
+      }
+    });
+  }
+
+  const colors = Array.isArray(row.colors) ? row.colors : [];
+  const defaultColor = colors[0] || Object.keys(galleryByColor)[0] || "Черный";
+  const defaultImages = galleryByColor[defaultColor] || [];
+  const rowImage = row.image?.trim() || "";
+  const image = rowImage || defaultImages[0] || "/products/product-1.jpg";
+
+  return {
+    id: row.id,
+    name: row.name,
+    brand: row.brand,
+    price: row.price,
+    oldPrice: row.old_price || null,
+    badge: row.badge || "",
+    image,
+    images: defaultImages.length > 0 ? defaultImages : [image],
+    colorImages,
+    galleryByColor,
+    defaultColor,
+    type: row.category === "Джинсы" || row.category === "Брюки" ? "bottom" : "top",
+    category: row.category,
+    colors,
+    sizes: Array.isArray(row.sizes) ? row.sizes : [],
+    description: row.description || "",
+  };
 }
 
 
@@ -157,6 +216,8 @@ export default function HomePageClient({
   initialBadges?: BadgeRow[];
 }) {
   const router = useRouter();
+  const [products, setProducts] = useState(initialProducts);
+  const [brands, setBrands] = useState(initialBrands);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [selectedDepartment, setSelectedDepartment] = useState<Department>("Мужчинам");
   const [selectedMensCategory, setSelectedMensCategory] = useState<MensCategory>("Все");
@@ -165,7 +226,7 @@ export default function HomePageClient({
   const [selectedSort, setSelectedSort] = useState<SortOption>("По популярности");
   const [selectedAvailability, setSelectedAvailability] = useState("Все товары");
   const [search, setSearch] = useState("");
-  const [showSplash, setShowSplash] = useState(true);
+  const [showSplash, setShowSplash] = useState(false);
   const [pageReady, setPageReady] = useState(false);
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [showBrandMenu, setShowBrandMenu] = useState(false);
@@ -181,6 +242,43 @@ export default function HomePageClient({
     const tg = getTelegramWebApp();
     tg?.ready();
     tg?.expand();
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadCatalog() {
+      const [{ data: productsData }, { data: brandsData }] = await Promise.all([
+        supabase
+          .from("products")
+          .select("*")
+          .eq("status", "Активен")
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("brands")
+          .select("*")
+          .order("name", { ascending: true }),
+      ]);
+
+      if (cancelled) return;
+
+      const nextProducts = ((productsData || []) as ProductRow[]).map(mapRowToHomeProduct);
+      if (nextProducts.length > 0) {
+        setProducts(nextProducts);
+      }
+
+      if (brandsData?.length) {
+        setBrands(brandsData as BrandRow[]);
+      }
+    }
+
+    loadCatalog().catch(() => {
+      // Keep the fast fallback catalog if Supabase is unavailable.
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -209,10 +307,14 @@ export default function HomePageClient({
       setShowSplash(false);
       return;
     }
+
+    setShowSplash(true);
+
     const t = setTimeout(() => {
-      setShowSplash(false);
       sessionStorage.setItem("montreaux_splash_shown", "1");
-    }, 3000);
+      setShowSplash(false);
+    }, SPLASH_DURATION_MS);
+
     return () => clearTimeout(t);
   }, []);
 
@@ -266,7 +368,7 @@ export default function HomePageClient({
 
   const currentCategory = selectedDepartment === "Мужчинам" ? selectedMensCategory : selectedWomensCategory;
   const currentCategories = selectedDepartment === "Мужчинам" ? mensCategories : womensCategories;
-  const departmentProducts = useMemo(() => (selectedDepartment === "Женщинам" ? [] : initialProducts), [initialProducts, selectedDepartment]);
+  const departmentProducts = useMemo(() => (selectedDepartment === "Женщинам" ? [] : products), [products, selectedDepartment]);
 
   const filteredProducts = useMemo(() => {
     const result = departmentProducts.filter((item) => {
@@ -990,7 +1092,7 @@ export default function HomePageClient({
                     {showBrandMenu && (
                       <div className="mn-dropdown">
                         <button className={selectedBrand === "Все бренды" ? "active" : ""} onClick={() => { setSelectedBrand("Все бренды"); setShowBrandMenu(false); }}>Все бренды</button>
-                        {initialBrands.map((b) => (
+                        {brands.map((b) => (
                           <button key={b.id} className={selectedBrand === b.name ? "active" : ""} onClick={() => { setSelectedBrand(b.name); setShowBrandMenu(false); }}>{b.name}</button>
                         ))}
                       </div>
@@ -1091,7 +1193,7 @@ export default function HomePageClient({
                             <IconDelivery />
                             <span>
                               {isInStock
-                                ? "Самовывоз/Быстрая доставка"
+                                ? "Доставка 1-3 дня"
                                 : "Доставка 7–14 дней"}
                             </span>
                           </div>

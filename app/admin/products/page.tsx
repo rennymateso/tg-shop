@@ -1,7 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Eye,
+  EyeOff,
+  Package,
+  Pencil,
+  Plus,
+  Search,
+  SlidersHorizontal,
+  Trash2,
+  X,
+} from "lucide-react";
 import { supabase } from "../../lib/supabase";
 
 type ProductStatus = "Активен" | "Скрыт";
@@ -12,24 +23,12 @@ type BadgeType =
   | "В наличии"
   | "Из-за рубежа";
 
-type ProductCategory =
-  | "Футболки"
-  | "Поло"
-  | "Джинсы"
-  | "Брюки"
-  | "Костюмы"
-  | "Платья"
-  | "Рубашки"
-  | "Юбки";
-
-type ProductGender = "Мужская одежда" | "Женская одежда";
-
 type AdminProduct = {
   id: string;
   name: string;
   brand: string;
-  gender: ProductGender;
-  category: ProductCategory;
+  gender: string;
+  category: string;
   country: string;
   price: number;
   oldPrice: number;
@@ -70,9 +69,10 @@ type ProductRow = {
 
 type ProductFilter = "Все" | "Активные" | "Скрытые" | "Без остатков";
 
-function getDiscountPercent(oldPrice: number, price: number) {
-  if (!oldPrice || oldPrice <= price) return 0;
-  return Math.round(((oldPrice - price) / oldPrice) * 100);
+const filters: ProductFilter[] = ["Все", "Активные", "Скрытые", "Без остатков"];
+
+function formatPrice(value: number) {
+  return Number(value || 0).toLocaleString("ru-RU");
 }
 
 function getStockTotal(stock: Record<string, number>) {
@@ -83,25 +83,25 @@ function getStockTotal(stock: Record<string, number>) {
 }
 
 function getBadgeClass(badge: BadgeType) {
-  if (badge === "В наличии") return "bg-[#EAF8F0] text-[#16A34A]";
-  if (badge === "Из-за рубежа") return "bg-[#F1F1F1] text-[#666]";
-  if (badge === "Скидка") return "bg-red-50 text-red-600";
-  if (badge === "Новинка") return "bg-blue-50 text-blue-600";
-  return "bg-[#F5F5F5] text-gray-500";
+  if (badge === "В наличии") return "bg-[#EAF8F0] text-[#15803D]";
+  if (badge === "Из-за рубежа") return "bg-[#EEF2FF] text-[#4F46E5]";
+  if (badge === "Скидка") return "bg-[#FFF1F2] text-[#E11D48]";
+  if (badge === "Новинка") return "bg-[#E0F2FE] text-[#0369A1]";
+  return "bg-[#F2F3F6] text-[#6B7280]";
 }
 
 function mapRowToProduct(row: ProductRow): AdminProduct {
   return {
     id: row.id,
-    name: row.name,
-    brand: row.brand,
-    gender: row.gender === "Женская одежда" ? "Женская одежда" : "Мужская одежда",
-    category: row.category as ProductCategory,
+    name: row.name || "Без названия",
+    brand: row.brand || "",
+    gender: row.gender || "",
+    category: row.category || "",
     country: row.country || "",
-    price: row.price,
-    oldPrice: row.old_price,
+    price: Number(row.price) || 0,
+    oldPrice: Number(row.old_price) || 0,
     badge: (row.badge || "Без бейджа") as BadgeType,
-    status: row.status === "Скрыт" ? "Скрыт" : "Активен",
+    status: (row.status || "Активен") as ProductStatus,
     description: row.description || "",
     article: row.article || "",
     sizes: Array.isArray(row.sizes) ? row.sizes : [],
@@ -120,6 +120,11 @@ export default function AdminProductsPage() {
   const [products, setProducts] = useState<AdminProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const [badgeProductId, setBadgeProductId] = useState<string | null>(null);
+  const [stockProductId, setStockProductId] = useState<string | null>(null);
+  const [priceProductId, setPriceProductId] = useState<string | null>(null);
+  const [priceDraft, setPriceDraft] = useState({ price: "", oldPrice: "" });
+  const stockSaveTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   const loadProducts = async () => {
     setLoading(true);
@@ -137,13 +142,25 @@ export default function AdminProductsPage() {
       return;
     }
 
-    const mapped = ((data || []) as ProductRow[]).map(mapRowToProduct);
-    setProducts(mapped);
+    setProducts(((data || []) as ProductRow[]).map(mapRowToProduct));
     setLoading(false);
   };
 
   useEffect(() => {
     loadProducts();
+
+    const channel = supabase
+      .channel("admin-products-page")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "products" },
+        () => loadProducts()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const filteredProducts = useMemo(() => {
@@ -151,7 +168,6 @@ export default function AdminProductsPage() {
 
     return products.filter((item) => {
       const stockTotal = getStockTotal(item.stock);
-
       const matchFilter =
         filter === "Все" ||
         (filter === "Активные" && item.status === "Активен") ||
@@ -174,11 +190,26 @@ export default function AdminProductsPage() {
   const stats = useMemo(() => {
     const active = products.filter((item) => item.status === "Активен").length;
     const hidden = products.filter((item) => item.status === "Скрыт").length;
-    const withDiscount = products.filter((item) => item.oldPrice > item.price).length;
     const outOfStock = products.filter((item) => getStockTotal(item.stock) <= 0).length;
+    const totalStock = products.reduce((sum, item) => sum + getStockTotal(item.stock), 0);
 
-    return { active, hidden, withDiscount, outOfStock };
+    return { active, hidden, outOfStock, totalStock };
   }, [products]);
+
+  const badgeProduct = useMemo(
+    () => products.find((item) => item.id === badgeProductId) || null,
+    [badgeProductId, products]
+  );
+
+  const stockProduct = useMemo(
+    () => products.find((item) => item.id === stockProductId) || null,
+    [stockProductId, products]
+  );
+
+  const priceProduct = useMemo(
+    () => products.find((item) => item.id === priceProductId) || null,
+    [priceProductId, products]
+  );
 
   const handleDelete = async (id: string) => {
     const confirmed = window.confirm("Удалить товар?");
@@ -217,131 +248,235 @@ export default function AdminProductsPage() {
     await loadProducts();
   };
 
+  const setProductBadge = async (id: string, badge: BadgeType) => {
+    setBadgeProductId(null);
+
+    setProducts((current) =>
+      current.map((item) => (item.id === id ? { ...item, badge } : item))
+    );
+
+    const { error } = await supabase
+      .from("products")
+      .update({
+        badge,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id);
+
+    if (error) {
+      setMessage(`Ошибка обновления: ${error.message}`);
+      await loadProducts();
+    }
+  };
+
+  const updateStockValue = (id: string, size: string, rawValue: string) => {
+    const quantity = Math.max(0, Number(rawValue.replace(/\D/g, "")) || 0);
+    let nextStock: Record<string, number> | null = null;
+
+    setProducts((current) =>
+      current.map((item) => {
+        if (item.id !== id) return item;
+
+        nextStock = {
+          ...item.stock,
+          [size]: quantity,
+        };
+
+        return {
+          ...item,
+          stock: nextStock,
+          sizes: item.sizes.includes(size) ? item.sizes : [...item.sizes, size],
+        };
+      })
+    );
+
+    const timerKey = `${id}:${size}`;
+    if (stockSaveTimers.current[timerKey]) {
+      clearTimeout(stockSaveTimers.current[timerKey]);
+    }
+
+    stockSaveTimers.current[timerKey] = setTimeout(async () => {
+      if (!nextStock) return;
+
+      const nextSizes = Object.entries(nextStock)
+        .filter(([, value]) => Math.max(0, Number(value) || 0) > 0)
+        .map(([stockSize]) => stockSize);
+
+      const { error } = await supabase
+        .from("products")
+        .update({
+          stock: nextStock,
+          sizes: nextSizes,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", id);
+
+      if (error) {
+        setMessage(`Ошибка остатков: ${error.message}`);
+        await loadProducts();
+      }
+    }, 500);
+  };
+
+  const openPriceSheet = (item: AdminProduct) => {
+    setPriceProductId(item.id);
+    setPriceDraft({
+      price: String(item.price || ""),
+      oldPrice: String(item.oldPrice || ""),
+    });
+  };
+
+  const savePrice = async () => {
+    if (!priceProduct) return;
+
+    const nextPrice = Math.max(0, Number(priceDraft.price.replace(/\D/g, "")) || 0);
+    const nextOldPrice = Math.max(
+      0,
+      Number(priceDraft.oldPrice.replace(/\D/g, "")) || 0
+    );
+
+    setProducts((current) =>
+      current.map((item) =>
+        item.id === priceProduct.id
+          ? { ...item, price: nextPrice, oldPrice: nextOldPrice }
+          : item
+      )
+    );
+    setPriceProductId(null);
+
+    const { error } = await supabase
+      .from("products")
+      .update({
+        price: nextPrice,
+        old_price: nextOldPrice,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", priceProduct.id);
+
+    if (error) {
+      setMessage(`Ошибка цены: ${error.message}`);
+      await loadProducts();
+    }
+  };
+
   return (
-    <>
-      <div className="mb-5">
-        <div className="rounded-[28px] bg-white p-5 shadow-sm">
-          <div className="flex items-start justify-between gap-3">
+    <main className="min-h-screen bg-[#F3F4F8] px-3 pb-24 pt-4 text-[#101114]">
+      <div className="mx-auto max-w-[480px] space-y-3">
+        <header className="rounded-[22px] bg-white px-4 pb-4 pt-5 shadow-sm">
+          <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm text-gray-500">Seller panel</p>
-              <h1 className="mt-1 text-[24px] font-semibold tracking-[-0.04em] text-black">
+              <h1 className="text-[27px] font-semibold leading-none tracking-normal">
                 Товары
               </h1>
-              <p className="mt-1 text-sm text-gray-500">
-                Каталог, остатки и статусы
+              <p className="mt-1 text-[12px] font-normal text-[#8A94A3]">
+                Каталог, цены и остатки
               </p>
             </div>
 
             <Link
               href="/admin/products/new"
-              className="shrink-0 rounded-2xl bg-[#111] px-4 py-2.5 text-sm font-medium text-white"
+              className="inline-flex h-9 items-center gap-1.5 rounded-[12px] bg-[#101114] px-3 text-[12px] font-medium text-white"
             >
-              + Товар
+              <Plus size={15} strokeWidth={2.4} />
+              Товар
             </Link>
           </div>
 
-          <div className="mt-4 flex items-center gap-2 rounded-2xl bg-[#F5F5F5] px-4 py-3">
-            <span className="text-gray-400">⌕</span>
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Поиск товара, бренда, артикула"
-              className="w-full bg-transparent text-[16px] outline-none placeholder:text-gray-400"
-            />
+          <div className="mt-4 grid grid-cols-4 gap-2">
+            <div className="rounded-[14px] bg-[#F5F6FA] px-2.5 py-2">
+              <p className="text-[10px] text-[#8A94A3]">Всего</p>
+              <p className="text-[15px] font-semibold">{products.length}</p>
+            </div>
+            <div className="rounded-[14px] bg-[#F5F6FA] px-2.5 py-2">
+              <p className="text-[10px] text-[#8A94A3]">Активные</p>
+              <p className="text-[15px] font-semibold">{stats.active}</p>
+            </div>
+            <div className="rounded-[14px] bg-[#F5F6FA] px-2.5 py-2">
+              <p className="text-[10px] text-[#8A94A3]">Остаток</p>
+              <p className="text-[15px] font-semibold">{stats.totalStock}</p>
+            </div>
+            <div className="rounded-[14px] bg-[#F5F6FA] px-2.5 py-2">
+              <p className="text-[10px] text-[#8A94A3]">Скрыто</p>
+              <p className="text-[15px] font-semibold">{stats.hidden}</p>
+            </div>
           </div>
-        </div>
-      </div>
+        </header>
 
-      {message && (
-        <div className="mb-4 rounded-[22px] bg-white p-4 text-sm text-black shadow-sm">
-          {message}
-        </div>
-      )}
-
-      <section className="mb-4 grid grid-cols-2 gap-3">
-        <div className="rounded-[24px] bg-white p-4 shadow-sm">
-          <p className="text-xs text-gray-500">Активные</p>
-          <p className="mt-2 text-[22px] font-semibold tracking-[-0.04em]">
-            {stats.active}
-          </p>
-        </div>
-
-        <div className="rounded-[24px] bg-white p-4 shadow-sm">
-          <p className="text-xs text-gray-500">Без остатков</p>
-          <p className="mt-2 text-[22px] font-semibold tracking-[-0.04em]">
-            {stats.outOfStock}
-          </p>
-        </div>
-
-        <div className="rounded-[24px] bg-white p-4 shadow-sm">
-          <p className="text-xs text-gray-500">Со скидкой</p>
-          <p className="mt-2 text-[22px] font-semibold tracking-[-0.04em]">
-            {stats.withDiscount}
-          </p>
-        </div>
-
-        <div className="rounded-[24px] bg-white p-4 shadow-sm">
-          <p className="text-xs text-gray-500">Скрытые</p>
-          <p className="mt-2 text-[22px] font-semibold tracking-[-0.04em]">
-            {stats.hidden}
-          </p>
-        </div>
-      </section>
-
-      <section className="mb-4 flex gap-2 overflow-x-auto pb-1">
-        {(["Все", "Активные", "Скрытые", "Без остатков"] as ProductFilter[]).map(
-          (item) => (
+        <section className="rounded-[22px] bg-white p-3 shadow-sm">
+          <div className="flex items-center gap-2">
+            <label className="flex h-10 flex-1 items-center gap-2 rounded-[14px] bg-[#F1F3F7] px-3">
+              <Search size={17} className="shrink-0 text-[#98A1AE]" />
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Название, артикул"
+                className="h-full w-full bg-transparent text-[14px] font-normal outline-none placeholder:text-[#9AA3AF]"
+              />
+            </label>
             <button
-              key={item}
               type="button"
-              onClick={() => setFilter(item)}
-              className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium ${
-                filter === item
-                  ? "bg-[#111] text-white"
-                  : "bg-white text-gray-600 shadow-sm"
-              }`}
+              className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-[#F1F3F7] text-[#8A94A3]"
+              aria-label="Фильтры"
             >
-              {item}
+              <SlidersHorizontal size={18} />
             </button>
-          )
-        )}
-      </section>
+          </div>
 
-      <section className="rounded-[28px] bg-white p-4 shadow-sm">
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-semibold tracking-[-0.03em] text-black">
-              Каталог
-            </h2>
-            <p className="text-sm text-gray-500">
-              {filteredProducts.length} из {products.length} товаров
-            </p>
+          <div className="mt-3 flex gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {filters.map((item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={() => setFilter(item)}
+                className={`shrink-0 rounded-[12px] px-3 py-2 text-[12px] font-medium transition ${
+                  filter === item
+                    ? "bg-[#101114] text-white"
+                    : "bg-[#F6F7FA] text-[#101114]"
+                }`}
+              >
+                {item}
+                {item === "Без остатков" && stats.outOfStock > 0 ? (
+                  <span className="ml-1 text-[#9AA3AF]">{stats.outOfStock}</span>
+                ) : null}
+              </button>
+            ))}
           </div>
-        </div>
+        </section>
 
-        {loading ? (
-          <div className="rounded-[24px] bg-[#F7F7F7] p-8 text-center text-sm text-gray-500">
-            Загрузка товаров...
+        {message ? (
+          <div className="rounded-[16px] bg-red-50 px-3 py-2 text-[12px] text-red-600">
+            {message}
           </div>
-        ) : filteredProducts.length === 0 ? (
-          <div className="rounded-[24px] bg-[#F7F7F7] p-8 text-center text-sm text-gray-500">
-            Товаров не найдено
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {filteredProducts.map((item) => {
-              const discount = getDiscountPercent(item.oldPrice, item.price);
+        ) : null}
+
+        <section className="space-y-2">
+          {loading ? (
+            <div className="rounded-[22px] bg-white py-10 text-center text-[13px] text-[#8A94A3] shadow-sm">
+              Загрузка товаров...
+            </div>
+          ) : filteredProducts.length === 0 ? (
+            <div className="rounded-[22px] bg-white px-4 py-10 text-center shadow-sm">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-[16px] bg-[#F1F3F7] text-[#8A94A3]">
+                <Package size={22} />
+              </div>
+              <p className="mt-3 text-[16px] font-semibold">Нет товаров</p>
+              <p className="mt-1 text-[13px] text-[#8A94A3]">
+                Попробуйте другой поиск или фильтр
+              </p>
+            </div>
+          ) : (
+            filteredProducts.map((item) => {
               const stockTotal = getStockTotal(item.stock);
 
               return (
-                <div
+                <article
                   key={item.id}
-                  className="rounded-[24px] bg-[#F7F7F7] p-3"
+                  className="rounded-[22px] bg-white p-3 shadow-sm"
                 >
                   <div className="flex gap-3">
                     <Link
                       href={`/admin/products/${item.id}`}
-                      className="h-[104px] w-[78px] shrink-0 overflow-hidden rounded-[18px] bg-[#ECECEC]"
+                      className="block h-[74px] w-[74px] shrink-0 overflow-hidden rounded-[16px] bg-[#F1F3F7]"
                     >
                       {item.image ? (
                         <img
@@ -349,103 +484,306 @@ export default function AdminProductsPage() {
                           alt={item.name}
                           className="h-full w-full object-cover"
                         />
-                      ) : null}
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-[#9AA3AF]">
+                          <Package size={22} />
+                        </div>
+                      )}
                     </Link>
 
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-black">
+                        <Link
+                          href={`/admin/products/${item.id}`}
+                          className="min-w-0"
+                        >
+                          <p className="line-clamp-2 text-[14px] font-medium leading-[1.18] text-[#101114]">
                             {item.name}
                           </p>
-                          <p className="mt-1 truncate text-xs text-gray-500">
-                            {item.brand} • {item.category}
+                          <p className="mt-1 truncate text-[11px] text-[#7F8997]">
+                            {item.article || item.id}
                           </p>
-                        </div>
+                        </Link>
 
-                        <button
-                          type="button"
-                          onClick={() => toggleStatus(item.id)}
-                          className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] ${
+                        <span
+                          className={`shrink-0 rounded-[9px] px-2 py-1 text-[10px] font-medium ${
                             item.status === "Активен"
-                              ? "bg-emerald-100 text-emerald-700"
-                              : "bg-gray-200 text-gray-500"
+                              ? "bg-[#EAF8F0] text-[#15803D]"
+                              : "bg-[#F1F3F7] text-[#7F8997]"
                           }`}
                         >
                           {item.status}
+                        </span>
+                      </div>
+
+                      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setBadgeProductId(item.id)}
+                          className={`rounded-[9px] px-2 py-1 text-[10px] font-medium ${getBadgeClass(item.badge)}`}
+                        >
+                          {item.badge}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setStockProductId(item.id)}
+                          className="rounded-[9px] bg-[#F6F7FA] px-2 py-1 text-[10px] font-medium text-[#697386]"
+                        >
+                          {stockTotal} шт
                         </button>
                       </div>
-
-                      <div className="mt-2 flex flex-wrap items-center gap-2">
-                        <span className="text-[15px] font-semibold text-[#16A34A]">
-                          {item.price.toLocaleString("ru-RU")} ₽
-                        </span>
-
-                        {item.oldPrice > item.price && (
-                          <span className="text-xs text-gray-400 line-through">
-                            {item.oldPrice.toLocaleString("ru-RU")} ₽
-                          </span>
-                        )}
-
-                        {discount > 0 && (
-                          <span className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] text-red-600">
-                            -{discount}%
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="mt-2 flex flex-wrap items-center gap-2">
-                        <span className={`rounded-full px-2 py-1 text-[10px] ${getBadgeClass(item.badge)}`}>
-                          {item.badge}
-                        </span>
-
-                        <span
-                          className={`rounded-full px-2 py-1 text-[10px] ${
-                            stockTotal > 0
-                              ? "bg-white text-gray-600"
-                              : "bg-red-50 text-red-600"
-                          }`}
-                        >
-                          Остаток: {stockTotal}
-                        </span>
-                      </div>
-
-                      <p className="mt-2 truncate text-xs text-gray-400">
-                        Артикул: {item.article || item.id}
-                      </p>
                     </div>
                   </div>
 
-                  <div className="mt-3 grid grid-cols-[1fr_1fr_auto] gap-2">
-                    <Link
-                      href={`/admin/products/${item.id}`}
-                      className="rounded-2xl bg-white px-3 py-2.5 text-center text-xs font-medium text-gray-700"
-                    >
-                      Редактировать
-                    </Link>
-
+                  <div className="mt-3 flex items-center justify-between gap-2 border-t border-[#EEF0F4] pt-2.5">
                     <button
                       type="button"
-                      onClick={() => toggleStatus(item.id)}
-                      className="rounded-2xl bg-white px-3 py-2.5 text-xs font-medium text-gray-700"
+                      onClick={() => openPriceSheet(item)}
+                      className="flex h-9 items-center gap-2 rounded-[12px] bg-[#F6F7FA] px-3 text-left"
                     >
-                      {item.status === "Активен" ? "Скрыть" : "Активировать"}
+                      <span className="text-[10px] font-medium text-[#8A94A3]">
+                        Цена
+                      </span>
+                      <span className="text-[15px] font-semibold leading-none">
+                        {formatPrice(item.price)} ₽
+                      </span>
+                      <Pencil size={13} className="text-[#8A94A3]" />
                     </button>
 
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(item.id)}
-                      className="rounded-2xl bg-red-50 px-3 py-2.5 text-xs font-medium text-red-600"
-                    >
-                      Удалить
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <Link
+                        href={`/admin/products/${item.id}`}
+                        className="flex h-8 w-8 items-center justify-center rounded-[11px] bg-[#F1F3F7] text-[#7F8997]"
+                        aria-label="Редактировать"
+                      >
+                        <Pencil size={15} />
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => toggleStatus(item.id)}
+                        className="flex h-8 w-8 items-center justify-center rounded-[11px] bg-[#F1F3F7] text-[#7F8997]"
+                        aria-label={item.status === "Активен" ? "Скрыть" : "Активировать"}
+                      >
+                        {item.status === "Активен" ? <EyeOff size={15} /> : <Eye size={15} />}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(item.id)}
+                        className="flex h-8 w-8 items-center justify-center rounded-[11px] bg-[#FFF1F2] text-[#E11D48]"
+                        aria-label="Удалить"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
                   </div>
-                </div>
+                </article>
               );
-            })}
+            })
+          )}
+        </section>
+      </div>
+
+      {badgeProduct ? (
+        <>
+          <div
+            className="fixed inset-x-0 top-0 bg-black/25"
+            style={{ bottom: "86px", zIndex: 9998 }}
+            onClick={() => setBadgeProductId(null)}
+          />
+          <div
+            className="fixed left-3 right-3 rounded-[24px] bg-white p-4 shadow-xl"
+            style={{ bottom: "86px", zIndex: 9999 }}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[16px] font-semibold">Тип товара</p>
+                <p className="mt-0.5 truncate text-[12px] text-[#8A94A3]">
+                  {badgeProduct.name}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setBadgeProductId(null)}
+                className="flex h-8 w-8 items-center justify-center rounded-[11px] bg-[#F1F3F7] text-[#7F8997]"
+                aria-label="Закрыть"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              {(["В наличии", "Из-за рубежа"] as BadgeType[]).map((badge) => (
+                <button
+                  key={badge}
+                  type="button"
+                  onClick={() => setProductBadge(badgeProduct.id, badge)}
+                  className={`rounded-[14px] px-3 py-3 text-[13px] font-medium ${
+                    badgeProduct.badge === badge
+                      ? "bg-[#101114] text-white"
+                      : "bg-[#F4F6FA] text-[#101114]"
+                  }`}
+                >
+                  {badge}
+                </button>
+              ))}
+            </div>
           </div>
-        )}
-      </section>
-    </>
+        </>
+      ) : null}
+
+      {stockProduct ? (
+        <>
+          <div
+            className="fixed inset-x-0 top-0 bg-black/25"
+            style={{ bottom: "86px", zIndex: 9998 }}
+            onClick={() => setStockProductId(null)}
+          />
+          <div
+            className="fixed left-3 right-3 max-h-[68vh] overflow-hidden rounded-[24px] bg-white shadow-xl"
+            style={{ bottom: "86px", zIndex: 9999 }}
+          >
+            <div className="flex items-center justify-between gap-3 border-b border-[#EEF0F4] p-4">
+              <div className="min-w-0">
+                <p className="text-[16px] font-semibold">Остатки</p>
+                <p className="mt-0.5 truncate text-[12px] text-[#8A94A3]">
+                  {stockProduct.name}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setStockProductId(null)}
+                className="flex h-8 w-8 items-center justify-center rounded-[11px] bg-[#F1F3F7] text-[#7F8997]"
+                aria-label="Закрыть"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="max-h-[calc(78vh-74px)] overflow-y-auto p-4">
+              {stockProduct.colors.length > 0 ? (
+                <div className="mb-3 flex gap-1.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  {stockProduct.colors.map((color) => (
+                    <span
+                      key={color}
+                      className="shrink-0 rounded-[10px] bg-[#F4F6FA] px-2.5 py-1.5 text-[11px] font-medium text-[#697386]"
+                    >
+                      {color}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+
+              <div className="grid grid-cols-2 gap-2">
+                {(
+                  stockProduct.sizes.length > 0
+                    ? stockProduct.sizes
+                    : Object.keys(stockProduct.stock).length > 0
+                      ? Object.keys(stockProduct.stock)
+                      : ["OS"]
+                ).map((size) => (
+                  <label
+                    key={size}
+                    className="flex h-11 items-center justify-between gap-2 rounded-[14px] bg-[#F6F7FA] px-3"
+                  >
+                    <span className="min-w-0 truncate text-[12px] font-medium text-[#101114]">
+                      {size}
+                    </span>
+                    <input
+                      value={stockProduct.stock[size] ?? 0}
+                      onChange={(event) =>
+                        updateStockValue(stockProduct.id, size, event.target.value)
+                      }
+                      inputMode="numeric"
+                      className="h-8 w-14 rounded-[10px] bg-white text-center text-[13px] font-medium outline-none"
+                      aria-label={`Остаток ${size}`}
+                    />
+                  </label>
+                ))}
+              </div>
+
+              <p className="mt-3 rounded-[12px] bg-[#F4F6FA] px-3 py-2 text-[12px] text-[#697386]">
+                Изменения сохраняются автоматически.
+              </p>
+            </div>
+          </div>
+        </>
+      ) : null}
+
+      {priceProduct ? (
+        <>
+          <div
+            className="fixed inset-x-0 top-0 bg-black/25"
+            style={{ bottom: "86px", zIndex: 9998 }}
+            onClick={() => setPriceProductId(null)}
+          />
+          <div
+            className="fixed left-3 right-3 rounded-[24px] bg-white p-4 shadow-xl"
+            style={{ bottom: "86px", zIndex: 9999 }}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[16px] font-semibold">Цена</p>
+                <p className="mt-0.5 truncate text-[12px] text-[#8A94A3]">
+                  {priceProduct.name}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPriceProductId(null)}
+                className="flex h-8 w-8 items-center justify-center rounded-[11px] bg-[#F1F3F7] text-[#7F8997]"
+                aria-label="Закрыть"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <label className="rounded-[14px] bg-[#F6F7FA] px-3 py-2">
+                <span className="text-[11px] font-medium text-[#697386]">
+                  Новая цена
+                </span>
+                <input
+                  value={priceDraft.price}
+                  onChange={(event) =>
+                    setPriceDraft((current) => ({
+                      ...current,
+                      price: event.target.value.replace(/\D/g, ""),
+                    }))
+                  }
+                  inputMode="numeric"
+                  className="mt-1 h-8 w-full bg-transparent text-[17px] font-semibold outline-none"
+                  placeholder="0"
+                />
+              </label>
+              <label className="rounded-[14px] bg-[#F6F7FA] px-3 py-2">
+                <span className="text-[11px] font-medium text-[#697386]">
+                  Старая цена
+                </span>
+                <input
+                  value={priceDraft.oldPrice}
+                  onChange={(event) =>
+                    setPriceDraft((current) => ({
+                      ...current,
+                      oldPrice: event.target.value.replace(/\D/g, ""),
+                    }))
+                  }
+                  inputMode="numeric"
+                  className="mt-1 h-8 w-full bg-transparent text-[17px] font-semibold outline-none"
+                  placeholder="0"
+                />
+              </label>
+            </div>
+
+            <button
+              type="button"
+              onClick={savePrice}
+              className="mt-3 h-11 w-full rounded-[15px] bg-[#101114] text-[14px] font-medium text-white"
+            >
+              Сохранить
+            </button>
+          </div>
+        </>
+      ) : null}
+    </main>
   );
 }

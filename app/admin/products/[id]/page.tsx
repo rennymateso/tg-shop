@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { ArrowLeft, Check, ChevronLeft, ChevronRight, Trash2, X } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { uploadProductImage } from "../../../lib/upload-product-image";
 
@@ -150,24 +151,22 @@ function generateArticleNumber() {
 
 function mapRowToProduct(row: ProductRow): AdminProduct {
   const gender = normalizeGender(row.gender);
-  const sizes = Array.isArray(row.sizes) ? row.sizes : [];
-  const stock = row.stock && typeof row.stock === "object" ? row.stock : {};
 
   return {
     id: row.id,
-    name: row.name,
-    brand: row.brand,
+    name: row.name || "",
+    brand: row.brand || "",
     gender,
     category: normalizeCategory(row.category, gender),
     country: row.country || "",
-    price: row.price,
-    oldPrice: row.old_price,
+    price: Number(row.price) || 0,
+    oldPrice: Number(row.old_price) || 0,
     badge: row.badge || "Без бейджа",
     status: row.status === "Скрыт" ? "Скрыт" : "Активен",
     description: row.description || "",
     article: (row.article || "").replace(/\D/g, "").slice(0, 7),
-    sizes,
-    stock,
+    sizes: Array.isArray(row.sizes) ? row.sizes : [],
+    stock: row.stock && typeof row.stock === "object" ? row.stock : {},
     colors: Array.isArray(row.colors) ? row.colors : [],
     image: row.image || "",
     colorImages: row.color_images || {},
@@ -191,20 +190,6 @@ export default function AdminEditProductPage() {
   const [saving, setSaving] = useState(false);
   const [activeColor, setActiveColor] = useState("");
   const [uploading, setUploading] = useState(false);
-
-  useEffect(() => {
-    const viewport = document.querySelector('meta[name="viewport"]');
-    const previousContent = viewport?.getAttribute("content") || "";
-
-    viewport?.setAttribute(
-      "content",
-      "width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover"
-    );
-
-    return () => {
-      if (viewport) viewport.setAttribute("content", previousContent);
-    };
-  }, []);
 
   useEffect(() => {
     const loadBrands = async () => {
@@ -288,11 +273,6 @@ export default function AdminEditProductPage() {
     return product ? getCategoryOptions(product.gender) : mensCategoryOptions;
   }, [product]);
 
-  const discountPercent = useMemo(() => {
-    if (!product || product.oldPrice <= product.price) return 0;
-    return Math.round(((product.oldPrice - product.price) / product.oldPrice) * 100);
-  }, [product]);
-
   const totalStock = useMemo(() => {
     if (!product) return 0;
     return product.sizes.reduce(
@@ -325,7 +305,6 @@ export default function AdminEditProductPage() {
     const nextSizes = exists
       ? product.sizes.filter((item) => item !== size)
       : [...product.sizes, size];
-
     const nextStock = { ...product.stock };
 
     if (exists) {
@@ -334,16 +313,11 @@ export default function AdminEditProductPage() {
       nextStock[size] = nextStock[size] || 0;
     }
 
-    setProduct({
-      ...product,
-      sizes: nextSizes,
-      stock: nextStock,
-    });
+    setProduct({ ...product, sizes: nextSizes, stock: nextStock });
   };
 
   const updateSizeStock = (size: string, value: string) => {
     if (!product) return;
-
     const quantity = Math.max(0, Number(value.replace(/\D/g, "")) || 0);
 
     setProduct({
@@ -362,7 +336,6 @@ export default function AdminEditProductPage() {
     const nextColors = exists
       ? product.colors.filter((item) => item !== color)
       : [...product.colors, color];
-
     const nextColorImages = { ...product.colorImages };
 
     if (exists) {
@@ -416,7 +389,6 @@ export default function AdminEditProductPage() {
       }
 
       const nextImages = [...current, ...uploadedUrls];
-
       setProduct({
         ...product,
         colorImages: {
@@ -447,12 +419,10 @@ export default function AdminEditProductPage() {
     const nextImages = (product.colorImages[color] || []).filter(
       (_, itemIndex) => itemIndex !== index
     );
-
     const nextColorImages = {
       ...product.colorImages,
       [color]: nextImages,
     };
-
     const nextMainImage =
       product.image === removedImage
         ? Object.values(nextColorImages).flat()[0] || ""
@@ -467,9 +437,7 @@ export default function AdminEditProductPage() {
 
   const makeMainImage = (color: string, index: number) => {
     if (!product) return;
-
     const arr = [...(product.colorImages[color] || [])];
-
     if (!arr[index]) return;
 
     const picked = arr[index];
@@ -488,34 +456,22 @@ export default function AdminEditProductPage() {
 
   const moveImageLeft = (color: string, index: number) => {
     if (!product || index <= 0) return;
-
     const arr = [...(product.colorImages[color] || [])];
     [arr[index - 1], arr[index]] = [arr[index], arr[index - 1]];
-
     setProduct({
       ...product,
-      colorImages: {
-        ...product.colorImages,
-        [color]: arr,
-      },
+      colorImages: { ...product.colorImages, [color]: arr },
     });
   };
 
   const moveImageRight = (color: string, index: number) => {
     if (!product) return;
-
     const arr = [...(product.colorImages[color] || [])];
-
     if (index >= arr.length - 1) return;
-
     [arr[index + 1], arr[index]] = [arr[index], arr[index + 1]];
-
     setProduct({
       ...product,
-      colorImages: {
-        ...product.colorImages,
-        [color]: arr,
-      },
+      colorImages: { ...product.colorImages, [color]: arr },
     });
   };
 
@@ -597,7 +553,7 @@ export default function AdminEditProductPage() {
         updatedAt: now,
       });
 
-      setMessage("Изменения сохранены.");
+      setMessage("Изменения сохранены");
       setSaving(false);
     } catch (error) {
       setMessage(
@@ -624,7 +580,7 @@ export default function AdminEditProductPage() {
 
   if (loading) {
     return (
-      <div className="rounded-[24px] bg-white p-6 text-sm text-gray-500 shadow-sm">
+      <div className="rounded-[22px] bg-white p-5 text-[13px] text-[#697386] shadow-sm">
         Загрузка товара...
       </div>
     );
@@ -632,533 +588,427 @@ export default function AdminEditProductPage() {
 
   if (!product) {
     return (
-      <div className="rounded-[24px] bg-white p-6 text-sm text-gray-500 shadow-sm">
+      <div className="rounded-[22px] bg-white p-5 text-[13px] text-[#697386] shadow-sm">
         Товар не найден
       </div>
     );
   }
 
+  const inputClass =
+    "mt-1.5 h-10 w-full rounded-[13px] bg-[#F4F6FA] px-3 text-[14px] outline-none";
+  const labelClass = "text-[11px] font-medium text-[#697386]";
+  const cardClass = "rounded-[22px] bg-white p-4 shadow-sm";
+
   return (
-    <>
-      <style>{`
-        input,
-        textarea,
-        select {
-          font-size: 16px;
-        }
-      `}</style>
-
-      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <p className="text-sm text-gray-500">Админ-панель</p>
-          <h1 className="text-2xl font-semibold text-black">
-            Редактировать товар
-          </h1>
-          <p className="mt-1 text-sm text-gray-400">{product.id}</p>
-        </div>
-
-        <div className="flex flex-col gap-3 sm:flex-row">
+    <main className="mx-auto max-w-[480px] pb-28 text-[#101114]">
+      <header className="sticky top-0 z-20 -mx-2 mb-3 bg-[#F3F4F8]/95 px-2 py-2 backdrop-blur">
+        <div className="flex items-center justify-between gap-2 rounded-[20px] bg-white px-3 py-3 shadow-sm">
           <Link
             href="/admin/products"
-            className="rounded-2xl bg-white px-5 py-3 text-center text-sm font-medium text-gray-700 shadow-sm"
+            className="flex h-9 w-9 items-center justify-center rounded-[12px] bg-[#F4F6FA] text-[#7F8997]"
+            aria-label="Назад"
           >
-            Назад
+            <ArrowLeft size={18} />
           </Link>
-
+          <div className="min-w-0 flex-1 text-center">
+            <h1 className="truncate text-[18px] font-semibold">Редактировать</h1>
+            <p className="mt-0.5 truncate text-[11px] text-[#8A94A3]">
+              {product.article || product.id}
+            </p>
+          </div>
           <button
             type="button"
             onClick={handleDelete}
-            className="rounded-2xl bg-red-50 px-5 py-3 text-sm font-medium text-red-600"
+            className="flex h-9 w-9 items-center justify-center rounded-[12px] bg-[#FFF1F2] text-[#E11D48]"
+            aria-label="Удалить"
           >
-            Удалить
-          </button>
-
-          <button
-            type="button"
-            onClick={saveChanges}
-            disabled={saving || brandsLoading || badgesLoading || uploading}
-            className="rounded-2xl bg-black px-5 py-3 text-sm font-medium text-white disabled:opacity-60"
-          >
-            {saving ? "Сохраняем..." : "Сохранить"}
+            <Trash2 size={17} />
           </button>
         </div>
-      </div>
+      </header>
 
-      {message && (
-        <div className="mb-6 rounded-[24px] bg-white p-4 text-sm text-black shadow-sm">
-          {message}
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_300px]">
-        <section className="space-y-6">
-          <div className="rounded-[28px] bg-white p-5 shadow-sm">
-            <h2 className="text-lg font-medium text-black">Основные данные</h2>
-
-            <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="md:col-span-2">
-                <label className="mb-2 block text-sm text-gray-500">
-                  Название
-                </label>
-                <input
-                  value={product.name}
-                  onChange={(e) => setProductField("name", e.target.value)}
-                  className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm text-gray-500">Бренд</label>
-                <select
-                  value={product.brand}
-                  onChange={(e) => setProductField("brand", e.target.value)}
-                  disabled={brandsLoading || brands.length === 0}
-                  className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none disabled:opacity-60"
-                >
-                  {brands.length === 0 ? (
-                    <option value="">
-                      {brandsLoading ? "Загрузка брендов..." : "Нет брендов"}
-                    </option>
-                  ) : (
-                    <>
-                      {!brands.some((item) => item.name === product.brand) && (
-                        <option value={product.brand}>{product.brand}</option>
-                      )}
-                      {brands.map((item) => (
-                        <option key={item.id} value={item.name}>
-                          {item.name}
-                        </option>
-                      ))}
-                    </>
-                  )}
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm text-gray-500">Раздел</label>
-                <select
-                  value={product.gender}
-                  onChange={(e) => {
-                    const nextGender = e.target.value as ProductGender;
-                    const options = getCategoryOptions(nextGender);
-
-                    setProduct({
-                      ...product,
-                      gender: nextGender,
-                      category: options.includes(product.category)
-                        ? product.category
-                        : options[0],
-                    });
-                  }}
-                  className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-                >
-                  {genderOptions.map((item) => (
-                    <option key={item}>{item}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm text-gray-500">
-                  Категория
-                </label>
-                <select
-                  value={product.category}
-                  onChange={(e) =>
-                    setProductField("category", e.target.value as ProductCategory)
-                  }
-                  className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-                >
-                  {categoryOptions.map((item) => (
-                    <option key={item}>{item}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm text-gray-500">
-                  Страна изготовления
-                </label>
-                <input
-                  value={product.country}
-                  onChange={(e) => setProductField("country", e.target.value)}
-                  placeholder="Например: Турция"
-                  className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm text-gray-500">Цена</label>
-                <input
-                  value={product.price}
-                  onChange={(e) =>
-                    setProductField("price", Number(e.target.value || 0))
-                  }
-                  inputMode="numeric"
-                  className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm text-gray-500">
-                  Старая цена
-                </label>
-                <input
-                  value={product.oldPrice}
-                  onChange={(e) =>
-                    setProductField("oldPrice", Number(e.target.value || 0))
-                  }
-                  inputMode="numeric"
-                  className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm text-gray-500">Бейдж</label>
-                <select
-                  value={product.badge}
-                  onChange={(e) => setProductField("badge", e.target.value)}
-                  disabled={badgesLoading}
-                  className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none disabled:opacity-60"
-                >
-                  <option value="Без бейджа">Без бейджа</option>
-                  {!badges.some((item) => item.name === product.badge) &&
-                    product.badge !== "Без бейджа" && (
-                      <option value={product.badge}>{product.badge}</option>
-                    )}
-                  {badges.map((item) => (
-                    <option key={item.id} value={item.name}>
-                      {item.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm text-gray-500">Статус</label>
-                <select
-                  value={product.status}
-                  onChange={(e) =>
-                    setProductField("status", e.target.value as ProductStatus)
-                  }
-                  className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-                >
-                  {statusOptions.map((item) => (
-                    <option key={item}>{item}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm text-gray-500">
-                  Артикул / короткий код
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    value={product.article}
-                    onChange={(e) =>
-                      setProductField(
-                        "article",
-                        e.target.value.replace(/\D/g, "").slice(0, 7)
-                      )
-                    }
-                    inputMode="numeric"
-                    placeholder="1234567"
-                    className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setProductField("article", generateArticleNumber())}
-                    className="shrink-0 rounded-2xl bg-black px-4 text-sm text-white"
-                  >
-                    Новый
-                  </button>
-                </div>
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="mb-2 block text-sm text-gray-500">
-                  Описание
-                </label>
-                <textarea
-                  value={product.description}
-                  onChange={(e) => setProductField("description", e.target.value)}
-                  rows={5}
-                  className="w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none"
-                />
-              </div>
-            </div>
+      <div className="space-y-3">
+        {message ? (
+          <div className="rounded-[16px] bg-white px-3 py-2 text-[12px] text-[#101114] shadow-sm">
+            {message}
           </div>
+        ) : null}
 
-          <div className="rounded-[28px] bg-white p-5 shadow-sm">
-            <h2 className="text-lg font-medium text-black">Размеры и остатки</h2>
-            <p className="mt-1 text-sm text-gray-500">
-              В магазин попадут только размеры, где количество больше 0.
-            </p>
-
-            <div className="mt-4 flex flex-wrap gap-2">
-              {sizeOptions.map((size) => {
-                const active = product.sizes.includes(size);
-
-                return (
-                  <button
-                    key={size}
-                    type="button"
-                    onClick={() => toggleSize(size)}
-                    className={`rounded-2xl px-4 py-2 text-sm transition ${
-                      active ? "bg-black text-white" : "bg-[#F5F5F5] text-gray-700"
-                    }`}
-                  >
-                    {size}
-                  </button>
-                );
-              })}
-            </div>
-
-            {product.sizes.length > 0 && (
-              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {product.sizes.map((size) => (
-                  <div
-                    key={size}
-                    className="flex items-center justify-between gap-3 rounded-2xl bg-[#F5F5F5] p-3"
-                  >
-                    <div>
-                      <p className="text-sm font-medium text-black">Размер {size}</p>
-                      <p className="text-xs text-gray-500">Остаток, шт.</p>
-                    </div>
-
-                    <input
-                      value={product.stock[size] ?? 0}
-                      onChange={(e) => updateSizeStock(size, e.target.value)}
-                      inputMode="numeric"
-                      className="w-[88px] rounded-xl bg-white p-2.5 text-center text-sm outline-none"
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="mt-4 rounded-2xl bg-[#F7F7F7] p-3 text-sm text-gray-600">
-              Общий остаток:{" "}
-              <span className="font-medium text-black">{totalStock} шт.</span>
-            </div>
-          </div>
-
-          <div className="rounded-[28px] bg-white p-5 shadow-sm">
-            <h2 className="text-lg font-medium text-black">Цвета и фото</h2>
-
-            <div className="mt-4 flex flex-wrap gap-2">
-              {colorOptions.map((color) => {
-                const active = product.colors.includes(color);
-
-                return (
-                  <button
-                    key={color}
-                    type="button"
-                    onClick={() => toggleColor(color)}
-                    className={`flex items-center gap-2 rounded-2xl px-4 py-2 text-sm transition ${
-                      active ? "bg-black text-white" : "bg-[#F5F5F5] text-gray-700"
-                    }`}
-                  >
-                    <span
-                      className={`block h-4 w-4 rounded-full ${
-                        color === "Белый" ? "border border-gray-300" : ""
-                      }`}
-                      style={{ backgroundColor: colorSwatches[color] || "#E5E7EB" }}
-                    />
-                    {color}
-                  </button>
-                );
-              })}
-            </div>
-
-            {product.colors.length > 0 && (
-              <div className="mt-4 flex flex-wrap gap-2">
-                {product.colors.map((color) => (
-                  <button
-                    key={color}
-                    type="button"
-                    onClick={() => setActiveColor(color)}
-                    className={`rounded-2xl px-4 py-2 text-sm ${
-                      activeColor === color
-                        ? "bg-black text-white"
-                        : "bg-[#F5F5F5] text-gray-700"
-                    }`}
-                  >
-                    {color}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {!activeColor ? (
-              <div className="mt-4 rounded-2xl bg-[#F7F7F7] p-5 text-sm text-gray-500">
-                Выберите цвет, чтобы редактировать фото.
-              </div>
-            ) : (
-              <div className="mt-4">
-                <div className="mb-3 flex items-center justify-between">
-                  <p className="text-sm font-medium text-black">
-                    Фото цвета: {activeColor}
-                  </p>
-                  <span className="text-sm text-gray-500">
-                    {activeImages.length}/6 фото
-                  </span>
-                </div>
-
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={(e) => handleImageUpload(activeColor, e.target.files)}
-                  className="block w-full rounded-2xl bg-[#F5F5F5] p-3.5 text-sm outline-none file:mr-4 file:rounded-xl file:border-0 file:bg-black file:px-4 file:py-2 file:text-sm file:text-white"
-                />
-
-                {uploading && (
-                  <p className="mt-3 text-sm text-gray-500">Загружаем фото...</p>
-                )}
-
-                {activeImages.length > 0 && (
-                  <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    {activeImages.map((img, index) => (
-                      <div
-                        key={`${activeColor}-${img}-${index}`}
-                        className="overflow-hidden rounded-2xl bg-[#F7F7F7] p-2"
-                      >
-                        <div className="relative">
-                          <img
-                            src={img}
-                            alt={`${activeColor} ${index + 1}`}
-                            className="h-[130px] w-full rounded-xl object-cover"
-                          />
-
-                          {product.image === img && (
-                            <span className="absolute left-2 top-2 rounded-full bg-black px-2 py-1 text-[10px] text-white">
-                              Главное
-                            </span>
-                          )}
-
-                          <button
-                            type="button"
-                            onClick={() => removeColorImage(activeColor, index)}
-                            className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-white text-sm text-black shadow"
-                          >
-                            ✕
-                          </button>
-                        </div>
-
-                        <div className="mt-2 grid grid-cols-3 gap-1">
-                          <button
-                            type="button"
-                            onClick={() => makeMainImage(activeColor, index)}
-                            className="rounded-lg bg-black px-2 py-1.5 text-[10px] text-white"
-                          >
-                            Главная
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => moveImageLeft(activeColor, index)}
-                            className="rounded-lg bg-white px-2 py-1.5 text-[10px] text-black"
-                          >
-                            ←
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => moveImageRight(activeColor, index)}
-                            className="rounded-lg bg-white px-2 py-1.5 text-[10px] text-black"
-                          >
-                            →
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </section>
-
-        <aside className="rounded-[28px] bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-medium text-black">Предпросмотр</h2>
-
-          <div className="mt-4 overflow-hidden rounded-[24px] border border-black/5 bg-[#FAFAFA]">
-            <div className="aspect-[3/4] bg-[#ECECEC]">
+        <section className={cardClass}>
+          <div className="flex gap-3">
+            <div className="h-[86px] w-[86px] shrink-0 overflow-hidden rounded-[18px] bg-[#F4F6FA]">
               {product.image ? (
                 <img
                   src={product.image}
                   alt={product.name}
                   className="h-full w-full object-cover"
                 />
-              ) : null}
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-[11px] text-[#8A94A3]">
+                  Нет фото
+                </div>
+              )}
             </div>
 
-            <div className="p-4">
-              <p className="text-[11px] uppercase tracking-[0.14em] text-gray-400">
-                {product.brand}
-              </p>
-
-              <h3 className="mt-2 text-[16px] font-medium text-black">
-                {product.name}
-              </h3>
-
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <span className="text-sm text-gray-400 line-through">
-                  {product.oldPrice} ₽
-                </span>
-
-                <span className="text-[18px] font-semibold text-[#16A34A]">
-                  {product.price} ₽
-                </span>
-
-                {discountPercent > 0 && (
-                  <span className="rounded-full bg-[#E8F7EE] px-2 py-0.5 text-xs text-[#16A34A]">
-                    -{discountPercent}%
-                  </span>
-                )}
-              </div>
-
-              <div className="mt-3 flex flex-wrap gap-2">
-                {product.badge !== "Без бейджа" && (
-                  <span
-                    className={`rounded-full px-2.5 py-1 text-xs ${
-                      product.badge.trim().toLowerCase() === "из-за рубежа"
-                        ? "bg-[#F1F1F1] text-[#666]"
-                        : product.badge.trim().toLowerCase() === "в наличии"
-                          ? "bg-[#EAF8F0] text-[#16A34A]"
-                          : "bg-[#F5F5F5] text-gray-700"
-                    }`}
-                  >
-                    {product.badge}
-                  </span>
-                )}
-
-                <span
-                  className={`rounded-full px-2.5 py-1 text-xs ${
-                    product.status === "Активен"
-                      ? "bg-emerald-100 text-emerald-700"
-                      : "bg-gray-100 text-gray-500"
-                  }`}
-                >
-                  {product.status}
-                </span>
-              </div>
-
-              <div className="mt-4 space-y-2 text-sm text-gray-600">
-                <p>Артикул: {product.article}</p>
-                <p>Раздел: {product.gender}</p>
-                <p>Страна: {product.country || "Не указана"}</p>
-                <p>Размеров с остатком: {availableSizes.length}</p>
-                <p>Остаток: {totalStock} шт.</p>
-                <p>Цветов: {product.colors.length}</p>
-                <p>Обновлен: {product.updatedAt}</p>
+            <div className="min-w-0 flex-1">
+              <label className={labelClass}>Название</label>
+              <input
+                value={product.name}
+                onChange={(event) => setProductField("name", event.target.value)}
+                className={inputClass}
+                placeholder="Название товара"
+              />
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <label>
+                  <span className={labelClass}>Цена</span>
+                  <input
+                    value={product.price}
+                    onChange={(event) =>
+                      setProductField("price", Number(event.target.value.replace(/\D/g, "")) || 0)
+                    }
+                    inputMode="numeric"
+                    className={inputClass}
+                  />
+                </label>
+                <label>
+                  <span className={labelClass}>Старая</span>
+                  <input
+                    value={product.oldPrice}
+                    onChange={(event) =>
+                      setProductField(
+                        "oldPrice",
+                        Number(event.target.value.replace(/\D/g, "")) || 0
+                      )
+                    }
+                    inputMode="numeric"
+                    className={inputClass}
+                  />
+                </label>
               </div>
             </div>
           </div>
-        </aside>
+        </section>
+
+        <section className={cardClass}>
+          <h2 className="text-[16px] font-semibold">Основное</h2>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <label>
+              <span className={labelClass}>Бренд</span>
+              <select
+                value={product.brand}
+                onChange={(event) => setProductField("brand", event.target.value)}
+                disabled={brandsLoading || brands.length === 0}
+                className={inputClass}
+              >
+                {brands.length === 0 ? (
+                  <option value="">
+                    {brandsLoading ? "Загрузка..." : "Нет брендов"}
+                  </option>
+                ) : (
+                  brands.map((item) => (
+                    <option key={item.id} value={item.name}>
+                      {item.name}
+                    </option>
+                  ))
+                )}
+              </select>
+            </label>
+
+            <label>
+              <span className={labelClass}>Статус</span>
+              <select
+                value={product.status}
+                onChange={(event) =>
+                  setProductField("status", event.target.value as ProductStatus)
+                }
+                className={inputClass}
+              >
+                {statusOptions.map((item) => (
+                  <option key={item}>{item}</option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              <span className={labelClass}>Раздел</span>
+              <select
+                value={product.gender}
+                onChange={(event) => {
+                  const nextGender = event.target.value as ProductGender;
+                  setProduct((prev) =>
+                    prev
+                      ? {
+                          ...prev,
+                          gender: nextGender,
+                          category: getCategoryOptions(nextGender)[0],
+                        }
+                      : prev
+                  );
+                }}
+                className={inputClass}
+              >
+                {genderOptions.map((item) => (
+                  <option key={item}>{item}</option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              <span className={labelClass}>Категория</span>
+              <select
+                value={product.category}
+                onChange={(event) =>
+                  setProductField("category", event.target.value as ProductCategory)
+                }
+                className={inputClass}
+              >
+                {categoryOptions.map((item) => (
+                  <option key={item}>{item}</option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              <span className={labelClass}>Страна</span>
+              <input
+                value={product.country}
+                onChange={(event) => setProductField("country", event.target.value)}
+                className={inputClass}
+                placeholder="Турция"
+              />
+            </label>
+
+            <label>
+              <span className={labelClass}>Артикул</span>
+              <input
+                value={product.article}
+                onChange={(event) =>
+                  setProductField(
+                    "article",
+                    event.target.value.replace(/\D/g, "").slice(0, 7)
+                  )
+                }
+                inputMode="numeric"
+                className={inputClass}
+                placeholder="1234567"
+              />
+            </label>
+          </div>
+
+          <label className="mt-2 block">
+            <span className={labelClass}>Бейдж</span>
+            <select
+              value={product.badge}
+              onChange={(event) => setProductField("badge", event.target.value)}
+              disabled={badgesLoading}
+              className={inputClass}
+            >
+              <option value="Без бейджа">Без бейджа</option>
+              {!badges.some((item) => item.name === product.badge) &&
+                product.badge !== "Без бейджа" && (
+                  <option value={product.badge}>{product.badge}</option>
+                )}
+              {badges.map((item) => (
+                <option key={item.id} value={item.name}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="mt-2 block">
+            <span className={labelClass}>Описание</span>
+            <textarea
+              value={product.description}
+              onChange={(event) =>
+                setProductField("description", event.target.value)
+              }
+              rows={4}
+              className="mt-1.5 w-full resize-none rounded-[13px] bg-[#F4F6FA] px-3 py-2 text-[14px] outline-none"
+              placeholder="Описание товара"
+            />
+          </label>
+        </section>
+
+        <section className={cardClass}>
+          <div className="flex items-center justify-between">
+            <h2 className="text-[16px] font-semibold">Размеры</h2>
+            <span className="rounded-[10px] bg-[#F4F6FA] px-2 py-1 text-[11px] text-[#697386]">
+              {totalStock} шт
+            </span>
+          </div>
+
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {sizeOptions.map((size) => {
+              const active = product.sizes.includes(size);
+              return (
+                <button
+                  key={size}
+                  type="button"
+                  onClick={() => toggleSize(size)}
+                  className={`h-8 min-w-10 rounded-[11px] px-2 text-[12px] font-medium ${
+                    active ? "bg-[#101114] text-white" : "bg-[#F4F6FA] text-[#697386]"
+                  }`}
+                >
+                  {size}
+                </button>
+              );
+            })}
+          </div>
+
+          {product.sizes.length > 0 ? (
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {product.sizes.map((size) => (
+                <label
+                  key={size}
+                  className="flex h-10 items-center justify-between rounded-[13px] bg-[#F4F6FA] px-3"
+                >
+                  <span className="text-[12px] font-medium">{size}</span>
+                  <input
+                    value={product.stock[size] ?? 0}
+                    onChange={(event) => updateSizeStock(size, event.target.value)}
+                    inputMode="numeric"
+                    className="h-8 w-14 rounded-[10px] bg-white text-center text-[13px] font-medium outline-none"
+                  />
+                </label>
+              ))}
+            </div>
+          ) : null}
+        </section>
+
+        <section className={cardClass}>
+          <h2 className="text-[16px] font-semibold">Цвета и фото</h2>
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {colorOptions.map((color) => {
+              const active = product.colors.includes(color);
+              return (
+                <button
+                  key={color}
+                  type="button"
+                  onClick={() => toggleColor(color)}
+                  className={`flex h-8 items-center gap-1.5 rounded-[11px] px-2 text-[12px] font-medium ${
+                    active ? "bg-[#101114] text-white" : "bg-[#F4F6FA] text-[#697386]"
+                  }`}
+                >
+                  <span
+                    className={`h-3.5 w-3.5 rounded-full ${
+                      color === "Белый" ? "border border-[#CBD5E1]" : ""
+                    }`}
+                    style={{ backgroundColor: colorSwatches[color] || "#E5E7EB" }}
+                  />
+                  {color}
+                </button>
+              );
+            })}
+          </div>
+
+          {product.colors.length > 0 ? (
+            <>
+              <div className="mt-3 flex gap-1.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {product.colors.map((color) => (
+                  <button
+                    key={color}
+                    type="button"
+                    onClick={() => setActiveColor(color)}
+                    className={`shrink-0 rounded-[11px] px-3 py-2 text-[12px] font-medium ${
+                      activeColor === color
+                        ? "bg-[#101114] text-white"
+                        : "bg-[#F4F6FA] text-[#697386]"
+                    }`}
+                  >
+                    {color}
+                  </button>
+                ))}
+              </div>
+
+              {activeColor ? (
+                <div className="mt-2">
+                  <label className="block rounded-[14px] bg-[#F4F6FA] px-3 py-3 text-center text-[12px] font-medium text-[#101114]">
+                    {uploading ? "Загружаем..." : `Загрузить фото: ${activeColor}`}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={(event) =>
+                        handleImageUpload(activeColor, event.target.files)
+                      }
+                      className="hidden"
+                    />
+                  </label>
+
+                  {activeImages.length > 0 ? (
+                    <div className="mt-3 grid grid-cols-3 gap-2">
+                      {activeImages.map((url, index) => (
+                        <div
+                          key={`${url}-${index}`}
+                          className="overflow-hidden rounded-[14px] bg-[#F4F6FA]"
+                        >
+                          <img
+                            src={url}
+                            alt={`${activeColor} ${index + 1}`}
+                            className="h-[96px] w-full object-cover"
+                          />
+                          <div className="grid grid-cols-4 gap-px bg-[#E8ECF2]">
+                            <button
+                              type="button"
+                              onClick={() => moveImageLeft(activeColor, index)}
+                              className="flex h-7 items-center justify-center bg-white text-[#697386]"
+                              aria-label="Влево"
+                            >
+                              <ChevronLeft size={14} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => moveImageRight(activeColor, index)}
+                              className="flex h-7 items-center justify-center bg-white text-[#697386]"
+                              aria-label="Вправо"
+                            >
+                              <ChevronRight size={14} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => makeMainImage(activeColor, index)}
+                              className="flex h-7 items-center justify-center bg-white text-[#15803D]"
+                              aria-label="Главное"
+                            >
+                              <Check size={14} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => removeColorImage(activeColor, index)}
+                              className="flex h-7 items-center justify-center bg-white text-[#E11D48]"
+                              aria-label="Удалить фото"
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-[12px] text-[#8A94A3]">
+                      Для выбранного цвета пока нет фото.
+                    </p>
+                  )}
+                </div>
+              ) : null}
+            </>
+          ) : null}
+        </section>
       </div>
-    </>
+
+      <div className="fixed inset-x-0 bottom-[70px] z-[90] px-3">
+        <div className="mx-auto flex max-w-[480px] gap-2 rounded-[20px] bg-white p-2 shadow-[0_-10px_30px_rgba(15,23,42,.12)]">
+          <button
+            type="button"
+            onClick={saveChanges}
+            disabled={saving || brandsLoading || badgesLoading || uploading}
+            className="h-11 flex-1 rounded-[15px] bg-[#101114] text-[14px] font-medium text-white disabled:opacity-60"
+          >
+            {saving ? "Сохраняем..." : "Сохранить"}
+          </button>
+        </div>
+      </div>
+    </main>
   );
 }

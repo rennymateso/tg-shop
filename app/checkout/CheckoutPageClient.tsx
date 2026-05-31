@@ -813,12 +813,6 @@ export default function CheckoutPageClient() {
     };
   }, [paymentStatus, attemptId]);
 
-  useEffect(() => {
-    if (deliveryMethod === "delivery" && paymentMethod === "cash") {
-      setPaymentMethod("card");
-    }
-  }, [deliveryMethod, paymentMethod]);
-
   const updateQuantity = (index: number, nextQty: number) => {
     const safeQty = Math.max(1, nextQty);
     const updated = [...items];
@@ -851,6 +845,18 @@ export default function CheckoutPageClient() {
   }, [items, productsMap]);
 
   const itemsCount = items.reduce((sum, item) => sum + item.quantity, 0);
+  const hasForeignItems = items.some(
+    (item) => productsMap[item.id]?.badge?.trim().toLowerCase() === "из-за рубежа"
+  );
+  const isCashPaymentAvailable =
+    deliveryMethod === "pickup" && !loadingProducts && !hasForeignItems;
+
+  useEffect(() => {
+    if (!isCashPaymentAvailable && paymentMethod === "cash") {
+      setPaymentMethod("card");
+    }
+  }, [isCashPaymentAvailable, paymentMethod]);
+
   const deliveryPrice =
     deliveryMethod === "delivery" && !isKazanCity(city) ? 500 : 0;
   const promoPercent = appliedPromoCode
@@ -1211,8 +1217,12 @@ export default function CheckoutPageClient() {
       return;
     }
 
-    if (deliveryMethod !== "pickup") {
-      alert("Оплата наличными доступна только при самовывозе");
+    if (!isCashPaymentAvailable) {
+      alert(
+        hasForeignItems
+          ? "Товары из-за рубежа оформляются только по предоплате картой"
+          : "Оплата наличными доступна только при самовывозе"
+      );
       return;
     }
 
@@ -1631,10 +1641,10 @@ export default function CheckoutPageClient() {
 
                   <button
                     onClick={() => {
-                      if (deliveryMethod !== "pickup") return;
+                      if (!isCashPaymentAvailable) return;
                       setPaymentMethod("cash");
                     }}
-                    disabled={deliveryMethod !== "pickup"}
+                    disabled={!isCashPaymentAvailable}
                     className={`rounded-2xl py-3 text-sm ${
                       paymentMethod === "cash"
                         ? "bg-white text-black ring-1 ring-black/20"
@@ -1648,6 +1658,12 @@ export default function CheckoutPageClient() {
                 {deliveryMethod !== "pickup" && (
                   <div className="mb-3 rounded-2xl bg-[#F5F5F5] p-3 text-sm text-gray-500">
                     Оплата наличными доступна только при выборе самовывоза.
+                  </div>
+                )}
+
+                {deliveryMethod === "pickup" && hasForeignItems && (
+                  <div className="mb-3 rounded-2xl bg-[#FFF7ED] p-3 text-sm text-[#B45309]">
+                    В корзине есть товар из-за рубежа. Для таких товаров нужна предоплата картой.
                   </div>
                 )}
 
@@ -1748,7 +1764,7 @@ export default function CheckoutPageClient() {
                 ) : (
                   <button
                     onClick={handleCashOrder}
-                    disabled={!isFormValid || deliveryMethod !== "pickup" || isPaying}
+                    disabled={!isFormValid || !isCashPaymentAvailable || isPaying}
                     className="w-full rounded-2xl bg-[#16A34A] py-3.5 text-sm font-medium text-white disabled:opacity-60"
                   >
                     {isPaying ? "Сохраняем..." : "Оформить заказ"}
