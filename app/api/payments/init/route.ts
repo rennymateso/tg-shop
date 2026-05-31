@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHash } from "crypto";
 import { createClient } from "@supabase/supabase-js";
+import {
+  calculatePromoDiscount,
+  getDeliveryPrice,
+  getDeliverySettings,
+  normalizeCity,
+} from "../shared";
 
 export const runtime = "nodejs";
 
@@ -12,6 +18,15 @@ type CartItem = {
   color?: string;
   quantity?: number;
 };
+
+function getCityFromAddress(address: string) {
+  const firstPart = address
+    .split(",")
+    .map((part) => part.trim())
+    .find(Boolean);
+
+  return firstPart || "";
+}
 
 function generateToken(payload: Record<string, unknown>, password: string) {
   const data: Record<string, string> = {};
@@ -68,6 +83,7 @@ export async function POST(req: NextRequest) {
     const customer = String(body?.customer || body?.name || "").trim();
     const phone = String(body?.phone || "").trim();
     const address = String(body?.address || "").trim();
+    const city = String(body?.city || "").trim();
     const deliveryMethod = String(body?.deliveryMethod || "delivery").trim();
     const promoCode = String(body?.promoCode || "").trim();
     const comment = String(body?.comment || "").trim();
@@ -85,8 +101,15 @@ export async function POST(req: NextRequest) {
       return sum + item.price * qty;
     }, 0);
 
-    const deliveryPrice = deliveryMethod === "delivery" ? 500 : 0;
-    const totalRub = itemsTotal + deliveryPrice;
+    const deliveryCity = city || getCityFromAddress(address);
+    const deliverySettings = await getDeliverySettings(supabase);
+    const deliveryPrice = getDeliveryPrice({
+      deliveryMethod,
+      city: deliveryCity,
+      settings: deliverySettings,
+    });
+    const promoDiscount = calculatePromoDiscount(itemsTotal, promoCode);
+    const totalRub = Math.max(1, itemsTotal + deliveryPrice - promoDiscount);
     const amount = Math.round(totalRub * 100);
 
     const attemptId = `PAY-${Date.now()}`;

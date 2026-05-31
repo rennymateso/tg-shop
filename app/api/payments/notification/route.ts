@@ -1,37 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHash } from "crypto";
 import { createClient } from "@supabase/supabase-js";
+import {
+  buildOrderIdFromAttemptId,
+  decreaseProductStocks,
+  sendCustomerPurchaseNotification,
+  type PaymentAttemptRow,
+} from "../shared";
 
 export const runtime = "nodejs";
-
-type AttemptItem = {
-  id: string;
-  name: string;
-  price: number;
-  size?: string;
-  color?: string;
-  quantity?: number;
-};
-
-type PaymentAttemptRow = {
-  id: string;
-  order_id: string | null;
-  customer_id: string | null;
-  customer: string;
-  phone: string;
-  total: number;
-  payment: "Картой";
-  delivery: "Доставка" | "Самовывоз";
-  address: string;
-  comment: string | null;
-  promo_code: string | null;
-  items: AttemptItem[];
-  tbank_order_id: string | null;
-  tbank_payment_id: string | null;
-  tbank_payment_status: string | null;
-  status: "pending" | "confirmed" | "failed" | "cancelled";
-  paid_at: string | null;
-};
 
 function generateToken(payload: Record<string, unknown>, password: string) {
   const data: Record<string, string> = {};
@@ -64,13 +41,10 @@ function getAttemptIdFromTbankOrderId(tbankOrderId: string) {
   return tbankOrderId.replace(/^TBANK-/, "");
 }
 
-function buildOrderIdFromAttemptId(attemptId: string) {
-  return `ORD-${attemptId.replace(/^PAY-/, "")}`;
-}
-
 export async function POST(req: NextRequest) {
   try {
     const terminalPassword = process.env.TBANK_TERMINAL_PASSWORD;
+    const telegramBotToken = process.env.TELEGRAM_BOT_TOKEN;
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -180,6 +154,8 @@ export async function POST(req: NextRequest) {
             await supabase.from("order_items").insert(itemsPayload);
           }
 
+          await decreaseProductStocks(supabase, attempt.items || []);
+
           await supabase
             .from("payment_attempts")
             .update({
@@ -189,6 +165,19 @@ export async function POST(req: NextRequest) {
               updated_at: new Date().toISOString(),
             })
             .eq("id", attemptId);
+
+          try {
+            await sendCustomerPurchaseNotification({
+              supabase,
+              botToken: telegramBotToken,
+              customerId: attempt.customer_id,
+              orderId: existingOrderId,
+              total: attempt.total,
+              delivery: attempt.delivery,
+            });
+          } catch (error) {
+            console.error("Telegram purchase notification error:", error);
+          }
         }
       }
     }

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Check, ChevronLeft, ChevronRight, RotateCcw, X } from "lucide-react";
+import { ArrowLeft, Check, GripVertical, RotateCcw, X } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { uploadProductImage } from "../../../lib/upload-product-image";
 
@@ -147,6 +147,10 @@ export default function AdminNewProductPage() {
   const [message, setMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingImages, setIsUploadingImages] = useState(false);
+  const [draggedImage, setDraggedImage] = useState<{
+    color: string;
+    index: number;
+  } | null>(null);
 
   useEffect(() => {
     const loadBrands = async () => {
@@ -336,22 +340,23 @@ export default function AdminNewProductPage() {
     });
   };
 
-  const moveImageLeft = (color: string, index: number) => {
-    if (index <= 0) return;
+  const moveImage = (color: string, fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return;
+
     setColorImages((prev) => {
       const arr = [...(prev[color] || [])];
-      [arr[index - 1], arr[index]] = [arr[index], arr[index - 1]];
+      if (!arr[fromIndex] || toIndex < 0 || toIndex >= arr.length) return prev;
+
+      const [picked] = arr.splice(fromIndex, 1);
+      arr.splice(toIndex, 0, picked);
       return { ...prev, [color]: arr };
     });
+    setDraggedImage({ color, index: toIndex });
   };
 
-  const moveImageRight = (color: string, index: number) => {
-    setColorImages((prev) => {
-      const arr = [...(prev[color] || [])];
-      if (index >= arr.length - 1) return prev;
-      [arr[index + 1], arr[index]] = [arr[index], arr[index + 1]];
-      return { ...prev, [color]: arr };
-    });
+  const handleImageDragEnter = (color: string, index: number) => {
+    if (!draggedImage || draggedImage.color !== color) return;
+    moveImage(color, draggedImage.index, index);
   };
 
   const fillArticle = () => {
@@ -823,32 +828,37 @@ export default function AdminNewProductPage() {
                       {activeImages.map((url, index) => (
                         <div
                           key={`${url}-${index}`}
-                          className="overflow-hidden rounded-[14px] bg-[#F4F6FA]"
+                          draggable
+                          onDragStart={() => setDraggedImage({ color: activeColor, index })}
+                          onDragEnter={() => handleImageDragEnter(activeColor, index)}
+                          onDragEnd={() => setDraggedImage(null)}
+                          onPointerDown={() => setDraggedImage({ color: activeColor, index })}
+                          onPointerEnter={() => handleImageDragEnter(activeColor, index)}
+                          onPointerUp={() => setDraggedImage(null)}
+                          onPointerCancel={() => setDraggedImage(null)}
+                          className={`overflow-hidden rounded-[14px] bg-[#F4F6FA] transition ${
+                            draggedImage?.color === activeColor &&
+                            draggedImage.index === index
+                              ? "scale-[.98] opacity-70"
+                              : ""
+                          }`}
+                          style={{ touchAction: "none" }}
                         >
-                          <img
-                            src={url}
-                            alt={`${activeColor} ${index + 1}`}
-                            className="h-[96px] w-full object-cover"
-                          />
-                          <div className="grid grid-cols-4 gap-px bg-[#E8ECF2]">
+                          <div className="relative">
+                            <img
+                              src={url}
+                              alt={`${activeColor} ${index + 1}`}
+                              className="h-[96px] w-full object-cover"
+                              draggable={false}
+                            />
+                            <div className="absolute left-1 top-1 flex h-6 w-6 items-center justify-center rounded-[8px] bg-black/55 text-white">
+                              <GripVertical size={14} />
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-px bg-[#E8ECF2]">
                             <button
                               type="button"
-                              onClick={() => moveImageLeft(activeColor, index)}
-                              className="flex h-7 items-center justify-center bg-white text-[#697386]"
-                              aria-label="Влево"
-                            >
-                              <ChevronLeft size={14} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => moveImageRight(activeColor, index)}
-                              className="flex h-7 items-center justify-center bg-white text-[#697386]"
-                              aria-label="Вправо"
-                            >
-                              <ChevronRight size={14} />
-                            </button>
-                            <button
-                              type="button"
+                              onPointerDown={(event) => event.stopPropagation()}
                               onClick={() => makeMainImage(activeColor, index)}
                               className="flex h-7 items-center justify-center bg-white text-[#15803D]"
                               aria-label="Главное"
@@ -857,6 +867,7 @@ export default function AdminNewProductPage() {
                             </button>
                             <button
                               type="button"
+                              onPointerDown={(event) => event.stopPropagation()}
                               onClick={() => removeColorImage(activeColor, index)}
                               className="flex h-7 items-center justify-center bg-white text-[#E11D48]"
                               aria-label="Удалить фото"

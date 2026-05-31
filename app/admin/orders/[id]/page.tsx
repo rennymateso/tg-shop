@@ -56,6 +56,26 @@ type ProductRow = {
   badge: string | null;
 };
 
+type DeliverySettings = {
+  freeCities: string[];
+  deliveryPrice: number;
+  inStockMinDays: number;
+  inStockMaxDays: number;
+  foreignMinDays: number;
+  foreignMaxDays: number;
+  pickupAddress: string;
+};
+
+const defaultDeliverySettings: DeliverySettings = {
+  freeCities: ["Казань"],
+  deliveryPrice: 500,
+  inStockMinDays: 1,
+  inStockMaxDays: 3,
+  foreignMinDays: 7,
+  foreignMaxDays: 14,
+  pickupAddress: 'г. Казань, Академика Глушко 16Г, ТЦ "АКАДЕМИК", 2 этаж',
+};
+
 const statusOptions: OrderStatus[] = [
   "Новый",
   "Оплачен",
@@ -144,6 +164,9 @@ export default function AdminOrderDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [savingStatus, setSavingStatus] = useState(false);
   const [message, setMessage] = useState("");
+  const [deliverySettings, setDeliverySettings] = useState<DeliverySettings>(
+    defaultDeliverySettings
+  );
 
   const loadOrder = async () => {
     if (!id) {
@@ -215,6 +238,25 @@ export default function AdminOrderDetailsPage() {
     };
   }, [id]);
 
+  useEffect(() => {
+    const loadDeliverySettings = async () => {
+      try {
+        const response = await fetch("/api/settings/delivery", {
+          cache: "no-store",
+        });
+        const result = await response.json();
+
+        if (response.ok && result?.settings) {
+          setDeliverySettings(result.settings);
+        }
+      } catch {
+        setDeliverySettings(defaultDeliverySettings);
+      }
+    };
+
+    loadDeliverySettings();
+  }, []);
+
   const itemsCount = useMemo(() => {
     return items.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
   }, [items]);
@@ -276,9 +318,18 @@ export default function AdminOrderDetailsPage() {
   }
 
   const statusPill = getStatusPill(order.status);
-  const deliveryDeadline = addDays(order.created_at, 1);
-  const promisedDeliveryFrom = addDays(order.created_at, hasForeignItems ? 7 : 1);
-  const promisedDeliveryTo = addDays(order.created_at, hasForeignItems ? 14 : 3);
+  const promisedDeliveryFrom = addDays(
+    order.created_at,
+    hasForeignItems
+      ? deliverySettings.foreignMinDays
+      : deliverySettings.inStockMinDays
+  );
+  const promisedDeliveryTo = addDays(
+    order.created_at,
+    hasForeignItems
+      ? deliverySettings.foreignMaxDays
+      : deliverySettings.inStockMaxDays
+  );
 
   return (
     <>

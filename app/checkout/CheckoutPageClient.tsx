@@ -108,6 +108,16 @@ type DadataSuggestion = {
   value: string;
 };
 
+type DeliverySettings = {
+  freeCities: string[];
+  deliveryPrice: number;
+  inStockMinDays: number;
+  inStockMaxDays: number;
+  foreignMinDays: number;
+  foreignMaxDays: number;
+  pickupAddress: string;
+};
+
 const promoCodes: Record<string, number> = {
   MONTREAUX10: 10,
   SALE10: 10,
@@ -115,8 +125,27 @@ const promoCodes: Record<string, number> = {
   VIP15: 15,
 };
 
-function isKazanCity(value: string) {
-  return value.trim().toLowerCase() === "казань";
+const defaultDeliverySettings: DeliverySettings = {
+  freeCities: ["Казань"],
+  deliveryPrice: 500,
+  inStockMinDays: 1,
+  inStockMaxDays: 3,
+  foreignMinDays: 7,
+  foreignMaxDays: 14,
+  pickupAddress: 'г. Казань, Академика Глушко 16Г, ТЦ "АКАДЕМИК", 2 этаж',
+};
+
+function normalizeCity(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/^г\.?\s*/i, "")
+    .replace(/^город\s+/i, "");
+}
+
+function isFreeDeliveryCity(value: string, settings: DeliverySettings) {
+  const normalized = normalizeCity(value);
+  return settings.freeCities.map(normalizeCity).includes(normalized);
 }
 
 function mapRowToProduct(row: ProductRow): Product {
@@ -518,6 +547,10 @@ export default function CheckoutPageClient() {
   const [isPaying, setIsPaying] = useState(false);
   const [paymentError, setPaymentError] = useState("");
   const [paymentCheckMessage, setPaymentCheckMessage] = useState("");
+  const [orderSuccess, setOrderSuccess] = useState(false);
+  const [deliverySettings, setDeliverySettings] = useState<DeliverySettings>(
+    defaultDeliverySettings
+  );
 
   const paymentStatus = searchParams.get("payment");
   const attemptId = searchParams.get("attemptId");
@@ -566,6 +599,25 @@ export default function CheckoutPageClient() {
       document.removeEventListener("touchmove", preventMultiTouch);
       document.removeEventListener("touchend", preventDoubleTapZoom);
     };
+  }, []);
+
+  useEffect(() => {
+    const loadDeliverySettings = async () => {
+      try {
+        const response = await fetch("/api/settings/delivery", {
+          cache: "no-store",
+        });
+        const result = await response.json();
+
+        if (response.ok && result?.settings) {
+          setDeliverySettings(result.settings);
+        }
+      } catch {
+        setDeliverySettings(defaultDeliverySettings);
+      }
+    };
+
+    loadDeliverySettings();
   }, []);
 
   const loadAddresses = async () => {
@@ -728,6 +780,8 @@ export default function CheckoutPageClient() {
   }, []);
 
   useEffect(() => {
+    if (orderSuccess) return;
+
     const draft: CheckoutDraft = {
       name,
       phone,
@@ -755,10 +809,21 @@ export default function CheckoutPageClient() {
     deliveryComment,
     promoCode,
     selectedAddressId,
+    orderSuccess,
   ]);
 
   useEffect(() => {
-    if (!paymentStatus || !attemptId) return;
+    if (!paymentStatus) return;
+
+    if (paymentStatus === "success") {
+      setOrderSuccess(true);
+      localStorage.removeItem("cart");
+      localStorage.removeItem("checkout_draft");
+      window.dispatchEvent(new Event("cart-updated"));
+      setItems([]);
+    }
+
+    if (!attemptId) return;
 
     let cancelled = false;
 
@@ -787,7 +852,8 @@ export default function CheckoutPageClient() {
             localStorage.removeItem("checkout_draft");
             window.dispatchEvent(new Event("cart-updated"));
             setItems([]);
-            setPaymentCheckMessage("Оплата подтверждена. Заказ успешно создан.");
+            setOrderSuccess(true);
+            setPaymentCheckMessage("");
             return;
           }
 
@@ -857,8 +923,11 @@ export default function CheckoutPageClient() {
     }
   }, [isCashPaymentAvailable, paymentMethod]);
 
+  const hasFreeDelivery = isFreeDeliveryCity(city, deliverySettings);
   const deliveryPrice =
-    deliveryMethod === "delivery" && !isKazanCity(city) ? 500 : 0;
+    deliveryMethod === "delivery" && !hasFreeDelivery
+      ? deliverySettings.deliveryPrice
+      : 0;
   const promoPercent = appliedPromoCode
     ? promoCodes[appliedPromoCode.toUpperCase()] || 0
     : 0;
@@ -1143,8 +1212,7 @@ export default function CheckoutPageClient() {
     }
   };
 
-  const pickupAddress =
-    'г. Казань, Академика Глушко 16Г, ТЦ "АКАДЕМИК", 2 этаж';
+  const pickupAddress = deliverySettings.pickupAddress;
 
   const deliveryAddress = buildDeliveryAddress({
     city,
@@ -1250,9 +1318,10 @@ export default function CheckoutPageClient() {
       localStorage.removeItem("cart");
       localStorage.removeItem("checkout_draft");
       window.dispatchEvent(new Event("cart-updated"));
+      setItems([]);
+      setOrderSuccess(true);
 
-      alert("Заказ успешно оформлен. С вами свяжется менеджер для подтверждения.");
-      router.push("/checkout?payment=success");
+      router.replace("/checkout?payment=success");
     } catch (error) {
       setPaymentError(
         error instanceof Error ? error.message : "Не удалось сохранить заказ"
@@ -1289,6 +1358,7 @@ export default function CheckoutPageClient() {
           phone,
           address: finalAddress,
           deliveryMethod,
+          city: cleanCityValue(city),
           promoCode,
           comment: orderComment,
           items,
@@ -1363,6 +1433,31 @@ export default function CheckoutPageClient() {
 
       {isPageLoading ? (
         <CheckoutPageSkeleton />
+      ) : orderSuccess ? (
+        <div className="rounded-[24px] bg-white p-7 text-center shadow-[0_8px_28px_rgba(0,0,0,0.05)]">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#EAF8F0] text-[26px] text-[#16A34A]">
+            ✓
+          </div>
+          <h2 className="mt-4 text-[20px] font-semibold text-black">
+            Заказ принят
+          </h2>
+          <p className="mt-2 text-sm leading-5 text-gray-500">
+            Спасибо за оплату. Мы отправим уведомление в Telegram, а менеджер
+            свяжется с вами для подтверждения деталей заказа.
+          </p>
+          <button
+            onClick={() => router.push("/orders")}
+            className="mt-5 w-full rounded-2xl bg-black py-3.5 text-sm font-medium text-white"
+          >
+            Перейти к заказам
+          </button>
+          <button
+            onClick={() => router.push("/")}
+            className="mt-2 w-full rounded-2xl bg-[#F0F0F0] py-3.5 text-sm font-medium text-black"
+          >
+            В каталог
+          </button>
+        </div>
       ) : (
         <>
           {paymentCheckMessage && (
@@ -1733,7 +1828,7 @@ export default function CheckoutPageClient() {
                   <div className="mb-3 flex items-center justify-between">
                     <span className="text-gray-500">Доставка</span>
                     <span className={deliveryPrice > 0 ? "text-black" : "text-[#16A34A]"}>
-                      {deliveryMethod === "delivery" && isKazanCity(city)
+                      {deliveryMethod === "delivery" && hasFreeDelivery
                         ? "Без доплат"
                         : deliveryPrice > 0
                         ? `${formatPrice(deliveryPrice)} ₽`
