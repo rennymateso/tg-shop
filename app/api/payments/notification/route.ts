@@ -2,10 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createHash } from "crypto";
 import { createClient } from "@supabase/supabase-js";
 import {
-  buildOrderIdFromAttemptId,
-  decreaseProductStocks,
-  sendCustomerPurchaseNotification,
-  sendSellerPurchaseNotification,
+  finalizeConfirmedPayment,
   type PaymentAttemptRow,
 } from "../shared";
 
@@ -107,94 +104,14 @@ export async function POST(req: NextRequest) {
     await supabase.from("payment_attempts").update(attemptUpdate).eq("id", attemptId);
 
     if (paymentStatus === "CONFIRMED") {
-      const existingOrderId = attempt.order_id || buildOrderIdFromAttemptId(attempt.id);
-
-      const { data: existingOrder } = await supabase
-        .from("orders")
-        .select("id")
-        .eq("id", existingOrderId)
-        .maybeSingle();
-
-      if (!existingOrder) {
-        const orderPayload = {
-          id: existingOrderId,
-          customer_id: attempt.customer_id,
-          customer: attempt.customer,
-          phone: attempt.phone,
-          total: attempt.total,
-          payment: "Картой",
-          delivery: attempt.delivery,
-          address: attempt.address,
-          status: "Оплачен",
-          comment: attempt.comment || "",
-          promo_code: attempt.promo_code || "",
-          tbank_order_id: tbankOrderId,
-          tbank_payment_id: paymentId,
-          tbank_payment_status: paymentStatus,
-          paid_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        };
-
-        const { error: orderInsertError } = await supabase
-          .from("orders")
-          .insert(orderPayload);
-
-        if (!orderInsertError) {
-          const itemsPayload = (attempt.items || []).map((item) => ({
-            order_id: existingOrderId,
-            product_id: item.id,
-            name: item.name,
-            size: item.size || "",
-            color: item.color || "",
-            quantity: item.quantity && item.quantity > 0 ? item.quantity : 1,
-            price: item.price,
-            item_status: "Подтвержден",
-          }));
-
-          if (itemsPayload.length > 0) {
-            await supabase.from("order_items").insert(itemsPayload);
-          }
-
-          await decreaseProductStocks(supabase, attempt.items || []);
-
-          await supabase
-            .from("payment_attempts")
-            .update({
-              order_id: existingOrderId,
-              status: "confirmed",
-              paid_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", attemptId);
-
-          try {
-            await sendCustomerPurchaseNotification({
-              supabase,
-              botToken: telegramBotToken,
-              customerId: attempt.customer_id,
-              orderId: existingOrderId,
-              total: attempt.total,
-              delivery: attempt.delivery,
-            });
-          } catch (error) {
-            console.error("Telegram purchase notification error:", error);
-          }
-
-          try {
-            await sendSellerPurchaseNotification({
-              botToken: telegramBotToken,
-              orderId: existingOrderId,
-              total: attempt.total,
-              delivery: attempt.delivery,
-              customer: attempt.customer,
-              phone: attempt.phone,
-              items: attempt.items || [],
-            });
-          } catch (error) {
-            console.error("Telegram seller notification error:", error);
-          }
-        }
-      }
+      await finalizeConfirmedPayment({
+        supabase,
+        attempt,
+        tbankOrderId,
+        paymentId,
+        paymentStatus,
+        botToken: telegramBotToken,
+      });
     }
 
     return new NextResponse("OK", {

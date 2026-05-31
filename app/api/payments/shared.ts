@@ -368,3 +368,125 @@ export async function sendSellerPurchaseNotification(params: {
     )
   );
 }
+
+export async function finalizeConfirmedPayment(params: {
+  supabase: SupabaseClient;
+  attempt: PaymentAttemptRow;
+  tbankOrderId: string | null;
+  paymentId: string | null;
+  paymentStatus: string;
+  botToken: string | undefined;
+}) {
+  const existingOrderId =
+    params.attempt.order_id || buildOrderIdFromAttemptId(params.attempt.id);
+  const paidAt = new Date().toISOString();
+
+  const { data: existingOrder } = await params.supabase
+    .from("orders")
+    .select("id")
+    .eq("id", existingOrderId)
+    .maybeSingle();
+
+  if (existingOrder) {
+    await params.supabase
+      .from("payment_attempts")
+      .update({
+        order_id: existingOrderId,
+        status: "confirmed",
+        tbank_order_id: params.tbankOrderId,
+        tbank_payment_id: params.paymentId,
+        tbank_payment_status: params.paymentStatus,
+        paid_at: params.attempt.paid_at || paidAt,
+        updated_at: paidAt,
+      })
+      .eq("id", params.attempt.id);
+
+    return existingOrderId;
+  }
+
+  const orderPayload = {
+    id: existingOrderId,
+    customer_id: params.attempt.customer_id,
+    customer: params.attempt.customer,
+    phone: params.attempt.phone,
+    total: params.attempt.total,
+    payment: "Картой",
+    delivery: params.attempt.delivery,
+    address: params.attempt.address,
+    status: "Оплачен",
+    comment: params.attempt.comment || "",
+    promo_code: params.attempt.promo_code || "",
+    tbank_order_id: params.tbankOrderId,
+    tbank_payment_id: params.paymentId,
+    tbank_payment_status: params.paymentStatus,
+    paid_at: paidAt,
+    updated_at: paidAt,
+  };
+
+  const { error: orderInsertError } = await params.supabase
+    .from("orders")
+    .insert(orderPayload);
+
+  if (orderInsertError) {
+    throw new Error(orderInsertError.message);
+  }
+
+  const itemsPayload = (params.attempt.items || []).map((item) => ({
+    order_id: existingOrderId,
+    product_id: item.id,
+    name: item.name,
+    size: item.size || "",
+    color: item.color || "",
+    quantity: getItemQuantity(item),
+    price: item.price,
+    item_status: "Подтвержден",
+  }));
+
+  if (itemsPayload.length > 0) {
+    await params.supabase.from("order_items").insert(itemsPayload);
+  }
+
+  await decreaseProductStocks(params.supabase, params.attempt.items || []);
+
+  await params.supabase
+    .from("payment_attempts")
+    .update({
+      order_id: existingOrderId,
+      status: "confirmed",
+      tbank_order_id: params.tbankOrderId,
+      tbank_payment_id: params.paymentId,
+      tbank_payment_status: params.paymentStatus,
+      paid_at: paidAt,
+      updated_at: paidAt,
+    })
+    .eq("id", params.attempt.id);
+
+  try {
+    await sendCustomerPurchaseNotification({
+      supabase: params.supabase,
+      botToken: params.botToken,
+      customerId: params.attempt.customer_id,
+      orderId: existingOrderId,
+      total: params.attempt.total,
+      delivery: params.attempt.delivery,
+    });
+  } catch (error) {
+    console.error("Telegram customer notification error:", error);
+  }
+
+  try {
+    await sendSellerPurchaseNotification({
+      botToken: params.botToken,
+      orderId: existingOrderId,
+      total: params.attempt.total,
+      delivery: params.attempt.delivery,
+      customer: params.attempt.customer,
+      phone: params.attempt.phone,
+      items: params.attempt.items || [],
+    });
+  } catch (error) {
+    console.error("Telegram seller notification error:", error);
+  }
+
+  return existingOrderId;
+}

@@ -828,14 +828,6 @@ export default function CheckoutPageClient() {
   useEffect(() => {
     if (!paymentStatus) return;
 
-    if (paymentStatus === "success") {
-      setOrderSuccess(true);
-      localStorage.removeItem("cart");
-      localStorage.removeItem("checkout_draft");
-      window.dispatchEvent(new Event("cart-updated"));
-      setItems([]);
-    }
-
     if (!attemptId) return;
 
     let cancelled = false;
@@ -846,7 +838,7 @@ export default function CheckoutPageClient() {
         return;
       }
 
-      setPaymentCheckMessage("Проверяем оплату...");
+      setPaymentCheckMessage("Проверяем оплату и создаем заказ...");
 
       for (let i = 0; i < 8; i += 1) {
         if (cancelled) return;
